@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Levit - Modern Zero-Dependency Web Editor</title>
+  <link rel="stylesheet" href="./src/ui/theme.css">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background: var(--levit-bg);
+      color: var(--levit-text);
+      font-family: var(--levit-font-sans);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: background-color 0.2s ease, color 0.2s ease;
+    }
+    header {
+      width: 100%;
+      max-width: 960px;
+      padding: 24px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--levit-border);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .logo-badge {
+      background: linear-gradient(135deg, #3b82f6, #6366f1);
+      color: white;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 18px;
+    }
+    .brand h1 {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .brand span {
+      font-size: 13px;
+      color: var(--levit-text-muted);
+      margin-left: 6px;
+    }
+    .controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .btn {
+      background: var(--levit-surface);
+      border: 1px solid var(--levit-border);
+      color: var(--levit-text);
+      padding: 7px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+    .btn:hover {
+      background: var(--levit-border);
+    }
+    .btn-primary {
+      background: var(--levit-primary);
+      border-color: var(--levit-primary);
+      color: white;
+    }
+    .btn-primary:hover {
+      background: var(--levit-primary-hover);
+    }
+    main {
+      width: 100%;
+      max-width: 820px;
+      padding: 40px 20px 80px;
+      flex: 1;
+    }
+    .editor-wrapper {
+      background: var(--levit-bg);
+      border: 1px solid var(--levit-border);
+      border-radius: 12px;
+      box-shadow: var(--levit-shadow);
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+    .editor-toolbar-hint {
+      padding: 10px 18px;
+      background: var(--levit-surface);
+      border-bottom: 1px solid var(--levit-border);
+      font-size: 12px;
+      color: var(--levit-text-muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .hint-tag {
+      background: var(--levit-border);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: var(--levit-font-mono);
+      font-size: 11px;
+    }
+    #editor-container {
+      min-height: 380px;
+      padding: 28px 32px;
+    }
+    .output-section {
+      margin-top: 32px;
+    }
+    .output-tabs {
+      display: flex;
+      gap: 4px;
+      border-bottom: 1px solid var(--levit-border);
+      margin-bottom: 12px;
+    }
+    .tab-btn {
+      padding: 6px 14px;
+      background: transparent;
+      border: none;
+      color: var(--levit-text-muted);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      border-bottom: 2px solid transparent;
+    }
+    .tab-btn.active {
+      color: var(--levit-primary);
+      border-bottom-color: var(--levit-primary);
+    }
+    pre.code-view {
+      background: var(--levit-surface);
+      border: 1px solid var(--levit-border);
+      border-radius: 8px;
+      padding: 16px;
+      font-family: var(--levit-font-mono);
+      font-size: 12px;
+      line-height: 1.5;
+      overflow-x: auto;
+      max-height: 240px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="logo-badge">L</div>
+      <h1>Levit</h1>
+      <span>v0.1.0 (Zero-Dependency)</span>
+    </div>
+    <div class="controls">
+      <button class="btn" id="ai-stream-btn">✨ AI 생성 스트리밍 시뮬레이션</button>
+      <button class="btn" id="theme-toggle">🌓 테마 전환</button>
+      <a href="https://github.com/yon/levit" target="_blank" class="btn">GitHub</a>
+    </div>
+  </header>
+
+  <main>
+    <div class="editor-wrapper">
+      <div class="editor-toolbar-hint">
+        <div>💡 <b>Tip:</b> 텍스트를 드래그하면 <b>버블 메뉴</b>가 뜨고, 새로운 줄에서 <span class="hint-tag">/</span>를 누르면 <b>슬래시 메뉴</b>가 열립니다.</div>
+        <div id="stats-badge">1 블록</div>
+      </div>
+      <div id="editor-container"></div>
+    </div>
+
+    <div class="output-section">
+      <div class="output-tabs">
+        <button class="tab-btn active" data-tab="json">JSON Schema</button>
+        <button class="tab-btn" data-tab="markdown">Markdown</button>
+        <button class="tab-btn" data-tab="html">HTML</button>
+      </div>
+      <pre class="code-view" id="output-preview"></pre>
+    </div>
+  </main>
+
+  <script type="module">
+    import {
+      createLevitEditor,
+      createBubbleMenu,
+      createSlashMenu,
+      streamAIResponse,
+      documentToMarkdown,
+      documentToHTML,
+    } from './src/index.ts';
+
+    const container = document.getElementById('editor-container');
+    const statsBadge = document.getElementById('stats-badge');
+    const outputPreview = document.getElementById('output-preview');
+
+    let currentTab = 'json';
+
+    const editor = createLevitEditor(container, {
+      placeholder: '자유롭게 글을 작성해보세요. (마크다운 # , > , ``` 지원 또는 "/" 입력)',
+      initialContent: {
+        version: 1,
+        blocks: [
+          {
+            id: 'demo-h1',
+            type: 'heading',
+            attrs: { level: 1 },
+            content: [{ text: 'Levit 웹 에디터에 오신 것을 환영합니다! 🚀', marks: [] }],
+          },
+          {
+            id: 'demo-p1',
+            type: 'paragraph',
+            attrs: {},
+            content: [
+              { text: 'Levit은 런타임 외부 라이브러리 의존성이 전혀 없는 ', marks: [] },
+              { text: 'Zero-Dependency 독자 엔진', marks: [{ type: 'bold' }] },
+              { text: ' 기반 에디터입니다.', marks: [] },
+            ],
+          },
+          {
+            id: 'demo-p2',
+            type: 'paragraph',
+            attrs: {},
+            content: [
+              { text: '웹사이트 어디든 ', marks: [] },
+              { text: '<levit-editor>', marks: [{ type: 'code' }] },
+              { text: ' 태그 하나 또는 단 3줄의 코드로 손쉽게 연동할 수 있습니다.', marks: [] },
+            ],
+          },
+          {
+            id: 'demo-q1',
+            type: 'blockquote',
+            attrs: {},
+            content: [{ text: '개발자와 AI 모두에게 가장 편리하고 가벼운 에디터를 지향합니다.', marks: [{ type: 'italic' }] }],
+          },
+        ],
+      },
+      onChange: () => updateOutput(),
+    });
+
+    // Menus
+    createBubbleMenu(editor);
+    createSlashMenu(editor);
+
+    function updateOutput() {
+      const doc = editor.getJSON();
+      statsBadge.textContent = `${doc.blocks.length}개 블록`;
+
+      if (currentTab === 'json') {
+        outputPreview.textContent = JSON.stringify(doc, null, 2);
+      } else if (currentTab === 'markdown') {
+        outputPreview.textContent = documentToMarkdown(doc);
+      } else if (currentTab === 'html') {
+        outputPreview.textContent = documentToHTML(doc);
+      }
+    }
+
+    updateOutput();
+
+    // Tabs
+    document.querySelectorAll('.tab-btn').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'));
+        e.target.classList.add('active');
+        currentTab = e.target.getAttribute('data-tab');
+        updateOutput();
+      });
+    });
+
+    // Dark Mode Toggle
+    const themeBtn = document.getElementById('theme-toggle');
+    themeBtn.addEventListener('click', () => {
+      const current = document.body.getAttribute('data-theme');
+      const next = current === 'dark' ? 'light' : 'dark';
+      document.body.setAttribute('data-theme', next);
+    });
+
+    // AI Stream Demo
+    const aiBtn = document.getElementById('ai-stream-btn');
+    aiBtn.addEventListener('click', async () => {
+      aiBtn.disabled = true;
+      aiBtn.textContent = '🤖 AI 작성 중...';
+
+      // Move cursor to bottom
+      editor.chain().splitBlock('paragraph').run();
+
+      async function* generateAIStream() {
+        const sentences = [
+          '✨ [AI 어시스턴트]: ',
+          'Levit 에디터는 ',
+          'LLM의 실시간 스트리밍 토큰을 ',
+          '자연스럽게 에디터 내에 즉시 렌더링할 수 있는 ',
+          'AI-Native 전용 스트리밍 API를 기본 탑재하고 있습니다.',
+        ];
+        for (const sentence of sentences) {
+          yield sentence;
+          await new Promise((r) => setTimeout(r, 120));
+        }
+      }
+
+      await streamAIResponse(editor, generateAIStream());
+
+      aiBtn.disabled = false;
+      aiBtn.textContent = '✨ AI 생성 스트리밍 시뮬레이션';
+    });
+  </script>
+</body>
+</html>
+

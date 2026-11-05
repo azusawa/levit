@@ -1,0 +1,49 @@
+{
+  "name": "levit",
+  "version": "0.1.0",
+  "description": "A modern, zero-dependency, AI-ready hybrid web editor designed for seamless embedding and extensibility.",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./levit.css": "./dist/levit.css",
+    "./style.css": "./dist/levit.css"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "llms.txt"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && tsc --emitDeclarationOnly",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "keywords": [
+    "editor",
+    "wysiwyg",
+    "rich-text",
+    "block-editor",
+    "web-component",
+    "zero-dependency",
+    "ai-ready",
+    "levit"
+  ],
+  "author": "Levit Authors",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {
+    "happy-dom": "^17.1.0",
+    "typescript": "^5.8.0",
+    "vite": "^6.2.0",
+    "vitest": "^3.0.0"
+  }
+}

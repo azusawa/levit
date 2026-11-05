@@ -1,0 +1,93 @@
+# Levit Web Editor (llms.txt)
+> A modern, zero-dependency, AI-ready hybrid web editor for effortless embedding and extensibility.
+
+## Overview
+Levit is a web editor library designed from scratch using standard Web APIs (DOM, Selection, InputEvent) with 0 runtime external dependencies. It combines block-based navigation (Notion style) with smooth rich-text editing (Tiptap style), live markdown shortcuts, floating bubble toolbars, slash commands (`/`), and built-in AI response streaming.
+
+## 1. Quick Start
+
+### Web Component (<levit-editor>)
+```html
+<script type="module" src="https://unpkg.com/levit/dist/index.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/levit/dist/levit.css">
+
+<levit-editor placeholder="Type something or press '/'..."></levit-editor>
+
+<script>
+  const editorEl = document.querySelector('levit-editor');
+  editorEl.addEventListener('input', (e) => {
+    console.log('JSON:', e.detail.json);
+    console.log('Text:', e.detail.text);
+  });
+</script>
+```
+
+### Vanilla JavaScript / TypeScript
+```ts
+import { createLevitEditor, createBubbleMenu, createSlashMenu } from 'levit';
+import 'levit/levit.css';
+
+const container = document.getElementById('editor');
+const editor = createLevitEditor(container, {
+  placeholder: 'Write your story...',
+  onChange: (ed) => console.log(ed.getJSON()),
+});
+
+// Attach modern menus
+createBubbleMenu(editor);
+createSlashMenu(editor);
+```
+
+## 2. Document Data Schema (JSON)
+```json
+{
+  "version": 1,
+  "blocks": [
+    {
+      "id": "b_1",
+      "type": "heading",
+      "attrs": { "level": 1 },
+      "content": [{ "text": "Hello Levit", "marks": [] }]
+    },
+    {
+      "id": "b_2",
+      "type": "paragraph",
+      "attrs": {},
+      "content": [
+        { "text": "This is ", "marks": [] },
+        { "text": "bold", "marks": [{ "type": "bold" }] },
+        { "text": " text.", "marks": [] }
+      ]
+    }
+  ]
+}
+```
+
+## 3. Serializers & Formats
+- `documentToJSON(doc)` / `documentFromJSON(json)`: Clean, deterministic block JSON
+- `documentToMarkdown(doc)` / `markdownToDocument(markdown)`: Lossless Markdown
+- `documentToHTML(doc)` / `htmlToDocument(html)`: Semantic HTML
+
+## 4. Chained Command API
+```ts
+editor.chain()
+  .insertText('Hello')
+  .toggleBold()
+  .setHeading(2)
+  .run();
+```
+
+## 5. AI Streaming API
+```ts
+import { streamAIResponse, getAIContext } from 'levit';
+
+// 1. Get context for prompt
+const context = getAIContext(editor);
+
+// 2. Stream LLM tokens directly into editor
+async function* fetchLLMStream() {
+  // Yield chunks from your LLM API
+}
+await streamAIResponse(editor, fetchLLMStream());
+```
+

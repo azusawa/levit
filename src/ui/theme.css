@@ -1,0 +1,312 @@
+/**
+ * Levit Web Editor - Modern Minimalist Theme
+ * Clean CSS Variables system with Light / Dark mode support.
+ */
+
+:root {
+  --levit-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Pretendard", Helvetica, Arial, sans-serif;
+  --levit-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  --levit-bg: #ffffff;
+  --levit-surface: #f8fafc;
+  --levit-text: #0f172a;
+  --levit-text-muted: #64748b;
+  --levit-placeholder: #94a3b8;
+  --levit-border: #e2e8f0;
+  --levit-primary: #3b82f6;
+  --levit-primary-hover: #2563eb;
+  --levit-selection: rgba(59, 130, 246, 0.18);
+  --levit-code-bg: #f1f5f9;
+  --levit-code-text: #0f172a;
+  --levit-quote-border: #cbd5e1;
+  --levit-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --levit-radius: 8px;
+}
+
+[data-theme="dark"] {
+  --levit-bg: #090d16;
+  --levit-surface: #131b2e;
+  --levit-text: #f1f5f9;
+  --levit-text-muted: #94a3b8;
+  --levit-placeholder: #475569;
+  --levit-border: #1e293b;
+  --levit-primary: #3b82f6;
+  --levit-primary-hover: #60a5fa;
+  --levit-selection: rgba(59, 130, 246, 0.35);
+  --levit-code-bg: #1e293b;
+  --levit-code-text: #e2e8f0;
+  --levit-quote-border: #334155;
+  --levit-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --levit-bg: #090d16;
+    --levit-surface: #131b2e;
+    --levit-text: #f1f5f9;
+    --levit-text-muted: #94a3b8;
+    --levit-placeholder: #475569;
+    --levit-border: #1e293b;
+    --levit-primary: #3b82f6;
+    --levit-primary-hover: #60a5fa;
+    --levit-selection: rgba(59, 130, 246, 0.35);
+    --levit-code-bg: #1e293b;
+    --levit-code-text: #e2e8f0;
+    --levit-quote-border: #334155;
+    --levit-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
+  }
+}
+
+/* Custom Element & Container */
+levit-editor {
+  display: block;
+  width: 100%;
+}
+
+.levit-editor-root {
+  font-family: var(--levit-font-sans);
+  color: var(--levit-text);
+  background-color: var(--levit-bg);
+  line-height: 1.7;
+  font-size: 16px;
+  min-height: 200px;
+  padding: 16px 20px;
+  outline: none;
+  box-sizing: border-box;
+  caret-color: var(--levit-primary);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.levit-editor-root::selection,
+.levit-editor-root *::selection {
+  background-color: var(--levit-selection);
+}
+
+/* Blocks */
+.levit-block {
+  margin: 0 0 0.6em 0;
+  position: relative;
+}
+
+.levit-block:last-child {
+  margin-bottom: 0;
+}
+
+.levit-block-paragraph {
+  margin-bottom: 0.75em;
+}
+
+/* Empty block placeholder */
+.levit-block.is-empty:first-child:last-child::before,
+.levit-editor-root[data-placeholder] .levit-block.is-empty:first-child::before {
+  content: attr(data-placeholder);
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--levit-placeholder);
+  pointer-events: none;
+  user-select: none;
+}
+
+.levit-editor-root[data-placeholder] .levit-block.is-empty::before {
+  content: attr(data-placeholder);
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--levit-placeholder);
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Headings */
+h1.levit-block-heading {
+  font-size: 2em;
+  font-weight: 700;
+  line-height: 1.25;
+  margin-top: 1.2em;
+  margin-bottom: 0.4em;
+  letter-spacing: -0.02em;
+}
+
+h2.levit-block-heading {
+  font-size: 1.5em;
+  font-weight: 600;
+  line-height: 1.3;
+  margin-top: 1em;
+  margin-bottom: 0.4em;
+  letter-spacing: -0.015em;
+}
+
+h3.levit-block-heading {
+  font-size: 1.25em;
+  font-weight: 600;
+  line-height: 1.4;
+  margin-top: 0.8em;
+  margin-bottom: 0.3em;
+}
+
+/* Blockquote */
+blockquote.levit-block-blockquote {
+  border-left: 3px solid var(--levit-quote-border);
+  padding-left: 14px;
+  color: var(--levit-text-muted);
+  font-style: italic;
+  margin: 0.8em 0;
+}
+
+/* Code block */
+pre.levit-block-code_block {
+  background-color: var(--levit-code-bg);
+  border-radius: var(--levit-radius);
+  padding: 12px 16px;
+  overflow-x: auto;
+  font-family: var(--levit-font-mono);
+  font-size: 0.9em;
+  line-height: 1.5;
+  margin: 0.8em 0;
+}
+
+pre.levit-block-code_block code {
+  color: var(--levit-code-text);
+  background: transparent;
+  padding: 0;
+}
+
+/* Inline Marks */
+strong {
+  font-weight: 600;
+}
+
+em {
+  font-style: italic;
+}
+
+u {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+s {
+  text-decoration: line-through;
+  color: var(--levit-text-muted);
+}
+
+.levit-inline-code {
+  font-family: var(--levit-font-mono);
+  font-size: 0.88em;
+  background-color: var(--levit-code-bg);
+  color: var(--levit-code-text);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+a {
+  color: var(--levit-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+a:hover {
+  color: var(--levit-primary-hover);
+}
+
+/* Floating Bubble Menu */
+.levit-bubble-menu {
+  position: absolute;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  background-color: var(--levit-surface);
+  border: 1px solid var(--levit-border);
+  box-shadow: var(--levit-shadow);
+  border-radius: var(--levit-radius);
+  padding: 4px;
+  gap: 2px;
+  animation: levitFadeIn 0.15s ease-out;
+}
+
+.levit-bubble-btn {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--levit-text);
+  font-family: var(--levit-font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.1s ease;
+}
+
+.levit-bubble-btn:hover {
+  background-color: var(--levit-border);
+}
+
+/* Slash Command Menu */
+.levit-slash-menu {
+  position: absolute;
+  z-index: 1000;
+  width: 250px;
+  max-height: 300px;
+  overflow-y: auto;
+  background-color: var(--levit-surface);
+  border: 1px solid var(--levit-border);
+  box-shadow: var(--levit-shadow);
+  border-radius: var(--levit-radius);
+  padding: 6px;
+  animation: levitFadeIn 0.15s ease-out;
+}
+
+.levit-slash-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.1s ease;
+  gap: 10px;
+}
+
+.levit-slash-item.is-active,
+.levit-slash-item:hover {
+  background-color: var(--levit-border);
+}
+
+.levit-slash-icon {
+  font-size: 16px;
+  font-weight: 600;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.levit-slash-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.levit-slash-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--levit-text);
+}
+
+.levit-slash-desc {
+  font-size: 11px;
+  color: var(--levit-text-muted);
+}
+
+@keyframes levitFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
