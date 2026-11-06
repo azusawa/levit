@@ -1,5 +1,6 @@
 import { BlockNode, DocumentData, InlineNode } from '../core/model/types';
 import { createBlock, createDocument, createTextNode } from '../core/model/document';
+import { normalizeHeadingLevel, sanitizeHref } from '../core/model/sanitize';
 
 export function documentToMarkdown(doc: DocumentData): string {
   const lines: string[] = [];
@@ -14,7 +15,10 @@ export function documentToMarkdown(doc: DocumentData): string {
           else if (m.type === 'italic') t = `*${t}*`;
           else if (m.type === 'code') t = `\`${t}\``;
           else if (m.type === 'strike') t = `~~${t}~~`;
-          else if (m.type === 'link' && m.attrs?.href) t = `[${t}](${m.attrs.href})`;
+          else if (m.type === 'link') {
+            const href = sanitizeHref(m.attrs?.href);
+            if (href) t = `[${t}](${href})`;
+          }
         }
       }
       blockText += t;
@@ -22,7 +26,7 @@ export function documentToMarkdown(doc: DocumentData): string {
 
     switch (block.type) {
       case 'heading': {
-        const level = block.attrs?.level || 1;
+        const level = normalizeHeadingLevel(block.attrs?.level);
         lines.push(`${'#'.repeat(level)} ${blockText}`);
         break;
       }
@@ -69,7 +73,8 @@ function parseInlineMarkdown(text: string): InlineNode[] {
       nodes.push(createTextNode(match[4], [{ type: 'code' }]));
     } else if (match[5] !== undefined && match[6] !== undefined) {
       // Link
-      nodes.push(createTextNode(match[5], [{ type: 'link', attrs: { href: match[6] } }]));
+      const href = sanitizeHref(match[6]);
+      nodes.push(createTextNode(match[5], href ? [{ type: 'link', attrs: { href } }] : []));
     }
 
     lastIndex = tokenRegex.lastIndex;

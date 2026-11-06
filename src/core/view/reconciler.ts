@@ -1,5 +1,6 @@
 import { BlockNode, InlineMark, InlineNode } from '../model/types';
 import { EditorState } from '../state/state';
+import { normalizeHeadingLevel, sanitizeHref } from '../model/sanitize';
 
 export class DOMReconciler {
   private container: HTMLElement;
@@ -86,7 +87,7 @@ export class DOMReconciler {
   private getBlockTagName(block: BlockNode): string {
     switch (block.type) {
       case 'heading': {
-        const level = Math.min(Math.max(block.attrs?.level || 1, 1), 6);
+        const level = normalizeHeadingLevel(block.attrs?.level);
         return `h${level}`;
       }
       case 'blockquote':
@@ -173,14 +174,16 @@ export class DOMReconciler {
         el = document.createElement('code');
         el.className = 'levit-inline-code';
         break;
-      case 'link':
+      case 'link': {
         el = document.createElement('a');
-        if (mark.attrs?.href) {
-          (el as HTMLAnchorElement).href = String(mark.attrs.href);
+        const href = sanitizeHref(mark.attrs?.href);
+        if (href) {
+          (el as HTMLAnchorElement).href = href;
           (el as HTMLAnchorElement).target = '_blank';
           (el as HTMLAnchorElement).rel = 'noopener noreferrer';
         }
         break;
+      }
       default:
         el = document.createElement('span');
         el.setAttribute('data-mark', mark.type);

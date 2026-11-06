@@ -1,5 +1,6 @@
 import { BlockNode, DocumentData, InlineMark, InlineNode } from '../core/model/types';
 import { createBlock, createDocument, createTextNode } from '../core/model/document';
+import { normalizeHeadingLevel, sanitizeHref } from '../core/model/sanitize';
 
 export function documentToHTML(doc: DocumentData): string {
   let html = '';
@@ -15,7 +16,10 @@ export function documentToHTML(doc: DocumentData): string {
           else if (m.type === 'underline') t = `<u>${t}</u>`;
           else if (m.type === 'strike') t = `<s>${t}</s>`;
           else if (m.type === 'code') t = `<code>${t}</code>`;
-          else if (m.type === 'link' && m.attrs?.href) t = `<a href="${escapeHTML(String(m.attrs.href))}">${t}</a>`;
+          else if (m.type === 'link') {
+            const href = sanitizeHref(m.attrs?.href);
+            if (href) t = `<a href="${escapeHTML(href)}">${t}</a>`;
+          }
         }
       }
       contentHtml += t;
@@ -23,7 +27,7 @@ export function documentToHTML(doc: DocumentData): string {
 
     switch (block.type) {
       case 'heading': {
-        const level = block.attrs?.level || 1;
+        const level = normalizeHeadingLevel(block.attrs?.level);
         html += `<h${level}>${contentHtml}</h${level}>`;
         break;
       }
@@ -108,8 +112,8 @@ function parseDOMNodes(parent: Element): InlineNode[] {
       else if (tag === 's' || tag === 'strike' || tag === 'del') nextMarks.push({ type: 'strike' });
       else if (tag === 'code') nextMarks.push({ type: 'code' });
       else if (tag === 'a') {
-        const href = el.getAttribute('href') || '';
-        nextMarks.push({ type: 'link', attrs: { href } });
+        const href = sanitizeHref(el.getAttribute('href'));
+        if (href) nextMarks.push({ type: 'link', attrs: { href } });
       }
 
       for (let i = 0; i < el.childNodes.length; i++) {
