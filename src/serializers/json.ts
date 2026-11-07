@@ -1,5 +1,5 @@
-import { BlockNode, DocumentData, InlineNode } from '../core/model/types';
-import { createBlock, createDocument, createTextNode } from '../core/model/document';
+import { BlockNode, DocumentData, InlineNode } from '../core/model/types.js';
+import { createBlock, createDocument, createTextNode } from '../core/model/document.js';
 
 export function documentToJSON(doc: DocumentData): DocumentData {
   return {

@@ -1,4 +1,4 @@
-import { EditorSelection } from '../model/types';
+import { EditorSelection } from '../model/types.js';
 
 /**
  * Finds the closest ancestor element that has data-block-id inside the editor container.

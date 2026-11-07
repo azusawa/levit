@@ -1,12 +1,12 @@
-import { DocumentData, EditorSelection, InlineMark } from './model/types';
-import { EditorState } from './state/state';
-import { Transaction } from './state/transaction';
-import { DOMReconciler } from './view/reconciler';
-import { restoreDOMSelection } from './view/selection';
-import { InputController } from './view/controller';
-import { documentFromJSON, documentToJSON } from '../serializers/json';
-import { findBlockIndex, getBlockText, sliceBlockContent } from './model/document';
-import { applyInputRules } from './plugin/input-rules';
+import { DocumentData, EditorSelection, InlineMark } from './model/types.js';
+import { EditorState } from './state/state.js';
+import { Transaction } from './state/transaction.js';
+import { DOMReconciler } from './view/reconciler.js';
+import { restoreDOMSelection } from './view/selection.js';
+import { InputController } from './view/controller.js';
+import { documentFromJSON, documentToJSON } from '../serializers/json.js';
+import { findBlockIndex, getBlockText, sliceBlockContent } from './model/document.js';
+import { applyInputRules } from './plugin/input-rules.js';
 
 export interface EditorOptions {
   element: HTMLElement;

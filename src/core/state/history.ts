@@ -1,4 +1,4 @@
-import { DocumentData, EditorSelection } from '../model/types';
+import { DocumentData, EditorSelection } from '../model/types.js';
 
 export interface HistoryItem {
   doc: DocumentData;

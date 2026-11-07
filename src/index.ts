@@ -14,12 +14,12 @@ export {
   createLevitEditor,
   ChainedCommands,
   type EditorOptions,
-} from './core/editor';
+} from './core/editor.js';
 
 // State & Transactions
-export { EditorState, type EditorStateConfig } from './core/state/state';
-export { Transaction } from './core/state/transaction';
-export { HistoryManager, type HistoryItem } from './core/state/history';
+export { EditorState, type EditorStateConfig } from './core/state/state.js';
+export { Transaction } from './core/state/transaction.js';
+export { HistoryManager, type HistoryItem } from './core/state/history.js';
 
 // Model & Types
 export {
@@ -31,7 +31,7 @@ export {
   splitBlockContent,
   mergeBlockContent,
   normalizeInlineNodes,
-} from './core/model/document';
+} from './core/model/document.js';
 
 export type {
   DocumentData,
@@ -40,20 +40,20 @@ export type {
   InlineMark,
   EditorPosition,
   EditorSelection,
-} from './core/model/types';
+} from './core/model/types.js';
 
 // Serializers
-export { documentToJSON, documentFromJSON } from './serializers/json';
-export { documentToMarkdown, markdownToDocument } from './serializers/markdown';
-export { documentToHTML, htmlToDocument } from './serializers/html';
+export { documentToJSON, documentFromJSON } from './serializers/json.js';
+export { documentToMarkdown, markdownToDocument } from './serializers/markdown.js';
+export { documentToHTML, htmlToDocument } from './serializers/html.js';
 
 // Floating Menus
-export { createBubbleMenu, type BubbleMenuInstance } from './plugins/bubble-menu';
-export { createSlashMenu, type SlashMenuInstance, type SlashMenuItem } from './plugins/slash-menu';
+export { createBubbleMenu, type BubbleMenuInstance } from './plugins/bubble-menu.js';
+export { createSlashMenu, type SlashMenuInstance, type SlashMenuItem } from './plugins/slash-menu.js';
 
 // AI Integration Helpers
-export { getAIContext, streamAIResponse, type AIContext } from './ai/stream';
+export { getAIContext, streamAIResponse, type AIContext } from './ai/stream.js';
 
 // Web Component (<levit-editor>)
-export { LevitEditorElement } from './ui/web-component';
+export { LevitEditorElement } from './ui/web-component.js';
 

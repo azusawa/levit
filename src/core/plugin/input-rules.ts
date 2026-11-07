@@ -1,5 +1,5 @@
-import { Transaction } from '../state/transaction';
-import { findBlockIndex, getBlockText } from '../model/document';
+import { Transaction } from '../state/transaction.js';
+import { findBlockIndex, getBlockText } from '../model/document.js';
 
 export interface InputRule {
   match: RegExp;

@@ -1,4 +1,4 @@
-import { LevitEditor } from '../core/editor';
+import { LevitEditor } from '../core/editor.js';
 
 export interface AIContext {
   documentText: string;

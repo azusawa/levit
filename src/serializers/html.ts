@@ -1,6 +1,6 @@
-import { BlockNode, DocumentData, InlineMark, InlineNode } from '../core/model/types';
-import { createBlock, createDocument, createTextNode } from '../core/model/document';
-import { normalizeHeadingLevel, sanitizeHref } from '../core/model/sanitize';
+import { BlockNode, DocumentData, InlineMark, InlineNode } from '../core/model/types.js';
+import { createBlock, createDocument, createTextNode } from '../core/model/document.js';
+import { normalizeHeadingLevel, sanitizeHref } from '../core/model/sanitize.js';
 
 const LIST_TAGS: Record<string, string> = {
   bullet_list_item: 'ul',

@@ -1,7 +1,7 @@
-import { DocumentData, EditorSelection, InlineMark } from '../model/types';
-import { createDocument } from '../model/document';
-import { cloneDocument, cloneSelection, Transaction } from './transaction';
-import { HistoryItem, HistoryManager } from './history';
+import { DocumentData, EditorSelection, InlineMark } from '../model/types.js';
+import { createDocument } from '../model/document.js';
+import { cloneDocument, cloneSelection, Transaction } from './transaction.js';
+import { HistoryItem, HistoryManager } from './history.js';
 
 export interface EditorStateConfig {
   doc?: DocumentData;

@@ -1,7 +1,7 @@
-import { BlockNode, InlineMark, InlineNode } from '../model/types';
-import { EditorState } from '../state/state';
-import { normalizeHeadingLevel, sanitizeHref } from '../model/sanitize';
-import { isListItem } from '../model/document';
+import { BlockNode, InlineMark, InlineNode } from '../model/types.js';
+import { EditorState } from '../state/state.js';
+import { normalizeHeadingLevel, sanitizeHref } from '../model/sanitize.js';
+import { isListItem } from '../model/document.js';
 
 export class DOMReconciler {
   private container: HTMLElement;

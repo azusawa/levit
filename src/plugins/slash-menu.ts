@@ -1,5 +1,5 @@
-import { LevitEditor } from '../core/editor';
-import { getBlockText } from '../core/model/document';
+import { LevitEditor } from '../core/editor.js';
+import { getBlockText } from '../core/model/document.js';
 
 export interface SlashMenuItem {
   id: string;

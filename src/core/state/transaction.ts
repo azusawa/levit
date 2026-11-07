@@ -4,7 +4,7 @@ import {
   EditorSelection,
   InlineMark,
   InlineNode,
-} from '../model/types';
+} from '../model/types.js';
 import {
   createBlock,
   findBlockIndex,
@@ -14,9 +14,9 @@ import {
   normalizeInlineNodes,
   sliceBlockContent,
   splitBlockContent,
-} from '../model/document';
-import { sanitizeHref } from '../model/sanitize';
-import { EditorState } from './state';
+} from '../model/document.js';
+import { sanitizeHref } from '../model/sanitize.js';
+import { EditorState } from './state.js';
 
 export function cloneDocument(doc: DocumentData): DocumentData {
   return {

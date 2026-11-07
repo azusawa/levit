@@ -1,6 +1,10 @@
-import { LevitEditor } from '../core/editor';
+import { LevitEditor } from '../core/editor.js';
 
-export class LevitEditorElement extends HTMLElement {
+// On the server (SSR) there is no HTMLElement. Fall back to an empty class so
+// importing the package does not throw; the element is only registered in browsers.
+const BaseElement = (typeof HTMLElement !== 'undefined' ? HTMLElement : class {}) as typeof HTMLElement;
+
+export class LevitEditorElement extends BaseElement {
   public editor!: LevitEditor;
   private mountPoint!: HTMLElement;
 

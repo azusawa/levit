@@ -1,4 +1,4 @@
-import { BlockNode, DocumentData, InlineMark, InlineNode } from './types';
+import { BlockNode, DocumentData, InlineMark, InlineNode } from './types.js';
 
 let idCounter = 0;
 export function generateBlockId(prefix = 'b'): string {

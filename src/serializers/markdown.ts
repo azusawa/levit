@@ -1,6 +1,6 @@
-import { BlockNode, DocumentData, InlineNode } from '../core/model/types';
-import { createBlock, createDocument, createTextNode, isListItem } from '../core/model/document';
-import { normalizeHeadingLevel, sanitizeHref } from '../core/model/sanitize';
+import { BlockNode, DocumentData, InlineNode } from '../core/model/types.js';
+import { createBlock, createDocument, createTextNode, isListItem } from '../core/model/document.js';
+import { normalizeHeadingLevel, sanitizeHref } from '../core/model/sanitize.js';
 
 export function documentToMarkdown(doc: DocumentData): string {
   let out = '';

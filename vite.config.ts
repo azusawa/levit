@@ -6,8 +6,8 @@ export default defineConfig({
     lib: {
       entry: resolve(__dirname, 'src/index.ts'),
       name: 'Levit',
-      fileName: (format) => `index.${format === 'es' ? 'js' : 'cjs'}`,
-      formats: ['es', 'cjs'],
+      fileName: () => 'index.js',
+      formats: ['es'],
     },
     rollupOptions: {
       output: {

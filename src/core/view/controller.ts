@@ -1,5 +1,5 @@
-import { LevitEditor } from '../editor';
-import { domSelectionToEditorSelection } from './selection';
+import { LevitEditor } from '../editor.js';
+import { domSelectionToEditorSelection } from './selection.js';
 
 export class InputController {
   private editor: LevitEditor;

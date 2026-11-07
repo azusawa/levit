@@ -1,6 +1,6 @@
-import { LevitEditor } from '../core/editor';
-import { normalizeLinkInput } from '../core/model/sanitize';
-import type { EditorSelection } from '../core/model/types';
+import { LevitEditor } from '../core/editor.js';
+import { normalizeLinkInput } from '../core/model/sanitize.js';
+import type { EditorSelection } from '../core/model/types.js';
 
 export interface BubbleMenuInstance {
   element: HTMLElement;
