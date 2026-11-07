@@ -25,6 +25,10 @@ describe('project links', () => {
     expect(pkg.bugs?.url).toBe(`${REPO}/issues`);
   });
 
+  it('package.json names the author', () => {
+    expect(JSON.parse(read('package.json')).author).toBe('azusawa');
+  });
+
   it('demo page declares a favicon that exists', () => {
     const match = read('index.html').match(/<link rel="icon"[^>]*href="([^"]+)"/);
     expect(match).not.toBeNull();
