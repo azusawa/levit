@@ -49,6 +49,8 @@
 npm install @yonailab/levit
 ```
 
+> Levit은 ESM 전용 패키지입니다. 번들러나 `import`로 사용하세요. 서버(SSR)에서 import해도 안전하며, `<levit-editor>`는 브라우저에서만 등록됩니다.
+
 ### 2. Vanilla JS / TypeScript에서 사용
 ```ts
 import { createLevitEditor, createBubbleMenu, createSlashMenu } from '@yonailab/levit';
@@ -163,38 +165,10 @@ CSS 변수(`--levit-*`)를 통해 디자인을 완벽히 커스터마이징할 �
 
 ---
 
-## 🧪 테스트 (TDD)
+## 🛠️ 개발에 참여하기
 
-모든 코드는 TDD 방식으로 엄격하게 검증되었습니다:
-
-```bash
-# 단위 테스트 (Vitest)
-npm test
-
-# 실제 Chrome에서 도는 E2E 테스트 (Playwright, 설치된 Google Chrome 사용)
-npm run test:e2e
-
-# 타입 검사
-npm run typecheck
-
-# 라이브러리 빌드 및 타입 선언 파일 생성
-npm run build
-
-# 배포될 패키지 검사 (publint, arethetypeswrong)
-npm run check:package
-```
-
-푸시와 PR마다 GitHub Actions가 위 검사를 모두 실행합니다.
-
-> Levit은 ESM 전용 패키지입니다. 번들러나 `import`로 사용하세요. 서버(SSR)에서 import해도 안전하며, `<levit-editor>`는 브라우저에서만 등록됩니다.
-
-### npm 배포 절차
-
-```bash
-npm version patch   # 버전 올리기 (minor / major 도 가능)
-npm publish         # 배포 전에 타입 검사, 단위 테스트, 빌드, 패키지 검사가 자동으로 실행됩니다
-git push --follow-tags
-```
+Levit은 TDD로 개발하며, 단위 테스트와 실제 Chrome에서 도는 E2E 테스트를 푸시와 PR마다 GitHub Actions가 실행합니다.
+개발 환경과 테스트 방법은 [CONTRIBUTING.md](CONTRIBUTING.md)를 보세요.
 
 ---
 
