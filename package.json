@@ -25,7 +25,8 @@
     "dev": "vite",
     "build": "vite build && tsc --emitDeclarationOnly",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:e2e": "playwright test"
   },
   "keywords": [
     "editor",
@@ -47,8 +48,8 @@
     "url": "https://github.com/azusawa/levit/issues"
   },
   "license": "MIT",
-  "dependencies": {},
   "devDependencies": {
+    "@playwright/test": "^1.65.0",
     "happy-dom": "^17.1.0",
     "typescript": "^5.8.0",
     "vite": "^6.2.0",

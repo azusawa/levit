@@ -103,10 +103,24 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
     close();
   }
 
-  function open(rect: DOMRect) {
+  let positionTimer: ReturnType<typeof setTimeout> | undefined;
+
+  // Mark the menu open right away so keys pressed before it is shown
+  // (Escape, Enter, arrows) are handled by the menu, not the editor.
+  function open() {
     isOpen = true;
     activeIndex = 0;
     renderList();
+    // Wait for the "/" to be rendered so the caret rect points at it.
+    positionTimer = setTimeout(() => {
+      positionTimer = undefined;
+      const sel = window.getSelection();
+      if (!isOpen || !sel || sel.rangeCount === 0) return;
+      show(sel.getRangeAt(0).getBoundingClientRect());
+    }, 10);
+  }
+
+  function show(rect: DOMRect) {
     menu.style.display = 'block';
 
     const top = rect.bottom + window.scrollY + 6;
@@ -117,20 +131,14 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
 
   function close() {
     isOpen = false;
+    clearTimeout(positionTimer);
+    positionTimer = undefined;
     menu.style.display = 'none';
   }
 
   function handleKeyDown(e: KeyboardEvent) {
     if (!isOpen) {
-      if (e.key === '/') {
-        setTimeout(() => {
-          const sel = window.getSelection();
-          if (sel && sel.rangeCount > 0) {
-            const rect = sel.getRangeAt(0).getBoundingClientRect();
-            open(rect);
-          }
-        }, 10);
-      }
+      if (e.key === '/') open();
       return;
     }
 
@@ -151,14 +159,17 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
     }
   }
 
-  editor.container.addEventListener('keydown', handleKeyDown);
+  // Capture phase: run before the editor's own keydown handler, so Enter picks
+  // the menu item instead of splitting the block.
+  editor.container.addEventListener('keydown', handleKeyDown, true);
   document.body.appendChild(menu);
 
   return {
     element: menu,
     getItems: () => [...items],
     destroy: () => {
-      editor.container.removeEventListener('keydown', handleKeyDown);
+      close();
+      editor.container.removeEventListener('keydown', handleKeyDown, true);
       menu.remove();
     },
   };

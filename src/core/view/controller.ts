@@ -54,6 +54,7 @@ export class InputController {
 
   private handleBeforeInput(e: InputEvent): void {
     if (this.isComposing) return;
+    this.syncSelectionFromDOM();
 
     if (e.inputType === 'insertText' && e.data) {
       e.preventDefault();
@@ -69,6 +70,7 @@ export class InputController {
 
   private handleKeyDown(e: KeyboardEvent): void {
     if (this.isComposing) return;
+    this.syncSelectionFromDOM();
 
     const isMod = e.metaKey || e.ctrlKey;
 
@@ -121,7 +123,12 @@ export class InputController {
 
   private handleSelectionChange(): void {
     if (this.isComposing) return;
+    this.syncSelectionFromDOM();
+  }
 
+  // selectionchange fires asynchronously, so a key pressed right after the caret
+  // moves can arrive before it. Read the DOM selection before every edit instead.
+  private syncSelectionFromDOM(): void {
     const newSel = domSelectionToEditorSelection(this.container);
     if (newSel) {
       this.editor.setSelectionQuietly(newSel);

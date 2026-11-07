@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>Levit E2E fixture</title>
+  <link rel="icon" type="image/svg+xml" href="/logo.svg">
+  <link rel="stylesheet" href="/src/ui/theme.css">
+  <style>
+    body { margin: 0; padding: 40px; background: var(--levit-bg); }
+    #editor { max-width: 720px; }
+  </style>
+</head>
+<body>
+  <div id="editor"></div>
+  <script type="module">
+    import { createLevitEditor, createBubbleMenu, createSlashMenu } from '/src/index.ts';
+
+    const editor = createLevitEditor(document.getElementById('editor'), {
+      placeholder: 'Type here',
+    });
+    createBubbleMenu(editor);
+    createSlashMenu(editor);
+
+    // Tests read the document model through this handle.
+    window.editor = editor;
+    window.editorReady = true;
+  </script>
+</body>
+</html>
