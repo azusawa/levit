@@ -2,7 +2,7 @@
  * Levit Web Editor
  * A modern, zero-dependency, AI-ready hybrid web editor.
  * 
- * Copyright (c) 2026 azusawa. All rights reserved.
+ * Copyright (c) 2026 yonailab. All rights reserved.
  * Licensed under the MIT License.
  */
 
