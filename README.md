@@ -46,13 +46,13 @@
 
 ### 1. 설치
 ```bash
-npm install levit
+npm install @yonailab/levit
 ```
 
 ### 2. Vanilla JS / TypeScript에서 사용
 ```ts
-import { createLevitEditor, createBubbleMenu, createSlashMenu } from 'levit';
-import 'levit/levit.css';
+import { createLevitEditor, createBubbleMenu, createSlashMenu } from '@yonailab/levit';
+import '@yonailab/levit/levit.css';
 
 const container = document.getElementById('editor');
 
@@ -78,8 +78,8 @@ createSlashMenu(editor);
 
 ```html
 <!-- CDN 링크 삽입 -->
-<script type="module" src="https://unpkg.com/levit/dist/index.js"></script>
-<link rel="stylesheet" href="https://unpkg.com/levit/dist/levit.css">
+<script type="module" src="https://unpkg.com/@yonailab/levit/dist/index.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/@yonailab/levit/dist/levit.css">
 
 <!-- 어디서나 태그 하나로 사용 -->
 <levit-editor placeholder="작성해주세요..."></levit-editor>
@@ -99,7 +99,7 @@ createSlashMenu(editor);
 LLM 스트리밍 응답을 에디터에 타이핑하듯 실시간으로 주입할 수 있습니다:
 
 ```ts
-import { streamAIResponse, getAIContext } from 'levit';
+import { streamAIResponse, getAIContext } from '@yonailab/levit';
 
 // 1. 현재 에디터 컨텍스트 추출 (LLM 프롬프트에 삽입)
 const context = getAIContext(editor);
@@ -129,7 +129,7 @@ import {
   markdownToDocument,
   documentToHTML,
   htmlToDocument,
-} from 'levit';
+} from '@yonailab/levit';
 
 // 마크다운 양방향 변환
 const md = documentToMarkdown(editor.getJSON());

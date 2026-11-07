@@ -8,8 +8,8 @@ Levit is a web editor library designed from scratch using standard Web APIs (DOM
 
 ### Web Component (<levit-editor>)
 ```html
-<script type="module" src="https://unpkg.com/levit/dist/index.js"></script>
-<link rel="stylesheet" href="https://unpkg.com/levit/dist/levit.css">
+<script type="module" src="https://unpkg.com/@yonailab/levit/dist/index.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/@yonailab/levit/dist/levit.css">
 
 <levit-editor placeholder="Type something or press '/'..."></levit-editor>
 
@@ -24,8 +24,8 @@ Levit is a web editor library designed from scratch using standard Web APIs (DOM
 
 ### Vanilla JavaScript / TypeScript
 ```ts
-import { createLevitEditor, createBubbleMenu, createSlashMenu } from 'levit';
-import 'levit/levit.css';
+import { createLevitEditor, createBubbleMenu, createSlashMenu } from '@yonailab/levit';
+import '@yonailab/levit/levit.css';
 
 const container = document.getElementById('editor');
 const editor = createLevitEditor(container, {
@@ -99,7 +99,7 @@ editor.getActiveLink(); // href of the selected link, or null
 
 ## 5. AI Streaming API
 ```ts
-import { streamAIResponse, getAIContext } from 'levit';
+import { streamAIResponse, getAIContext } from '@yonailab/levit';
 
 // 1. Get context for prompt
 const context = getAIContext(editor);

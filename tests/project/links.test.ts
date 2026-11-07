@@ -29,6 +29,24 @@ describe('project links', () => {
     expect(JSON.parse(read('package.json')).author).toBe('yonailab');
   });
 
+  it('package is published as the public scoped name @yonailab/levit', () => {
+    const pkg = JSON.parse(read('package.json'));
+    expect(pkg.name).toBe('@yonailab/levit');
+    expect(pkg.publishConfig?.access).toBe('public');
+  });
+
+  it.each(['README.md', 'llms.txt'])('%s uses the scoped package name in examples', (file) => {
+    const text = read(file);
+    // npm rejected the bare name "levit", so no example may use it.
+    expect(text).not.toMatch(/from 'levit[/']|import 'levit\/|npm install levit\b|unpkg\.com\/levit\//);
+    expect(text).toContain("from '@yonailab/levit'");
+    expect(text).toContain('unpkg.com/@yonailab/levit/dist/index.js');
+  });
+
+  it('README shows the scoped install command', () => {
+    expect(read('README.md')).toContain('npm install @yonailab/levit');
+  });
+
   it('README makes no copyright claims', () => {
     expect(read('README.md')).not.toMatch(/저작권|Clean[ -]?(IP|room)|법적/i);
   });

@@ -1,5 +1,5 @@
 {
-  "name": "levit",
+  "name": "@yonailab/levit",
   "version": "0.1.0",
   "description": "A modern, zero-dependency, AI-ready hybrid web editor designed for seamless embedding and extensibility.",
   "type": "module",
@@ -56,6 +56,9 @@
     "url": "https://github.com/azusawa/levit/issues"
   },
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.5",
     "@playwright/test": "^1.65.0",
