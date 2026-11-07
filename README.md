@@ -7,7 +7,7 @@
   <br />
   <strong>심플하고 모던한 완성형 웹 에디터 (Zero-Dependency & AI-Ready)</strong>
   <br />
-  <i>가져다 쓰기 가장 편하고, 확장하기 쉬우며, 저작권 이슈가 전혀 없는 독립 코어 엔진</i>
+  <i>가져다 쓰기 가장 편하고, 확장하기 쉬운 독립 코어 엔진</i>
 </p>
 
 <p align="center">
@@ -26,17 +26,14 @@
 1. **Zero Runtime Dependency (런타임 의존성 0개)**
    - 외부 런타임 라이브러리 없이 순수 Web 표준 API(DOM, Selection, InputEvent)와 TypeScript만으로 독자 구현되었습니다.
    - 번들 크기: **약 12 kB (gzipped)** 로 로딩 속도가 극도로 빠릅니다.
-2. **100% 자체 저작권 & 상업적 이용 안전성 (Clean IP)**
-   - 타 오픈소스 라이브러리의 코드를 한 줄도 복사하지 않은 완전한 Clean-room 설계입니다.
-   - 향후 상업적 판매, 유료 기능 도입, Open-Core 비즈니스 모델로의 확장에 법적 제약이 전혀 없습니다.
-3. **가져다 쓰기 가장 쉬운 구조 (DX & AX First)**
+2. **가져다 쓰기 가장 쉬운 구조 (DX & AX First)**
    - 단 3줄의 코드로 모든 웹사이트에 연동 가능합니다.
    - `<levit-editor></levit-editor>` 웹 컴포넌트를 지원하여 React, Vue, Svelte, 바닐라 JS 어디서나 HTML 태그 하나로 동작합니다.
-4. **AI-Native 설계 (AI 친화적)**
+3. **AI-Native 설계 (AI 친화적)**
    - 결정론적이고 단순한 JSON 스키마를 지원하여 LLM이 문서를 분석하고 생성하기 매우 쉽습니다.
    - LLM 토큰 응답을 실시간으로 입력해 주는 `streamAIResponse()` 내장.
    - AI 코딩 에이전트(Cursor, Antigravity, Copilot 등)를 위한 `llms.txt` 표준 지원.
-5. **하이브리드 편집 경험 (Modern Hybrid UX)**
+4. **하이브리드 편집 경험 (Modern Hybrid UX)**
    - Notion 스타일의 **슬래시(`/`) 커맨드 메뉴**
    - 텍스트 선택 시 부드럽게 나타나는 **플로팅 버블 툴바 (Floating Bubble Toolbar)** — 굵게·기울임·밑줄·코드·**링크**·제목·인용
    - **글머리표 / 번호 목록** (Enter로 다음 항목, 빈 항목에서 Enter 또는 맨 앞 Backspace로 목록 종료)
@@ -204,4 +201,3 @@ git push --follow-tags
 ## 📄 라이선스 (License)
 
 본 프로젝트는 [MIT License](LICENSE)에 따라 배포됩니다.
-완전한 Clean-room 독자 구현으로 상업적 서비스 탑재, 재배포 및 유료 확장이 모두 자유롭습니다.

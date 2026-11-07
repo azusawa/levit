@@ -29,6 +29,14 @@ describe('project links', () => {
     expect(JSON.parse(read('package.json')).author).toBe('azusawa');
   });
 
+  it('README makes no copyright claims', () => {
+    expect(read('README.md')).not.toMatch(/저작권|Clean[ -]?(IP|room)|법적/i);
+  });
+
+  it('README still points at the license file', () => {
+    expect(read('README.md')).toContain('[MIT License](LICENSE)');
+  });
+
   it.each(['LICENSE', 'src/index.ts'])('%s names azusawa as the copyright holder', (file) => {
     expect(read(file)).toMatch(/Copyright \(c\) 2026 azusawa\b/);
     expect(read(file)).not.toContain('Levit Authors');
