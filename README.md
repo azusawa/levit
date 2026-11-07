@@ -1,7 +1,7 @@
 # Levit (레빗)
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/yon/levit/main/logo.png" alt="Levit Logo" width="80" onerror="this.style.display='none'"/>
+  <img src="./logo.svg" alt="Levit Logo" width="80"/>
   <br />
   <strong>심플하고 모던한 완성형 웹 에디터 (Zero-Dependency & AI-Ready)</strong>
   <br />

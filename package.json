@@ -38,6 +38,14 @@
     "levit"
   ],
   "author": "Levit Authors",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/azusawa/levit.git"
+  },
+  "homepage": "https://github.com/azusawa/levit#readme",
+  "bugs": {
+    "url": "https://github.com/azusawa/levit/issues"
+  },
   "license": "MIT",
   "dependencies": {},
   "devDependencies": {
