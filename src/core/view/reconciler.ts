@@ -1,6 +1,7 @@
 import { BlockNode, InlineMark, InlineNode } from '../model/types';
 import { EditorState } from '../state/state';
 import { normalizeHeadingLevel, sanitizeHref } from '../model/sanitize';
+import { isListItem } from '../model/document';
 
 export class DOMReconciler {
   private container: HTMLElement;
@@ -23,6 +24,7 @@ export class DOMReconciler {
     }
 
     let previousSibling: HTMLElement | null = null;
+    const rendered: [BlockNode, HTMLElement][] = [];
 
     for (let i = 0; i < state.doc.blocks.length; i++) {
       const block = state.doc.blocks[i];
@@ -49,6 +51,7 @@ export class DOMReconciler {
         // Element exists, check if content changed
         const lastSnapshot = this.renderedSnapshots.get(block.id);
         if (lastSnapshot !== blockSnapshot) {
+          this.applyBlockClasses(blockEl, block);
           this.updateBlockContent(blockEl, block);
           this.renderedSnapshots.set(block.id, blockSnapshot);
         }
@@ -65,6 +68,7 @@ export class DOMReconciler {
       }
 
       previousSibling = blockEl;
+      rendered.push([block, blockEl]);
     }
 
     // Remove orphaned DOM elements
@@ -72,6 +76,23 @@ export class DOMReconciler {
       if (!activeBlockIds.has(id)) {
         element.remove();
         this.renderedSnapshots.delete(id);
+      }
+    }
+
+    this.updateListNumbers(rendered);
+  }
+
+  // Numbers each run of ordered items from 1. Runs end at any other block,
+  // so this has to look at the whole document, not only changed blocks.
+  private updateListNumbers(rendered: [BlockNode, HTMLElement][]): void {
+    let n = 0;
+    for (const [block, el] of rendered) {
+      if (block.type === 'ordered_list_item') {
+        n += 1;
+        if (el.getAttribute('data-number') !== String(n)) el.setAttribute('data-number', String(n));
+      } else {
+        n = 0;
+        if (el.hasAttribute('data-number')) el.removeAttribute('data-number');
       }
     }
   }
@@ -94,6 +115,9 @@ export class DOMReconciler {
         return 'blockquote';
       case 'code_block':
         return 'pre';
+      case 'bullet_list_item':
+      case 'ordered_list_item':
+        return 'div';
       default:
         return 'p';
     }
@@ -103,10 +127,15 @@ export class DOMReconciler {
     const tagName = this.getBlockTagName(block);
     const el = document.createElement(tagName);
     el.setAttribute('data-block-id', block.id);
-    el.className = `levit-block levit-block-${block.type}`;
+    this.applyBlockClasses(el, block);
 
     this.updateBlockContent(el, block);
     return el;
+  }
+
+  private applyBlockClasses(el: HTMLElement, block: BlockNode): void {
+    el.className = `levit-block levit-block-${block.type}`;
+    if (isListItem(block.type)) el.classList.add('levit-list-item');
   }
 
   private updateBlockContent(el: HTMLElement, block: BlockNode): void {

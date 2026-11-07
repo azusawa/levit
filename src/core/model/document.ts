@@ -136,3 +136,18 @@ export function mergeBlockContent(left: InlineNode[], right: InlineNode[]): Inli
   return normalizeInlineNodes([...left, ...right]);
 }
 
+
+export const LIST_ITEM_TYPES = ['bullet_list_item', 'ordered_list_item'] as const;
+
+export function isListItem(type: string): boolean {
+  return (LIST_ITEM_TYPES as readonly string[]).includes(type);
+}
+
+/**
+ * Returns the inline nodes between two character offsets of a block.
+ */
+export function sliceBlockContent(block: BlockNode, start: number, end: number): InlineNode[] {
+  const [, fromStart] = splitBlockContent(block, start);
+  const [middle] = splitBlockContent({ ...block, content: fromStart }, end - start);
+  return middle;
+}

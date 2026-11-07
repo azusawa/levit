@@ -9,10 +9,13 @@ import {
   createBlock,
   findBlockIndex,
   getBlockText,
+  isListItem,
   mergeBlockContent,
   normalizeInlineNodes,
+  sliceBlockContent,
   splitBlockContent,
 } from '../model/document';
+import { sanitizeHref } from '../model/sanitize';
 import { EditorState } from './state';
 
 export function cloneDocument(doc: DocumentData): DocumentData {
@@ -180,6 +183,14 @@ export class Transaction {
       return this;
     }
 
+    // Offset is 0 in a list item: leave the list, keep the text
+    if (isListItem(block.type)) {
+      block.type = 'paragraph';
+      block.attrs = {};
+      this.docChanged = true;
+      return this;
+    }
+
     // Offset is 0: merge with previous block if exists
     if (blockIdx > 0) {
       const prevBlock = this.doc.blocks[blockIdx - 1];
@@ -209,7 +220,12 @@ export class Transaction {
     return this;
   }
 
-  splitBlock(type = 'paragraph', attrs: Record<string, any> = {}): this {
+  /**
+   * Splits the current block at the caret. Without a type, the new block is a
+   * paragraph, except in a list item, where it continues the list (or leaves
+   * the list when the item is empty).
+   */
+  splitBlock(type?: string, attrs?: Record<string, any>): this {
     if (!this.selection.isCollapsed) {
       this.deleteRange();
     }
@@ -219,6 +235,19 @@ export class Transaction {
 
     const block = this.doc.blocks[blockIdx];
     const offset = this.selection.anchor.offset;
+
+    if (type === undefined && isListItem(block.type)) {
+      if (getBlockText(block) === '') {
+        block.type = 'paragraph';
+        block.attrs = {};
+        this.docChanged = true;
+        return this;
+      }
+      type = block.type;
+      attrs = { ...block.attrs };
+    }
+    type ??= 'paragraph';
+    attrs ??= {};
 
     const [left, right] = splitBlockContent(block, offset);
     block.content = left;
@@ -296,6 +325,44 @@ export class Transaction {
       });
 
       b.content = normalizeInlineNodes([...left, ...modifiedMid, ...right]);
+    }
+
+    this.docChanged = true;
+    return this;
+  }
+
+  /**
+   * Links the selected text to href, replacing any existing link.
+   * null removes links. Unsafe URLs are ignored.
+   */
+  setLink(href: string | null): this {
+    if (this.selection.isCollapsed) return this;
+
+    let safeHref: string | null = null;
+    if (href !== null) {
+      safeHref = sanitizeHref(href);
+      if (!safeHref) return this;
+    }
+
+    const { from, to } = this.normalizeSelectionOrder();
+    const fromIdx = findBlockIndex(this.doc, from.blockId);
+    const toIdx = findBlockIndex(this.doc, to.blockId);
+    if (fromIdx === -1 || toIdx === -1) return this;
+
+    for (let i = fromIdx; i <= toIdx; i++) {
+      const b = this.doc.blocks[i];
+      const start = i === fromIdx ? from.offset : 0;
+      const end = i === toIdx ? to.offset : getBlockText(b).length;
+
+      const [left] = splitBlockContent(b, start);
+      const [, right] = splitBlockContent(b, end);
+      const mid = sliceBlockContent(b, start, end).map((node) => {
+        const marks = (node.marks ?? []).filter((m) => m.type !== 'link');
+        if (safeHref) marks.push({ type: 'link', attrs: { href: safeHref } });
+        return { text: node.text, marks };
+      });
+
+      b.content = normalizeInlineNodes([...left, ...mid, ...right]);
     }
 
     this.docChanged = true;

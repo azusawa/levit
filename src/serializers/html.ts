@@ -2,10 +2,24 @@ import { BlockNode, DocumentData, InlineMark, InlineNode } from '../core/model/t
 import { createBlock, createDocument, createTextNode } from '../core/model/document';
 import { normalizeHeadingLevel, sanitizeHref } from '../core/model/sanitize';
 
+const LIST_TAGS: Record<string, string> = {
+  bullet_list_item: 'ul',
+  ordered_list_item: 'ol',
+};
+
 export function documentToHTML(doc: DocumentData): string {
   let html = '';
+  // Consecutive list items of the same kind share one <ul>/<ol>.
+  let openList: string | null = null;
 
   for (const block of doc.blocks) {
+    const listTag = LIST_TAGS[block.type] ?? null;
+    if (listTag !== openList) {
+      if (openList) html += `</${openList}>`;
+      if (listTag) html += `<${listTag}>`;
+      openList = listTag;
+    }
+
     let contentHtml = '';
     for (const node of block.content) {
       let t = escapeHTML(node.text);
@@ -37,12 +51,17 @@ export function documentToHTML(doc: DocumentData): string {
       case 'code_block':
         html += `<pre><code>${contentHtml}</code></pre>`;
         break;
+      case 'bullet_list_item':
+      case 'ordered_list_item':
+        html += `<li>${contentHtml}</li>`;
+        break;
       default:
         html += `<p>${contentHtml}</p>`;
         break;
     }
   }
 
+  if (openList) html += `</${openList}>`;
   return html;
 }
 
@@ -74,6 +93,13 @@ export function htmlToDocument(html: string): DocumentData {
       blocks.push(createBlock('heading', { level }, parseDOMNodes(el)));
     } else if (tagName === 'blockquote') {
       blocks.push(createBlock('blockquote', {}, parseDOMNodes(el)));
+    } else if (tagName === 'ul' || tagName === 'ol') {
+      const type = tagName === 'ul' ? 'bullet_list_item' : 'ordered_list_item';
+      for (const item of Array.from(el.children)) {
+        if (item.tagName.toLowerCase() === 'li') {
+          blocks.push(createBlock(type, {}, parseDOMNodes(item)));
+        }
+      }
     } else if (tagName === 'pre') {
       const code = el.querySelector('code');
       const text = (code || el).textContent || '';

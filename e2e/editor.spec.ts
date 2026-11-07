@@ -131,7 +131,7 @@ test.describe('bubble menu', () => {
 
     const menu = page.locator('.levit-bubble-menu');
     await expect(menu).toBeVisible();
-    await menu.getByRole('button', { name: 'B', exact: true }).click();
+    await menu.getByRole('button', { name: 'Bold', exact: true }).click();
 
     const [b] = await blocks(page);
     expect(b.content.every((c) => c.marks?.some((m) => m.type === 'bold'))).toBe(true);

@@ -5,7 +5,7 @@ import { DOMReconciler } from './view/reconciler';
 import { restoreDOMSelection } from './view/selection';
 import { InputController } from './view/controller';
 import { documentFromJSON, documentToJSON } from '../serializers/json';
-import { getBlockText } from './model/document';
+import { findBlockIndex, getBlockText, sliceBlockContent } from './model/document';
 import { applyInputRules } from './plugin/input-rules';
 
 export interface EditorOptions {
@@ -36,8 +36,23 @@ export class ChainedCommands {
     return this;
   }
 
-  splitBlock(type = 'paragraph', attrs: Record<string, any> = {}): this {
+  splitBlock(type?: string, attrs?: Record<string, any>): this {
     this.tr.splitBlock(type, attrs);
+    return this;
+  }
+
+  setBlockType(type: string, attrs: Record<string, any> = {}): this {
+    this.tr.setBlockType(type, attrs);
+    return this;
+  }
+
+  setLink(href: string): this {
+    this.tr.setLink(href);
+    return this;
+  }
+
+  unsetLink(): this {
+    this.tr.setLink(null);
     return this;
   }
 
@@ -146,6 +161,35 @@ export class LevitEditor {
     restoreDOMSelection(this.container, this.state.selection);
     this.options.onChange?.(this);
     return true;
+  }
+
+  /** The href shared by all selected text, or null if the selection is not one link. */
+  getActiveLink(): string | null {
+    const { anchor, head, isCollapsed } = this.state.selection;
+    if (isCollapsed) return null;
+
+    const blocks = this.state.doc.blocks;
+    let fromIdx = findBlockIndex(this.state.doc, anchor.blockId);
+    let toIdx = findBlockIndex(this.state.doc, head.blockId);
+    let from = anchor;
+    let to = head;
+    if (fromIdx > toIdx || (fromIdx === toIdx && anchor.offset > head.offset)) {
+      [fromIdx, toIdx, from, to] = [toIdx, fromIdx, head, anchor];
+    }
+    if (fromIdx === -1 || toIdx === -1) return null;
+
+    let href: string | null = null;
+    for (let i = fromIdx; i <= toIdx; i++) {
+      const start = i === fromIdx ? from.offset : 0;
+      const end = i === toIdx ? to.offset : getBlockText(blocks[i]).length;
+      for (const node of sliceBlockContent(blocks[i], start, end)) {
+        const link = node.marks?.find((m) => m.type === 'link')?.attrs?.href;
+        if (typeof link !== 'string') return null;
+        if (href !== null && link !== href) return null;
+        href = link;
+      }
+    }
+    return href;
   }
 
   getText(): string {

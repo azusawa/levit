@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { createBlock, createDocument, createTextNode } from '../../src/core/model/document';
-import { sanitizeHref, normalizeHeadingLevel } from '../../src/core/model/sanitize';
+import { sanitizeHref, normalizeHeadingLevel, normalizeLinkInput } from '../../src/core/model/sanitize';
 import { EditorState } from '../../src/core/state/state';
 import { DOMReconciler } from '../../src/core/view/reconciler';
 import { documentFromJSON } from '../../src/serializers/json';
@@ -148,5 +148,27 @@ describe('Import', () => {
   it('Markdown import keeps safe links', () => {
     const doc = markdownToDocument('[click](https://example.com)');
     expect(linkMarks(doc)).toEqual([{ type: 'link', attrs: { href: 'https://example.com' } }]);
+  });
+});
+
+describe('normalizeLinkInput', () => {
+  it.each([
+    ['example.com', 'https://example.com'],
+    ['  example.com/docs  ', 'https://example.com/docs'],
+    ['www.example.com', 'https://www.example.com'],
+    ['https://example.com', 'https://example.com'],
+    ['mailto:me@example.com', 'mailto:me@example.com'],
+    ['/docs', '/docs'],
+    ['#top', '#top'],
+  ])('%j becomes %j', (input, expected) => {
+    expect(normalizeLinkInput(input)).toBe(expected);
+  });
+
+  it.each(['javascript:alert(1)', 'data:text/html,x'])('rejects unsafe %j', (input) => {
+    expect(normalizeLinkInput(input)).toBeNull();
+  });
+
+  it('returns an empty string for blank input (meaning: remove the link)', () => {
+    expect(normalizeLinkInput('   ')).toBe('');
   });
 });

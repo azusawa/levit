@@ -6,73 +6,51 @@ export interface InputRule {
   handler: (tr: Transaction, match: RegExpMatchArray, blockId: string) => boolean;
 }
 
+/** Clears the block, changes its type and puts the caret at its start. */
+function convertBlock(tr: Transaction, blockId: string, type: string, attrs: Record<string, any> = {}): boolean {
+  const idx = findBlockIndex(tr.doc, blockId);
+  if (idx === -1) return false;
+
+  const block = tr.doc.blocks[idx];
+  block.type = type;
+  block.attrs = attrs;
+  block.content = [{ text: '', marks: [] }];
+
+  tr.selection = {
+    anchor: { blockId, offset: 0 },
+    head: { blockId, offset: 0 },
+    isCollapsed: true,
+  };
+  tr.docChanged = true;
+  tr.selectionChanged = true;
+  return true;
+}
+
 export const defaultInputRules: InputRule[] = [
-  // Heading rule: # , ## , ### , etc.
+  // Heading: "# " to "###### "
   {
     match: /^(#{1,6})\s$/,
-    handler: (tr, match, blockId) => {
-      const level = match[1].length;
-      const idx = findBlockIndex(tr.doc, blockId);
-      if (idx === -1) return false;
-
-      const block = tr.doc.blocks[idx];
-      block.type = 'heading';
-      block.attrs = { level };
-      block.content = [{ text: '', marks: [] }];
-
-      tr.selection = {
-        anchor: { blockId, offset: 0 },
-        head: { blockId, offset: 0 },
-        isCollapsed: true,
-      };
-      tr.docChanged = true;
-      tr.selectionChanged = true;
-      return true;
-    },
+    handler: (tr, match, blockId) => convertBlock(tr, blockId, 'heading', { level: match[1].length }),
   },
-  // Blockquote rule: > 
+  // Blockquote: "> "
   {
     match: /^>\s$/,
-    handler: (tr, _match, blockId) => {
-      const idx = findBlockIndex(tr.doc, blockId);
-      if (idx === -1) return false;
-
-      const block = tr.doc.blocks[idx];
-      block.type = 'blockquote';
-      block.attrs = {};
-      block.content = [{ text: '', marks: [] }];
-
-      tr.selection = {
-        anchor: { blockId, offset: 0 },
-        head: { blockId, offset: 0 },
-        isCollapsed: true,
-      };
-      tr.docChanged = true;
-      tr.selectionChanged = true;
-      return true;
-    },
+    handler: (tr, _match, blockId) => convertBlock(tr, blockId, 'blockquote'),
   },
-  // Code block rule: ```
+  // Code block: ```
   {
     match: /^```$/,
-    handler: (tr, _match, blockId) => {
-      const idx = findBlockIndex(tr.doc, blockId);
-      if (idx === -1) return false;
-
-      const block = tr.doc.blocks[idx];
-      block.type = 'code_block';
-      block.attrs = {};
-      block.content = [{ text: '', marks: [] }];
-
-      tr.selection = {
-        anchor: { blockId, offset: 0 },
-        head: { blockId, offset: 0 },
-        isCollapsed: true,
-      };
-      tr.docChanged = true;
-      tr.selectionChanged = true;
-      return true;
-    },
+    handler: (tr, _match, blockId) => convertBlock(tr, blockId, 'code_block'),
+  },
+  // Bulleted list: "- " or "* "
+  {
+    match: /^[-*]\s$/,
+    handler: (tr, _match, blockId) => convertBlock(tr, blockId, 'bullet_list_item'),
+  },
+  // Numbered list: "1. "
+  {
+    match: /^\d+\.\s$/,
+    handler: (tr, _match, blockId) => convertBlock(tr, blockId, 'ordered_list_item'),
   },
 ];
 
@@ -84,6 +62,8 @@ export function applyInputRules(tr: Transaction, rules: InputRule[] = defaultInp
   if (idx === -1) return false;
 
   const block = tr.doc.blocks[idx];
+  // Code is literal text: "# " or "- " there must stay as typed.
+  if (block.type === 'code_block') return false;
   const text = getBlockText(block);
 
   for (const rule of rules) {

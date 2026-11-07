@@ -22,3 +22,20 @@ export function normalizeHeadingLevel(level: unknown): number {
   if (typeof n !== 'number' || !Number.isInteger(n)) return 1;
   return Math.min(Math.max(n, 1), 6);
 }
+
+/**
+ * Turns what a person typed into a link field into a safe href.
+ * Adds https:// to bare domains like "example.com".
+ * Returns '' for blank input and null when the URL is not allowed.
+ */
+export function normalizeLinkInput(input: string): string | null {
+  const value = input.trim();
+  if (value === '') return '';
+
+  const hasScheme = /^[a-z][a-z0-9+.-]*:/i.test(value);
+  const isRelative = /^[/#?.]/.test(value);
+  const looksLikeDomain = /^[^\s/]+\.[^\s/]+/.test(value);
+  if (!hasScheme && !isRelative && looksLikeDomain) return sanitizeHref(`https://${value}`);
+
+  return sanitizeHref(value);
+}

@@ -112,5 +112,27 @@ describe('DOM Reconciler & Selection Mapping', () => {
     const activeRange = window.getSelection()?.getRangeAt(0);
     expect(activeRange?.startOffset).toBe(3);
   });
+  it('maps selection boundaries that sit on inline elements, not text', () => {
+    const doc = createDocument([
+      createBlock('paragraph', {}, [
+        createTextNode('read '),
+        createTextNode('docs', [{ type: 'link', attrs: { href: 'https://x.example' } }]),
+        createTextNode(' now'),
+      ], 'b1'),
+    ]);
+    const reconciler = new DOMReconciler(container);
+    reconciler.render(EditorState.create({ doc }));
+
+    // Like a double-click on a link: the range is set on the <a> itself.
+    const range = document.createRange();
+    range.selectNodeContents(container.querySelector('a')!);
+    const sel = window.getSelection()!;
+    sel.removeAllRanges();
+    sel.addRange(range);
+
+    const editorSel = domSelectionToEditorSelection(container)!;
+    expect(editorSel.anchor.offset).toBe(5);
+    expect(editorSel.head.offset).toBe(9);
+  });
 });
 

@@ -66,6 +66,20 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
       icon: '💻',
       action: (ed) => ed.dispatch(ed.state.tr.setBlockType('code_block')),
     },
+    {
+      id: 'bullet-list',
+      title: 'Bulleted List',
+      description: 'Simple list with bullets',
+      icon: '•',
+      action: (ed) => ed.chain().setBlockType('bullet_list_item').run(),
+    },
+    {
+      id: 'ordered-list',
+      title: 'Numbered List',
+      description: 'List numbered in order',
+      icon: '1.',
+      action: (ed) => ed.chain().setBlockType('ordered_list_item').run(),
+    },
   ];
 
   function renderList() {

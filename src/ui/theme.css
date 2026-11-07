@@ -97,8 +97,9 @@ levit-editor {
 }
 
 /* Empty block placeholder */
-.levit-block.is-empty:first-child:last-child::before,
-.levit-editor-root[data-placeholder] .levit-block.is-empty:first-child::before {
+/* List items draw their marker with ::before, so they never show a placeholder. */
+.levit-block.is-empty:first-child:last-child:not(.levit-list-item)::before,
+.levit-editor-root[data-placeholder] .levit-block.is-empty:first-child:not(.levit-list-item)::before {
   content: attr(data-placeholder);
   position: absolute;
   left: 0;
@@ -108,7 +109,7 @@ levit-editor {
   user-select: none;
 }
 
-.levit-editor-root[data-placeholder] .levit-block.is-empty::before {
+.levit-editor-root[data-placeholder] .levit-block.is-empty:not(.levit-list-item)::before {
   content: attr(data-placeholder);
   position: absolute;
   left: 0;
@@ -143,6 +144,40 @@ h3.levit-block-heading {
   line-height: 1.4;
   margin-top: 0.8em;
   margin-bottom: 0.3em;
+}
+
+/* Lists: each item is its own block; the marker is drawn with ::before.
+   The reconciler writes the number of ordered items into data-number. */
+.levit-list-item {
+  padding-left: 1.6em;
+  margin-bottom: 0.25em;
+}
+
+.levit-list-item::before {
+  position: absolute;
+  left: 0;
+  width: 1.3em;
+  text-align: right;
+  color: var(--levit-text-muted);
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Give the block after a list the same gap a paragraph would get. */
+.levit-list-item + .levit-block:not(.levit-list-item) {
+  margin-top: 0.75em;
+}
+
+.levit-block-bullet_list_item::before {
+  content: "•";
+  text-align: center;
+  color: var(--levit-text);
+  font-weight: 700;
+}
+
+.levit-block-ordered_list_item::before {
+  content: attr(data-number) ".";
+  font-variant-numeric: tabular-nums;
 }
 
 /* Blockquote */
@@ -241,6 +276,30 @@ a:hover {
 
 .levit-bubble-btn:hover {
   background-color: var(--levit-border);
+}
+
+.levit-bubble-btn.is-active {
+  color: var(--levit-primary);
+}
+
+.levit-bubble-link-input {
+  width: 240px;
+  background: var(--levit-bg);
+  border: 1px solid var(--levit-border);
+  border-radius: 4px;
+  color: var(--levit-text);
+  font-family: var(--levit-font-sans);
+  font-size: 13px;
+  padding: 4px 8px;
+  outline: none;
+}
+
+.levit-bubble-link-input:focus {
+  border-color: var(--levit-primary);
+}
+
+.levit-bubble-link-input[aria-invalid="true"] {
+  border-color: #ef4444;
 }
 
 /* Slash Command Menu */

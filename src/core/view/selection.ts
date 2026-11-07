@@ -15,41 +15,32 @@ function findAncestorBlock(node: Node | null, container: HTMLElement): HTMLEleme
 }
 
 /**
- * Calculates character offset inside a block element up to targetNode at targetOffset.
+ * Counts the characters in a block before a DOM boundary point.
+ * The point may be in a text node or on an element (e.g. a range set on <a>).
  */
 function getOffsetInBlock(blockEl: HTMLElement, targetNode: Node, targetOffset: number): number {
-  let offset = 0;
-  const walker = document.createTreeWalker(blockEl, NodeFilter.SHOW_TEXT);
-  let textNode: Node | null;
-
-  while ((textNode = walker.nextNode())) {
-    if (textNode === targetNode) {
-      return offset + targetOffset;
-    }
-    offset += (textNode.nodeValue || '').length;
-  }
-
-  // If targetNode is an element (e.g. block element or empty block <br>)
-  if (targetNode === blockEl) {
-    let childOffset = 0;
-    for (let i = 0; i < targetOffset && i < blockEl.childNodes.length; i++) {
-      const child = blockEl.childNodes[i];
-      childOffset += (child.textContent || '').length;
-    }
-    return childOffset;
-  }
-
-  return offset;
+  const before = document.createRange();
+  before.selectNodeContents(blockEl);
+  before.setEnd(targetNode, targetOffset);
+  return before.toString().length;
 }
 
 export function domSelectionToEditorSelection(container: HTMLElement): EditorSelection | null {
   const sel = window.getSelection();
   if (!sel || sel.rangeCount === 0) return null;
 
-  const anchorNode = sel.anchorNode;
-  const anchorOffset = sel.anchorOffset;
-  const focusNode = sel.focusNode;
-  const focusOffset = sel.focusOffset;
+  // Read both ends from the Range, and use anchor only to tell the direction.
+  // Some DOM implementations (e.g. happy-dom) report a wrong focusNode.
+  const range = sel.getRangeAt(0);
+  const isBackward =
+    !range.collapsed &&
+    sel.anchorNode === range.endContainer &&
+    sel.anchorOffset === range.endOffset;
+
+  const anchorNode = isBackward ? range.endContainer : range.startContainer;
+  const anchorOffset = isBackward ? range.endOffset : range.startOffset;
+  const focusNode = isBackward ? range.startContainer : range.endContainer;
+  const focusOffset = isBackward ? range.startOffset : range.endOffset;
 
   if (!anchorNode || !focusNode) return null;
   if (!container.contains(anchorNode) || !container.contains(focusNode)) return null;

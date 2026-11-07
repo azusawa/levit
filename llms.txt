@@ -63,6 +63,21 @@ createSlashMenu(editor);
 }
 ```
 
+### Block types
+`paragraph`, `heading` (`attrs.level` 1-6), `blockquote`, `code_block`,
+`bullet_list_item`, `ordered_list_item`.
+Lists are flat: each list item is its own block, and consecutive items of the
+same type form one list (exported as one `<ul>`/`<ol>` or one Markdown list).
+
+### Marks
+`bold`, `italic`, `underline`, `strike`, `code`, `link` (`attrs.href`).
+Link hrefs must be `http:`, `https:`, `mailto:` or relative; anything else
+(e.g. `javascript:`) is dropped on render, import and export.
+
+### Markdown shortcuts (typed at the start of a block)
+`# ` to `###### ` heading, `> ` quote, ``` code block, `- ` or `* ` bulleted
+list, `1. ` numbered list. Shortcuts do not apply inside code blocks.
+
 ## 3. Serializers & Formats
 - `documentToJSON(doc)` / `documentFromJSON(json)`: Clean, deterministic block JSON
 - `documentToMarkdown(doc)` / `markdownToDocument(markdown)`: Lossless Markdown
@@ -75,6 +90,11 @@ editor.chain()
   .toggleBold()
   .setHeading(2)
   .run();
+
+editor.chain().setBlockType('bullet_list_item').run();
+editor.chain().setLink('https://example.com').run(); // applies to the selection
+editor.chain().unsetLink().run();
+editor.getActiveLink(); // href of the selected link, or null
 ```
 
 ## 5. AI Streaming API

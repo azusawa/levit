@@ -1,9 +1,11 @@
 import { BlockNode, DocumentData, InlineNode } from '../core/model/types';
-import { createBlock, createDocument, createTextNode } from '../core/model/document';
+import { createBlock, createDocument, createTextNode, isListItem } from '../core/model/document';
 import { normalizeHeadingLevel, sanitizeHref } from '../core/model/sanitize';
 
 export function documentToMarkdown(doc: DocumentData): string {
-  const lines: string[] = [];
+  let out = '';
+  let prevType: string | null = null;
+  let number = 0;
 
   for (const block of doc.blocks) {
     let blockText = '';
@@ -24,25 +26,40 @@ export function documentToMarkdown(doc: DocumentData): string {
       blockText += t;
     }
 
+    let line: string;
     switch (block.type) {
       case 'heading': {
         const level = normalizeHeadingLevel(block.attrs?.level);
-        lines.push(`${'#'.repeat(level)} ${blockText}`);
+        line = `${'#'.repeat(level)} ${blockText}`;
         break;
       }
       case 'blockquote':
-        lines.push(`> ${blockText}`);
+        line = `> ${blockText}`;
         break;
       case 'code_block':
-        lines.push(`\`\`\`\n${blockText}\n\`\`\``);
+        line = `\`\`\`\n${blockText}\n\`\`\``;
+        break;
+      case 'bullet_list_item':
+        line = `- ${blockText}`;
+        break;
+      case 'ordered_list_item':
+        number = prevType === 'ordered_list_item' ? number + 1 : 1;
+        line = `${number}. ${blockText}`;
         break;
       default:
-        lines.push(blockText);
+        line = blockText;
         break;
     }
+
+    // Items of the same list sit on consecutive lines; everything else is a paragraph.
+    if (prevType !== null) {
+      out += prevType === block.type && isListItem(block.type) ? '\n' : '\n\n';
+    }
+    out += line;
+    prevType = block.type;
   }
 
-  return lines.join('\n\n');
+  return out;
 }
 
 /**
@@ -104,6 +121,18 @@ export function markdownToDocument(markdown: string): DocumentData {
     if (headingMatch) {
       const level = headingMatch[1].length;
       blocks.push(createBlock('heading', { level }, parseInlineMarkdown(headingMatch[2])));
+      continue;
+    }
+
+    // List items: every line starts with "-", "*", "+" or "1."
+    const lines = trimmed.split(/\r?\n/);
+    const listLine = /^\s*(?:([-*+])|\d+\.)\s+(.*)$/;
+    if (lines.every((l) => listLine.test(l))) {
+      for (const l of lines) {
+        const m = l.match(listLine)!;
+        const type = m[1] ? 'bullet_list_item' : 'ordered_list_item';
+        blocks.push(createBlock(type, {}, parseInlineMarkdown(m[2])));
+      }
       continue;
     }
 
