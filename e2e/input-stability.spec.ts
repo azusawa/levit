@@ -32,14 +32,36 @@ async function caretAt(page: Page, blockIndex: number, offset: number) {
   );
 }
 
-/** Fires a paste event with the given clipboard data, like Cmd/Ctrl+V would. */
+/**
+ * Pastes exactly `data` with a real Cmd/Ctrl+V. The data is put on the
+ * clipboard by a real Cmd/Ctrl+C on a helper element whose copy handler sets
+ * it. A script-made paste event would not do: Firefox hides clipboard data
+ * from untrusted events.
+ */
 async function pasteData(page: Page, data: Record<string, string>) {
+  // Let a pending selectionchange (e.g. after an arrow key) reach the editor first.
+  await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => r(null))));
   await page.evaluate((d) => {
-    const dt = new DataTransfer();
-    for (const [type, value] of Object.entries(d)) dt.setData(type, value);
-    const target = getSelection()!.anchorNode!.parentElement ?? document.querySelector('#editor')!;
-    target.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+    const src = document.createElement('div');
+    src.id = 'clipboard-source';
+    src.textContent = 'clipboard source';
+    document.body.appendChild(src);
+    src.addEventListener('copy', (e) => {
+      for (const [type, value] of Object.entries(d)) e.clipboardData!.setData(type, value);
+      e.preventDefault();
+    }, { once: true });
+    const range = document.createRange();
+    range.selectNodeContents(src);
+    getSelection()!.removeAllRanges();
+    getSelection()!.addRange(range);
   }, data);
+  await page.keyboard.press('ControlOrMeta+c');
+  // Back to the editor, at the selection it had before.
+  await page.evaluate(() => {
+    document.getElementById('clipboard-source')!.remove();
+    (window as any).editor.focus();
+  });
+  await page.keyboard.press('ControlOrMeta+v');
 }
 
 test.beforeEach(async ({ page }) => {
