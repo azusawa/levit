@@ -372,12 +372,20 @@ export class Transaction {
     const first = pasted[0];
     const last = pasted[pasted.length - 1];
     if (this.isAtom(first.type) || this.isAtom(last.type)) {
-      block.content = left;
+      // Text before the first atom joins the left half, like any paste.
+      const inserted = [...pasted];
+      if (!this.isAtom(first.type)) {
+        block.content = normalizeInlineNodes([...left, ...first.content]);
+        inserted.shift();
+      } else {
+        block.content = left;
+      }
       const after: BlockNode[] = [];
       if (this.isAtom(last.type)) after.push(createBlock(block.type, { ...block.attrs }, right));
       else last.content = normalizeInlineNodes([...last.content, ...right]);
-      this.doc.blocks.splice(blockIdx + 1, 0, ...pasted, ...after);
-      if (block.type === 'paragraph' && getBlockText(block) === '') this.doc.blocks.splice(blockIdx, 1);
+      this.doc.blocks.splice(blockIdx + 1, 0, ...inserted, ...after);
+      // An empty left half (caret at the start, or an empty line) goes away.
+      if (getBlockText(block) === '') this.doc.blocks.splice(blockIdx, 1);
       if (after[0]) this.setCaret(after[0].id, 0);
       else this.setCaret(last.id, getBlockText(last).length - getBlockText({ ...last, content: right }).length);
       this.docChanged = true;
@@ -455,6 +463,13 @@ export class Transaction {
    * caret moves to the block after it, which is a new paragraph if needed.
    */
   insertAtom(type: string, attrs: Record<string, any> = {}): this {
+    // Only blocks without text go here, and images keep their src check.
+    if (!this.isAtom(type)) return this;
+    if (type === 'image') {
+      const src = sanitizeImageSrc(attrs.src);
+      if (!src) return this;
+      attrs = { ...attrs, src };
+    }
     if (!this.selection.isCollapsed) this.deleteRange();
     let idx = findBlockIndex(this.doc, this.selection.anchor.blockId);
     if (idx === -1) return this;

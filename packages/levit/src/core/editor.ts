@@ -232,6 +232,8 @@ export class LevitEditor {
   /** The messages in use: the defaults with the messages option on top. */
   public readonly messages: LevitMessages;
   private cleanups: (() => void)[] = [];
+  private originalAttributes = new Map<string, string | null>();
+  private addedRootClass = false;
   private reconciler: DOMReconciler;
   private controller: InputController;
   private guard: DOMGuard;
@@ -254,6 +256,12 @@ export class LevitEditor {
         return true;
       };
     }
+
+    // Remember the attributes the editor is about to set, so destroy() can
+    // give the element back as it was.
+    const owned = ['contenteditable', 'spellcheck', 'data-placeholder', 'aria-placeholder', 'role', 'aria-multiline', 'aria-label'];
+    for (const name of owned) this.originalAttributes.set(name, this.container.getAttribute(name));
+    this.addedRootClass = !this.container.classList.contains('levit-editor-root');
 
     // Configure container
     this.container.classList.add('levit-editor-root');
@@ -295,9 +303,16 @@ export class LevitEditor {
       this.domListeners.push([name, listener]);
     }
 
-    for (const plugin of this.schema.plugins) {
-      const cleanup = plugin.setup?.(this);
-      if (typeof cleanup === 'function') this.cleanups.push(cleanup);
+    try {
+      for (const plugin of this.schema.plugins) {
+        const cleanup = plugin.setup?.(this);
+        if (typeof cleanup === 'function') this.cleanups.push(cleanup);
+      }
+    } catch (error) {
+      // No editor is returned, so nobody could call destroy(): undo the
+      // setup done so far and give the element back as it was.
+      this.destroy();
+      throw error;
     }
   }
 
@@ -483,6 +498,7 @@ export class LevitEditor {
     this.state = EditorState.create({ doc, schema: this.schema });
     this.render();
     this.notifyUpdate();
+    this.notifySelection();
   }
 
   focus(): void {
@@ -501,9 +517,14 @@ export class LevitEditor {
     this.events.emit('destroy', { editor: this });
     this.events.clear();
     for (const [name, listener] of this.domListeners) this.container.removeEventListener(name, listener);
-    this.guard.disconnect();
-    this.controller.destroy();
-    this.container.innerHTML = '';
+    this.guard?.disconnect();
+    this.controller?.destroy();
+    this.container.replaceChildren();
+    for (const [name, value] of this.originalAttributes) {
+      if (value === null) this.container.removeAttribute(name);
+      else this.container.setAttribute(name, value);
+    }
+    if (this.addedRootClass) this.container.classList.remove('levit-editor-root');
   }
 }
 

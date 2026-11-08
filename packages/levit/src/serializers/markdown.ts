@@ -1,12 +1,16 @@
 import { BlockNode, DocumentData, InlineNode } from '../core/model/types.js';
-import { createBlock, createDocument, createTextNode, isListItem, listIndent } from '../core/model/document.js';
+import {
+  BUILT_IN_BLOCK_TYPES,
+  createBlock,
+  createDocument,
+  createTextNode,
+  isListItem,
+  listIndent,
+} from '../core/model/document.js';
 import { schemaFor, type SerializerOptions } from '../core/plugin/plugin.js';
 import { normalizeCodeLanguage, normalizeHeadingLevel, sanitizeHref, sanitizeImageSrc } from '../core/model/sanitize.js';
 
-const BUILT_IN_MARKDOWN_BLOCKS = new Set([
-  'paragraph', 'heading', 'blockquote', 'code_block', 'horizontal_rule', 'image',
-  'bullet_list_item', 'ordered_list_item', 'task_list_item',
-]);
+const BUILT_IN_MARKDOWN_BLOCKS = new Set(BUILT_IN_BLOCK_TYPES);
 
 export function documentToMarkdown(doc: DocumentData, options: SerializerOptions = {}): string {
   const schema = schemaFor(options.plugins);

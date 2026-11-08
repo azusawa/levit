@@ -2,7 +2,7 @@ import type { BlockNode, InlineMark } from '../model/types.js';
 import type { Transaction } from '../state/transaction.js';
 import type { LevitEditor } from '../editor.js';
 import type { InputRule } from './input-rules.js';
-import { ATOM_BLOCK_TYPES, LIST_ITEM_TYPES } from '../model/document.js';
+import { ATOM_BLOCK_TYPES, BUILT_IN_BLOCK_TYPES } from '../model/document.js';
 
 /** A block type added by a plugin. */
 export interface BlockSpec {
@@ -79,9 +79,7 @@ export interface LevitPlugin {
   setup?: (editor: LevitEditor) => void | (() => void);
 }
 
-const BUILT_IN_BLOCKS = new Set<string>([
-  'paragraph', 'heading', 'blockquote', 'code_block', ...LIST_ITEM_TYPES, ...ATOM_BLOCK_TYPES,
-]);
+const BUILT_IN_BLOCKS = new Set(BUILT_IN_BLOCK_TYPES);
 const BUILT_IN_MARKS = new Set(['bold', 'italic', 'underline', 'strike', 'highlight', 'code', 'link']);
 
 /** Everything the plugins of one editor add, looked up by name. */
@@ -141,7 +139,8 @@ export function schemaFor(plugins?: readonly LevitPlugin[]): Schema {
 
 /** True when a keydown matches a shortcut like 'Mod-Shift-k' or 'Alt-Enter'. */
 export function matchesShortcut(e: KeyboardEvent, shortcut: string): boolean {
-  const parts = shortcut.split('-');
+  // 'Mod--' binds the minus key: the last '-' is the key, not a separator.
+  const parts = shortcut.endsWith('--') ? [...shortcut.slice(0, -2).split('-'), '-'] : shortcut.split('-');
   const key = parts.pop()!.toLowerCase();
   const want = { ctrl: false, meta: false, alt: false, shift: false };
   for (const part of parts) {
@@ -160,5 +159,8 @@ export function matchesShortcut(e: KeyboardEvent, shortcut: string): boolean {
   const usesMod = parts.some((p) => p.toLowerCase() === 'mod');
   if (!usesMod && (e.metaKey !== want.meta || e.ctrlKey !== want.ctrl)) return false;
   if (e.altKey !== want.alt || e.shiftKey !== want.shift) return false;
-  return e.key.toLowerCase() === key || e.code.toLowerCase() === `key${key}`;
+  // e.code catches keys whose character changes with Shift or Alt
+  // (Shift+1 gives '!', Alt+letter on macOS gives a symbol).
+  const code = (e.code ?? '').toLowerCase();
+  return e.key.toLowerCase() === key || code === `key${key}` || code === `digit${key}` || (key === '-' && code === 'minus');
 }

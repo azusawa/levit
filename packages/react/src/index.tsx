@@ -13,8 +13,7 @@ import {
   createBubbleMenu,
   createLevitEditor,
   createSlashMenu,
-  documentFromJSON,
-  documentToJSON,
+  sameContent,
   type DocumentData,
   type EditorOptions,
   type LevitEditor as Editor,
@@ -85,11 +84,6 @@ export interface LevitEditorProps extends Omit<UseLevitEditorOptions, 'initialCo
   id?: string;
 }
 
-/** The document without block ids, to compare content only. */
-function contentKey(doc: DocumentData): string {
-  return JSON.stringify(documentToJSON(documentFromJSON(doc)).blocks.map(({ id: _id, ...block }) => block));
-}
-
 /**
  * A Levit editor with its menus. Use `defaultValue` for an uncontrolled
  * editor, or `value` with `onChange` for a controlled one. The ref gives the
@@ -112,7 +106,7 @@ export const LevitEditor = forwardRef<Editor | null, LevitEditorProps>(function 
   // value that comes back from onChange does not reset the caret.
   useEffect(() => {
     if (!editor || value === undefined) return;
-    if (contentKey(value) !== contentKey(editor.getJSON())) editor.setJSON(value);
+    if (!sameContent(value, editor.getJSON())) editor.setJSON(value);
   }, [editor, value]);
 
   return <div ref={elementRef} className={className} style={style} id={id} />;

@@ -14,8 +14,7 @@ import {
   createBubbleMenu,
   createLevitEditor,
   createSlashMenu,
-  documentFromJSON,
-  documentToJSON,
+  sameContent,
   type DocumentData,
   type EditorOptions,
   type LevitEditor as Editor,
@@ -68,11 +67,6 @@ export function useLevitEditor(options: UseLevitEditorOptions = {}): {
   return { element, editor };
 }
 
-/** The document without block ids, to compare content only. */
-function contentKey(doc: DocumentData): string {
-  return JSON.stringify(documentToJSON(documentFromJSON(doc)).blocks.map(({ id: _id, ...block }) => block));
-}
-
 /**
  * A Levit editor with its menus. Bind the document with v-model; listen to
  * `ready` for the editor instance, or read it from the component ref.
@@ -117,7 +111,7 @@ export const LevitEditor = defineComponent({
       () => props.modelValue,
       (value) => {
         if (!editor.value || value === undefined) return;
-        if (contentKey(value) !== contentKey(editor.value.getJSON())) editor.value.setJSON(value);
+        if (!sameContent(value, editor.value.getJSON())) editor.value.setJSON(value);
       }
     );
 

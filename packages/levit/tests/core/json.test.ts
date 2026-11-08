@@ -48,3 +48,24 @@ describe('JSON Serialization & Deserialization', () => {
   });
 });
 
+
+describe('sameContent', () => {
+  it('compares documents without their block ids', async () => {
+    const { sameContent } = await import('../../src/serializers/json');
+    const a = { version: 1, blocks: [{ id: 'x', type: 'paragraph', content: [{ text: 'hi' }] }] };
+    const b = { version: 1, blocks: [{ id: 'y', type: 'paragraph', attrs: {}, content: [{ text: 'hi', marks: [] }] }] };
+    const c = { version: 1, blocks: [{ id: 'x', type: 'paragraph', content: [{ text: 'bye' }] }] };
+    expect(sameContent(a, b)).toBe(true);
+    expect(sameContent(a, c)).toBe(false);
+  });
+});
+
+describe('built-in block types', () => {
+  it('are listed once and used by the plugin check and both serializers', async () => {
+    const { BUILT_IN_BLOCK_TYPES } = await import('../../src/core/model/document');
+    const { Schema } = await import('../../src/core/plugin/plugin');
+    for (const type of BUILT_IN_BLOCK_TYPES) {
+      expect(() => new Schema([{ name: 'x', blocks: [{ type }] }])).toThrow(/built in/);
+    }
+  });
+});

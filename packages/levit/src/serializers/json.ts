@@ -45,3 +45,12 @@ export function documentFromJSON(json: any): DocumentData {
   return createDocument(blocks);
 }
 
+/**
+ * True when two documents hold the same content, ignoring block ids. Used by
+ * the React and Vue wrappers to tell a new value from the one they emitted.
+ */
+export function sameContent(a: unknown, b: unknown): boolean {
+  const key = (doc: unknown) =>
+    JSON.stringify(documentToJSON(documentFromJSON(doc)).blocks.map(({ id: _id, ...block }) => block));
+  return key(a) === key(b);
+}

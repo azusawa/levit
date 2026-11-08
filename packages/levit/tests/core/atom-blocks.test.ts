@@ -5,6 +5,7 @@ import { DOMReconciler } from '../../src/core/view/reconciler';
 import { applyInputRules } from '../../src/core/plugin/input-rules';
 import { createSlashMenu } from '../../src/plugins/slash-menu';
 import { sanitizeImageSrc } from '../../src/core/model/sanitize';
+import { Schema } from '../../src/core/plugin/plugin';
 import { createBlock, createDocument, createTextNode, getBlockText } from '../../src/core/model/document';
 import { documentToHTML, htmlToDocument } from '../../src/serializers/html';
 import { documentToMarkdown, markdownToDocument } from '../../src/serializers/markdown';
@@ -342,5 +343,48 @@ describe('insertFragment with an image', () => {
     let state = stateWith([para('a', '')], caret('a', 0));
     state = state.tr.insertFragment([img('x')]).apply();
     expect(types(state.doc)).toEqual(['image', 'paragraph']);
+  });
+});
+
+describe('review fixes: insertAtom', () => {
+  it('does nothing for a type that is not an atom', () => {
+    const state = stateWith([para('a', '')]);
+    expect(state.tr.insertAtom('paragraph', {}).docChanged).toBe(false);
+    expect(state.tr.insertAtom('unknown', {}).docChanged).toBe(false);
+  });
+
+  it('checks an image src like insertImage does', () => {
+    const state = stateWith([para('a', '')]);
+    expect(state.tr.insertAtom('image', { src: 'javascript:alert(1)' }).docChanged).toBe(false);
+    const ok = state.tr.insertAtom('image', { src: 'https://x.test/a.png' });
+    expect(ok.doc.blocks[0].attrs).toEqual({ src: 'https://x.test/a.png' });
+  });
+});
+
+describe('review fixes: pasting text then an image', () => {
+  it('joins the first pasted text to the left half of the line', () => {
+    let state = stateWith([para('a', 'abcd')], caret('a', 2));
+    state = state.tr.insertFragment([para('x', 'XY'), img('i')]).apply();
+    expect(summary(state.doc)).toEqual([['paragraph', 'abXY'], ['image', ''], ['paragraph', 'cd']]);
+  });
+
+  it('an image pasted into an empty heading leaves no empty heading behind', () => {
+    let state = stateWith([createBlock('heading', { level: 1 }, [createTextNode('')], 'h')], caret('h', 0));
+    state = state.tr.insertFragment([img('i')]).apply();
+    expect(types(state.doc)).toEqual(['image', 'heading']);
+  });
+});
+
+describe('review fixes: a reused element that stops being an atom', () => {
+  it('becomes editable again', () => {
+    const container = document.createElement('div');
+    const plugins = [{ name: 'card', blocks: [{ type: 'card', atom: true, tag: 'p' }] }];
+    const schema = new Schema(plugins);
+    const reconciler = new DOMReconciler(container, { schema });
+    reconciler.render(EditorState.create({ doc: createDocument([createBlock('card', {}, [createTextNode('')], 'c')]), schema }));
+    expect(container.firstElementChild!.getAttribute('contenteditable')).toBe('false');
+    reconciler.render(EditorState.create({ doc: createDocument([para('c', 'text')]), schema }));
+    expect(container.firstElementChild!.hasAttribute('contenteditable')).toBe(false);
+    expect(container.firstElementChild!.classList.contains('levit-atom')).toBe(false);
   });
 });

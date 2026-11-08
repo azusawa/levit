@@ -150,6 +150,11 @@ export function isAtomBlock(type: string): boolean {
   return (ATOM_BLOCK_TYPES as readonly string[]).includes(type);
 }
 
+/** Every block type Levit knows without plugins. */
+export const BUILT_IN_BLOCK_TYPES: readonly string[] = [
+  'paragraph', 'heading', 'blockquote', 'code_block', ...LIST_ITEM_TYPES, ...ATOM_BLOCK_TYPES,
+];
+
 /** Deepest nesting level a list item can have. */
 export const MAX_LIST_INDENT = 8;
 

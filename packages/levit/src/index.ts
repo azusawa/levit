@@ -58,7 +58,7 @@ export type {
 } from './core/model/types.js';
 
 // Serializers
-export { documentToJSON, documentFromJSON } from './serializers/json.js';
+export { documentToJSON, documentFromJSON, sameContent } from './serializers/json.js';
 export { documentToMarkdown, markdownToDocument } from './serializers/markdown.js';
 export { documentToHTML, htmlToDocument } from './serializers/html.js';
 

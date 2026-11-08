@@ -107,3 +107,13 @@ describe('editor events', () => {
     expect(onError).toHaveBeenCalledWith(expect.objectContaining({ message: 'boom' }));
   });
 });
+
+describe('review fixes', () => {
+  it('setJSON also fires "selectionUpdate", since the selection moves to the new document', () => {
+    const selection = vi.fn();
+    editor.on('selectionUpdate', selection);
+    editor.setJSON({ version: 1, blocks: [{ id: 'n', type: 'paragraph', content: [{ text: 'new' }] }] });
+    expect(selection).toHaveBeenCalledTimes(1);
+    expect(selection.mock.calls[0][0].selection.anchor.blockId).toBe('n');
+  });
+});

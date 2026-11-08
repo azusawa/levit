@@ -182,9 +182,13 @@ export class DOMReconciler {
     if (isListItem(block.type)) el.classList.add('levit-list-item');
     const spec = this.schema.blocks.get(block.type);
     if (spec?.className) el.classList.add(...spec.className.split(/\s+/).filter(Boolean));
+    // An element can be reused when a block changes type but keeps its tag,
+    // so clear contenteditable for blocks that are not atoms.
     if (this.schema.isAtom(block.type)) {
       el.classList.add('levit-atom');
       el.contentEditable = 'false';
+    } else {
+      el.removeAttribute('contenteditable');
     }
     const indent = listIndent(block);
     if (indent > 0) el.setAttribute('data-indent', String(indent));

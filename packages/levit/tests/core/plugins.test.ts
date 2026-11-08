@@ -269,3 +269,72 @@ describe('plugins in HTML and Markdown', () => {
     expect(target.state.doc.blocks.map((b) => b.type)).toContain('callout');
   });
 });
+
+describe('review fixes: plugin blocks in pasted HTML', () => {
+  const embed: LevitPlugin = {
+    name: 'embed',
+    blocks: [
+      {
+        type: 'embed',
+        atom: true,
+        toHTML: (block) => `<iframe src="${block.attrs?.src}"></iframe>`,
+        parseHTML: (el) => (el.tagName === 'IFRAME' ? { src: el.getAttribute('src') } : null),
+      },
+    ],
+  };
+  const types = (html: string) => htmlToDocument(html, { plugins: [embed] }).blocks.map((b) => b.type);
+
+  it('keeps a claimed element inside a list item, even when its tag is normally skipped', () => {
+    expect(types('<ul><li>Intro<iframe src="https://v.test/1"></iframe></li></ul>')).toEqual(['bullet_list_item', 'embed']);
+  });
+
+  it('pulls a claimed element out of a paragraph, like an image', () => {
+    expect(types('<p>text<iframe src="https://v.test/1"></iframe>after</p>')).toEqual(['paragraph', 'embed', 'paragraph']);
+  });
+
+  it('asks each plugin about each element only once', () => {
+    const parseHTML = vi.fn(() => null);
+    const counted: LevitPlugin = { name: 'count', blocks: [{ type: 'x', parseHTML }] };
+    const html = '<div><div><div><b><p>a</p></b></div></div></div><ul><li>b<ul><li>c</li></ul></li></ul>';
+    const parsed = new DOMParser().parseFromString(html, 'text/html');
+    const elements = parsed.body.querySelectorAll('*').length;
+    htmlToDocument(html, { plugins: [counted] });
+    expect(parseHTML.mock.calls.length).toBeLessThanOrEqual(elements);
+  });
+});
+
+describe('review fixes: setup that throws', () => {
+  it('cleans up everything already set up and leaves the element as it was', () => {
+    const cleanup = vi.fn();
+    const plugins: LevitPlugin[] = [
+      { name: 'a', setup: () => cleanup },
+      { name: 'b', setup: () => { throw new Error('bad setup'); } },
+    ];
+    expect(() => new LevitEditor({ element: container, plugins })).toThrow('bad setup');
+    expect(cleanup).toHaveBeenCalledTimes(1);
+    expect(container.isContentEditable || container.getAttribute('contenteditable') === 'true').toBe(false);
+    expect(container.hasAttribute('role')).toBe(false);
+  });
+});
+
+describe('review fixes: shortcuts', () => {
+  const press = (key: string, code: string, init: KeyboardEventInit = {}) => {
+    const e = new KeyboardEvent('keydown', { key, code, bubbles: true, cancelable: true, ...init });
+    container.dispatchEvent(e);
+    return e;
+  };
+
+  it('matches digit keys by their code when Shift changes the character', () => {
+    const run = vi.fn(() => true);
+    editorWith([para('p', '')], [{ name: 'k', keymap: { 'Mod-Shift-1': run } }]);
+    press('!', 'Digit1', { ctrlKey: true, shiftKey: true });
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+
+  it('can bind the minus key', () => {
+    const run = vi.fn(() => true);
+    editorWith([para('p', '')], [{ name: 'k', keymap: { 'Mod--': run } }]);
+    press('-', 'Minus', { ctrlKey: true });
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+});

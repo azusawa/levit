@@ -1,5 +1,6 @@
 import { BlockNode, DocumentData, InlineMark, InlineNode } from '../core/model/types.js';
 import {
+  BUILT_IN_BLOCK_TYPES,
   createBlock,
   createDocument,
   createTextNode,
@@ -16,10 +17,7 @@ const LISTS: Record<string, { tag: string; open: string }> = {
   task_list_item: { tag: 'ul', open: '<ul class="levit-task-list">' },
 };
 
-const BUILT_IN_HTML_BLOCKS = new Set([
-  'paragraph', 'heading', 'blockquote', 'code_block', 'horizontal_rule', 'image',
-  'bullet_list_item', 'ordered_list_item', 'task_list_item',
-]);
+const BUILT_IN_HTML_BLOCKS = new Set(BUILT_IN_BLOCK_TYPES);
 
 export function documentToHTML(doc: DocumentData, options: SerializerOptions = {}): string {
   const schema = schemaFor(options.plugins);
@@ -221,6 +219,11 @@ function claimBlock(node: Node): { spec: BlockSpec; attrs: Record<string, any> }
   return null;
 }
 
+/** True when an element has an image or a plugin block somewhere inside it. */
+function holdsBlocks(el: Element): boolean {
+  return Array.from(el.querySelectorAll('*')).some((child) => tagOf(child) === 'img' || claimBlock(child) !== null);
+}
+
 function isBlockElement(node: Node): boolean {
   return node.nodeType === Node.ELEMENT_NODE && (BLOCK_TAGS.has(tagOf(node)) || claimBlock(node) !== null);
 }
@@ -270,10 +273,10 @@ function readBlockElement(el: Element, ctx: Context, out: BlockNode[]): void {
   } else if (tag === 'img') {
     const src = sanitizeImageSrc(el.getAttribute('src'));
     if (src) out.push(createBlock('image', { src, alt: el.getAttribute('alt') ?? '' }));
-  } else if (/^h[1-6]$/.test(tag) || (LEAF_TAGS.has(tag) && !el.querySelector('img'))) {
+  } else if (/^h[1-6]$/.test(tag) || (LEAF_TAGS.has(tag) && !holdsBlocks(el))) {
     readLeaf(el, tag, ctx, out);
   } else if (LEAF_TAGS.has(tag)) {
-    // A paragraph with images: its text and images become separate blocks.
+    // A paragraph with images (or plugin blocks): its text and those become separate blocks.
     readBlocks(el, ctx, out);
   } else if (tag === 'blockquote') {
     readBlocks(el, { type: 'blockquote' }, out);
@@ -334,7 +337,7 @@ function readListItem(li: Element, ctx: Context, out: BlockNode[]): void {
     if (content.some((n) => n.text.length > 0) || rest.length === 0) out.push(createBlock(type, attrsFor(ctx), content));
   }
   for (const child of rest) {
-    if (child.nodeType === Node.ELEMENT_NODE && SKIP_TAGS.has(tagOf(child))) continue;
+    if (child.nodeType === Node.ELEMENT_NODE && SKIP_TAGS.has(tagOf(child)) && !claimBlock(child)) continue;
     if (isBlockElement(child)) readBlockElement(child as Element, ctx, out);
     else if (wrapsBlocks(child)) readBlocks(child, ctx, out);
     else {
