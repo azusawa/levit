@@ -4,6 +4,7 @@ import { Transaction } from './state/transaction.js';
 import { DOMReconciler } from './view/reconciler.js';
 import { restoreDOMSelection } from './view/selection.js';
 import { InputController } from './view/controller.js';
+import { DOMGuard } from './view/dom-guard.js';
 import { documentFromJSON, documentToJSON } from '../serializers/json.js';
 import { findBlockIndex, getBlockText, sliceBlockContent } from './model/document.js';
 import { applyInputRules } from './plugin/input-rules.js';
@@ -144,6 +145,7 @@ export class LevitEditor {
   public readonly container: HTMLElement;
   private reconciler: DOMReconciler;
   private controller: InputController;
+  private guard: DOMGuard;
   private options: EditorOptions;
 
   constructor(options: EditorOptions) {
@@ -170,6 +172,13 @@ export class LevitEditor {
 
     // Initial render
     this.reconciler.render(this.state);
+    this.guard = new DOMGuard(this.container, () => this.controller.composing, () => this.repairDOM());
+  }
+
+  /** Renders the model and tells the guard that these DOM changes are ours. */
+  private render(): void {
+    this.reconciler.render(this.state);
+    this.guard?.ignorePending();
   }
 
   chain(): ChainedCommands {
@@ -180,7 +189,7 @@ export class LevitEditor {
     this.state = this.state.apply(tr);
 
     if (tr.docChanged) {
-      this.reconciler.render(this.state);
+      this.render();
       this.options.onChange?.(this);
     }
 
@@ -193,7 +202,7 @@ export class LevitEditor {
   /** Rebuilds the DOM from the document model, undoing any outside change. */
   repairDOM(): void {
     this.reconciler.invalidate();
-    this.reconciler.render(this.state);
+    this.render();
     restoreDOMSelection(this.container, this.state.selection);
   }
 
@@ -205,7 +214,7 @@ export class LevitEditor {
   undo(): boolean {
     if (!this.state.history.canUndo()) return false;
     this.state = this.state.undo();
-    this.reconciler.render(this.state);
+    this.render();
     restoreDOMSelection(this.container, this.state.selection);
     this.options.onChange?.(this);
     return true;
@@ -214,7 +223,7 @@ export class LevitEditor {
   redo(): boolean {
     if (!this.state.history.canRedo()) return false;
     this.state = this.state.redo();
-    this.reconciler.render(this.state);
+    this.render();
     restoreDOMSelection(this.container, this.state.selection);
     this.options.onChange?.(this);
     return true;
@@ -262,7 +271,7 @@ export class LevitEditor {
   setJSON(json: any): void {
     const doc = documentFromJSON(json);
     this.state = EditorState.create({ doc });
-    this.reconciler.render(this.state);
+    this.render();
     this.options.onChange?.(this);
   }
 
@@ -272,6 +281,7 @@ export class LevitEditor {
   }
 
   destroy(): void {
+    this.guard.disconnect();
     this.controller.destroy();
     this.container.innerHTML = '';
   }
