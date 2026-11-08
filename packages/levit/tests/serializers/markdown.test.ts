@@ -56,3 +56,43 @@ describe('link text with square brackets', () => {
     expect(node.marks?.[0]?.type).toBe('link');
   });
 });
+
+describe('review fixes: Markdown details', () => {
+  const link = (md: string) => markdownToDocument(md).blocks[0].content.find((n) => n.marks?.length);
+
+  it('keeps links whose URL has spaces or brackets through a round trip', () => {
+    for (const href of ['https://x.test/my file.pdf', 'https://x.test/?a[]=1', 'http://[::1]/']) {
+      const doc = createDocument([createBlock('paragraph', {}, [createTextNode('a', [{ type: 'link', attrs: { href } }])])]);
+      const back = link(documentToMarkdown(doc));
+      expect(back?.marks?.[0]).toEqual({ type: 'link', attrs: { href } });
+    }
+  });
+
+  it('reads <...> link URLs', () => {
+    expect(link('[a](<https://x.test/a b>)')?.marks?.[0]?.attrs?.href).toBe('https://x.test/a b');
+  });
+
+  it('reads headings after any whitespace, including full-width and a line break', () => {
+    for (const [md, text] of [['#　見出し', '見出し'], ['# Title', 'Title'], ['#\nTitle', 'Title'], ['##\tTabbed', 'Tabbed']]) {
+      const block = markdownToDocument(md).blocks[0];
+      expect(block.type, md).toBe('heading');
+      expect(block.content.map((n) => n.text).join('')).toBe(text);
+    }
+    expect(markdownToDocument('# a\nb').blocks[0].type).toBe('paragraph');
+    expect(markdownToDocument('#nospace').blocks[0].type).toBe('paragraph');
+  });
+
+  it('takes the code language only from right after the fence', () => {
+    expect(markdownToDocument('```  js\ncode\n```').blocks[0].attrs).toEqual({});
+    expect(markdownToDocument('```js`x\ncode\n```').blocks[0].attrs).toEqual({ language: 'js' });
+    expect(markdownToDocument('```js title="a"\ncode\n```').blocks[0].attrs).toEqual({ language: 'js' });
+  });
+
+  it('still reads inline marks the same way', () => {
+    const nodes = markdownToDocument('**b** *i* `c` ~~s~~ ==h== [l](https://x.test) plain').blocks[0].content;
+    expect(nodes.map((n) => [n.text, (n.marks ?? []).map((m) => m.type)])).toEqual([
+      ['b', ['bold']], [' ', []], ['i', ['italic']], [' ', []], ['c', ['code']], [' ', []],
+      ['s', ['strike']], [' ', []], ['h', ['highlight']], [' ', []], ['l', ['link']], [' plain', []],
+    ]);
+  });
+});

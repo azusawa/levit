@@ -1,6 +1,7 @@
 import { BlockNode, DocumentData, InlineNode } from '../core/model/types.js';
 import {
   BUILT_IN_BLOCK_TYPES,
+  normalizeInlineNodes,
   createBlock,
   createDocument,
   createTextNode,
@@ -35,8 +36,12 @@ export function documentToMarkdown(doc: DocumentData, options: SerializerOptions
           else if (m.type === 'highlight') t = `==${t}==`;
           else if (m.type === 'link') {
             const href = sanitizeHref(m.attrs?.href);
-            // Brackets in link text are escaped so the link reads back whole.
-            if (href) t = `[${t.replace(/[[\]\\]/g, '\\$&')}](${href})`;
+            // Brackets in link text are escaped, and a URL with spaces,
+            // brackets or parentheses goes in <...>, so the link reads back whole.
+            if (href) {
+              const url = /[\s()[\]<>]/.test(href) ? `<${href}>` : href;
+              t = `[${t.replace(/[[\]\\]/g, '\\$&')}](${url})`;
+            }
           } else {
             const spec = schema.marks.get(m.type);
             if (spec?.toMarkdown) t = spec.toMarkdown(t, m);
@@ -115,56 +120,117 @@ export function documentToMarkdown(doc: DocumentData, options: SerializerOptions
 }
 
 /**
- * Parses markdown inline text with bold, italic, code, and links.
+ * Parses inline Markdown: **bold**, *italic*, `code`, [link](url),
+ * ~~strike~~ and ==highlight==. Marks do not cross line breaks, so each line
+ * is read on its own.
  */
 function parseInlineMarkdown(text: string): InlineNode[] {
   if (!text) return [createTextNode('')];
-
   const nodes: InlineNode[] = [];
-  // Tokens: bold (**...**), italic (*...*), code (`...`), link ([text](url)),
-  // strikethrough (~~...~~) and highlight (==...==).
-  // Link text is plain characters, escaped characters (\[) or one level of
-  // [brackets]; URLs have no spaces or brackets. Every match attempt stops
-  // at the next bracket, so runs of "[" or "](" cannot make the search scan
-  // the whole line again from each one (which took seconds on crafted text).
-  const tokenRegex =
-    /(\*\*(.*?)\*\*|\*(.*?)\*|`(.*?)`|\[((?:\\.|\[[^[\]\n]*\]|[^[\]\\\n])*)\]\(([^)\s[\]]*)\)|~~(.+?)~~|==(.+?)==)/g;
-  let lastIndex = 0;
-  let match: RegExpExecArray | null;
+  text.split('\n').forEach((line, i) => {
+    if (i > 0) nodes.push(createTextNode('\n'));
+    nodes.push(...parseInlineLine(line));
+  });
+  return normalizeInlineNodes(nodes);
+}
 
-  while ((match = tokenRegex.exec(text)) !== null) {
-    if (match.index > lastIndex) {
-      nodes.push(createTextNode(text.slice(lastIndex, match.index)));
+/** Simple marks: [opening and closing text, mark type, at least one character inside]. */
+const DELIMITED: [string, string, boolean][] = [
+  ['**', 'bold', false],
+  ['*', 'italic', false],
+  ['`', 'code', false],
+  ['~~', 'strike', true],
+  ['==', 'highlight', true],
+];
+
+/**
+ * Reads one line in a single pass, without regular expressions: crafted
+ * input made the earlier pattern-based parser take seconds. Searches for a
+ * closing marker remember where they failed, and brackets are matched once
+ * up front, so the work stays linear in the length of the line.
+ */
+function parseInlineLine(line: string): InlineNode[] {
+  const nodes: InlineNode[] = [];
+  // Searching for `token` from any position at or after this one finds nothing.
+  const notFoundFrom = new Map<string, number>();
+  const find = (token: string, from: number): number => {
+    if (from >= (notFoundFrom.get(token) ?? Infinity)) return -1;
+    const at = line.indexOf(token, from);
+    if (at === -1) notFoundFrom.set(token, from);
+    return at;
+  };
+  const closingBracket = matchBrackets(line);
+
+  let plainStart = 0;
+  let i = 0;
+  const emit = (end: number, node: InlineNode) => {
+    if (i > plainStart) nodes.push(createTextNode(line.slice(plainStart, i)));
+    nodes.push(node);
+    i = end;
+    plainStart = end;
+  };
+
+  while (i < line.length) {
+    const delimited = DELIMITED.find(([marker]) => line.startsWith(marker, i));
+    if (delimited) {
+      const [marker, type, needsText] = delimited;
+      const close = find(marker, i + marker.length + (needsText ? 1 : 0));
+      if (close !== -1) {
+        emit(close + marker.length, createTextNode(line.slice(i + marker.length, close), [{ type }]));
+        continue;
+      }
     }
-
-    if (match[2] !== undefined) {
-      // Bold
-      nodes.push(createTextNode(match[2], [{ type: 'bold' }]));
-    } else if (match[3] !== undefined) {
-      // Italic
-      nodes.push(createTextNode(match[3], [{ type: 'italic' }]));
-    } else if (match[4] !== undefined) {
-      // Inline code
-      nodes.push(createTextNode(match[4], [{ type: 'code' }]));
-    } else if (match[5] !== undefined && match[6] !== undefined) {
-      // Link
-      const href = sanitizeHref(match[6]);
-      const text = match[5].replace(/\\([[\]\\])/g, '$1');
-      nodes.push(createTextNode(text, href ? [{ type: 'link', attrs: { href } }] : []));
-    } else if (match[7] !== undefined) {
-      nodes.push(createTextNode(match[7], [{ type: 'strike' }]));
-    } else if (match[8] !== undefined) {
-      nodes.push(createTextNode(match[8], [{ type: 'highlight' }]));
+    if (line[i] === '[') {
+      const link = readLink(line, i, closingBracket);
+      if (link) {
+        const href = sanitizeHref(link.href);
+        emit(link.end, createTextNode(link.text, href ? [{ type: 'link', attrs: { href } }] : []));
+        continue;
+      }
     }
-
-    lastIndex = tokenRegex.lastIndex;
+    i += 1;
   }
+  if (plainStart < line.length) nodes.push(createTextNode(line.slice(plainStart)));
+  return nodes;
+}
 
-  if (lastIndex < text.length) {
-    nodes.push(createTextNode(text.slice(lastIndex)));
+/** For each "[", the index of its matching "]". Backslash escapes a bracket. */
+function matchBrackets(line: string): Map<number, number> {
+  const pairs = new Map<number, number>();
+  const open: number[] = [];
+  for (let k = 0; k < line.length; k++) {
+    const c = line[k];
+    if (c === '\\') k++;
+    else if (c === '[') open.push(k);
+    else if (c === ']' && open.length > 0) pairs.set(open.pop()!, k);
   }
+  return pairs;
+}
 
-  return nodes.length > 0 ? nodes : [createTextNode('')];
+/**
+ * Reads [text](url) or [text](<url>) starting at a "[". The URL scan stops at
+ * brackets, so scans from different links never cover the same characters.
+ */
+function readLink(
+  line: string,
+  start: number,
+  closingBracket: Map<number, number>
+): { text: string; href: string; end: number } | null {
+  const close = closingBracket.get(start);
+  if (close === undefined || line[close + 1] !== '(') return null;
+  const text = line.slice(start + 1, close).replace(/\\([[\]\\])/g, '$1');
+
+  let k = close + 2;
+  if (line[k] === '<') {
+    // <url>: may hold spaces and brackets, ends at ">)".
+    k += 1;
+    while (k < line.length && line[k] !== '>' && line[k] !== '<') k++;
+    if (line[k] !== '>' || line[k + 1] !== ')') return null;
+    return { text, href: line.slice(close + 3, k), end: k + 2 };
+  }
+  while (k < line.length && !/[)\s[\]<]/.test(line[k])) k++;
+  if (line[k] !== ')') return null;
+  return { text, href: line.slice(close + 2, k), end: k + 1 };
 }
 
 /** Turns Markdown hard breaks ("\\" or two spaces before a newline) into "\n". */
@@ -182,7 +248,10 @@ function readCodeFence(block: string): { language: string; text: string } | null
   if (block.length < 6 || !block.startsWith('```') || !block.endsWith('```')) return null;
   const newline = block.indexOf('\n');
   const infoEnd = newline === -1 ? block.length - 3 : newline;
-  const language = block.slice(3, infoEnd).trim().split(/[ \t]/)[0];
+  // The language is what directly follows the fence, up to a space or backtick.
+  let languageEnd = 3;
+  while (languageEnd < infoEnd && !/[\s`]/.test(block[languageEnd])) languageEnd++;
+  const language = block.slice(3, languageEnd);
   const text = newline === -1 ? '' : block.slice(newline + 1, -3).trim();
   return { language, text };
 }
@@ -228,10 +297,12 @@ export function markdownToDocument(markdown: string, options: SerializerOptions 
     }
 
     // Heading (# ... ######)
-    const heading = /^#{1,6}(?=[ \t])/.exec(trimmed);
-    if (heading && !trimmed.includes('\n')) {
-      const level = heading[0].length;
-      blocks.push(createBlock('heading', { level }, parseInlineMarkdown(trimmed.slice(level).trim())));
+    // Any whitespace may follow the #s (also a full-width space or a line
+    // break), and the heading text must be a single line.
+    const heading = /^#{1,6}(?=\s)/.exec(trimmed);
+    const headingText = heading ? trimmed.slice(heading[0].length).trimStart() : '';
+    if (heading && !headingText.includes('\n')) {
+      blocks.push(createBlock('heading', { level: heading[0].length }, parseInlineMarkdown(headingText)));
       continue;
     }
 
