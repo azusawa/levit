@@ -6,7 +6,7 @@ import { restoreDOMSelection } from './view/selection.js';
 import { InputController } from './view/controller.js';
 import { DOMGuard } from './view/dom-guard.js';
 import { documentFromJSON, documentToJSON } from '../serializers/json.js';
-import { findBlockIndex, getBlockText, sliceBlockContent } from './model/document.js';
+import { findBlockIndex, getBlockText, sliceBlockContent, sliceDocument } from './model/document.js';
 import { applyInputRules, defaultInputRules } from './plugin/input-rules.js';
 import { Schema, type LevitPlugin } from './plugin/plugin.js';
 import { en, format, type LevitMessages } from '../i18n/messages.js';
@@ -262,12 +262,20 @@ export class LevitEditor {
 
     if (options.placeholder) {
       this.container.setAttribute('data-placeholder', options.placeholder);
+      this.container.setAttribute('aria-placeholder', options.placeholder);
     }
 
     // Initialize document
     const initialDoc = options.initialContent
       ? documentFromJSON(options.initialContent)
       : undefined;
+
+    // Screen readers announce the editor as a multi-line text field.
+    this.container.setAttribute('role', 'textbox');
+    this.container.setAttribute('aria-multiline', 'true');
+    if (!this.container.hasAttribute('aria-label') && !this.container.hasAttribute('aria-labelledby')) {
+      this.container.setAttribute('aria-label', this.messages.editorLabel);
+    }
 
     this.state = EditorState.create({ doc: initialDoc, schema: this.schema });
     this.reconciler = new DOMReconciler(this.container, {
@@ -402,6 +410,23 @@ export class LevitEditor {
     this.notifyUpdate();
     this.notifySelection();
     return true;
+  }
+
+  /**
+   * True when the mark is on for the selection: all selected text has it, or
+   * for a caret, text typed next would get it.
+   */
+  isActive(markType: string): boolean {
+    const { doc, selection, storedMarks } = this.state;
+    if (selection.isCollapsed) {
+      if (storedMarks) return storedMarks.some((m) => m.type === markType);
+      const block = doc.blocks[findBlockIndex(doc, selection.anchor.blockId)];
+      if (!block || selection.anchor.offset === 0) return false;
+      const before = sliceBlockContent(block, selection.anchor.offset - 1, selection.anchor.offset);
+      return before.some((n) => n.marks?.some((m) => m.type === markType));
+    }
+    const nodes = sliceDocument(doc, selection).flatMap((b) => b.content).filter((n) => n.text.length > 0);
+    return nodes.length > 0 && nodes.every((n) => n.marks?.some((m) => m.type === markType));
   }
 
   /** The href shared by all selected text, or null if the selection is not one link. */

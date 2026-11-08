@@ -32,12 +32,19 @@ function chooseImage(editor: LevitEditor): void {
   if (src && src.trim()) editor.chain().insertImage({ src: src.trim() }).run();
 }
 
+let menuCount = 0;
+
 export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
+  const m = editor.messages;
   const menu = document.createElement('div');
   menu.className = 'levit-slash-menu';
+  // A listbox the editor points at with aria-activedescendant, so screen
+  // readers announce the highlighted entry while focus stays in the text.
+  menu.id = `levit-slash-menu-${++menuCount}`;
+  menu.setAttribute('role', 'listbox');
+  menu.setAttribute('aria-label', m.slashMenuLabel);
   menu.style.display = 'none';
 
-  const m = editor.messages;
   let activeIndex = 0;
   let isOpen = false;
 
@@ -124,24 +131,36 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
   // Entries from the editor's plugins go after the built-in ones.
   items.push(...editor.schema.slashItems);
 
+  // Built with textContent: titles can come from plugins and messages.
+  const part = (tag: string, className: string, text?: string) => {
+    const el = document.createElement(tag);
+    el.className = className;
+    if (text !== undefined) el.textContent = text;
+    return el;
+  };
+
   function renderList() {
-    menu.innerHTML = '';
+    menu.replaceChildren();
     items.forEach((item, index) => {
-      const el = document.createElement('div');
-      el.className = `levit-slash-item ${index === activeIndex ? 'is-active' : ''}`;
-      el.innerHTML = `
-        <span class="levit-slash-icon">${item.icon}</span>
-        <div class="levit-slash-content">
-          <div class="levit-slash-title">${item.title}</div>
-          <div class="levit-slash-desc">${item.description}</div>
-        </div>
-      `;
+      const el = part('div', `levit-slash-item${index === activeIndex ? ' is-active' : ''}`);
+      el.id = `${menu.id}-${index}`;
+      el.setAttribute('role', 'option');
+      el.setAttribute('aria-selected', String(index === activeIndex));
+      const icon = part('span', 'levit-slash-icon', item.icon);
+      icon.setAttribute('aria-hidden', 'true');
+      const content = part('div', 'levit-slash-content');
+      content.append(part('div', 'levit-slash-title', item.title), part('div', 'levit-slash-desc', item.description));
+      el.append(icon, content);
       el.addEventListener('mousedown', (e) => {
         e.preventDefault();
         selectItem(index);
       });
       menu.appendChild(el);
     });
+    if (isOpen) {
+      editor.container.setAttribute('aria-controls', menu.id);
+      editor.container.setAttribute('aria-activedescendant', `${menu.id}-${activeIndex}`);
+    }
   }
 
   function selectItem(index: number) {
@@ -187,6 +206,8 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
 
   function close() {
     isOpen = false;
+    editor.container.removeAttribute('aria-controls');
+    editor.container.removeAttribute('aria-activedescendant');
     clearTimeout(positionTimer);
     positionTimer = undefined;
     menu.style.display = 'none';

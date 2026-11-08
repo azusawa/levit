@@ -13,6 +13,8 @@ export function createBubbleMenu(editor: LevitEditor): BubbleMenuInstance {
   const m = editor.messages;
   const menu = document.createElement('div');
   menu.className = 'levit-bubble-menu';
+  menu.setAttribute('role', 'toolbar');
+  menu.setAttribute('aria-label', m.formattingToolbar);
   menu.style.display = 'none';
 
   const buttonRow = document.createElement('div');
@@ -33,20 +35,21 @@ export function createBubbleMenu(editor: LevitEditor): BubbleMenuInstance {
   let savedSelection: EditorSelection | null = null;
   let lastRect: DOMRect | null = null;
 
-  const buttons = [
-    { label: 'B', title: m.bold, action: () => editor.chain().toggleBold().run() },
-    { label: 'I', title: m.italic, action: () => editor.chain().toggleItalic().run() },
-    { label: 'U', title: m.underline, action: () => editor.chain().toggleUnderline().run() },
-    { label: 'S', title: m.strikethrough, action: () => editor.chain().toggleStrike().run() },
-    { label: '🖍', title: m.highlight, action: () => editor.chain().toggleHighlight().run() },
-    { label: '</>', title: m.code, action: () => editor.chain().toggleMark({ type: 'code' }).run() },
-    { label: '🔗', title: m.link, action: () => openLinkField() },
+  // `mark` buttons report whether the selection has that mark (aria-pressed).
+  const buttons: { label: string; title: string; mark?: string; action: () => void }[] = [
+    { label: 'B', title: m.bold, mark: 'bold', action: () => editor.chain().toggleBold().run() },
+    { label: 'I', title: m.italic, mark: 'italic', action: () => editor.chain().toggleItalic().run() },
+    { label: 'U', title: m.underline, mark: 'underline', action: () => editor.chain().toggleUnderline().run() },
+    { label: 'S', title: m.strikethrough, mark: 'strike', action: () => editor.chain().toggleStrike().run() },
+    { label: '🖍', title: m.highlight, mark: 'highlight', action: () => editor.chain().toggleHighlight().run() },
+    { label: '</>', title: m.code, mark: 'code', action: () => editor.chain().toggleMark({ type: 'code' }).run() },
+    { label: '🔗', title: m.link, mark: 'link', action: () => openLinkField() },
     { label: 'H1', title: m.heading1, action: () => editor.chain().setHeading(1).run() },
     { label: 'H2', title: m.heading2, action: () => editor.chain().setHeading(2).run() },
     { label: '”', title: m.quote, action: () => editor.chain().setBlockType('blockquote').run() },
   ];
 
-  let linkButton: HTMLButtonElement | null = null;
+  const buttonEls: HTMLButtonElement[] = [];
 
   for (const b of buttons) {
     const btn = document.createElement('button');
@@ -55,14 +58,71 @@ export function createBubbleMenu(editor: LevitEditor): BubbleMenuInstance {
     btn.textContent = b.label;
     btn.title = b.title;
     btn.setAttribute('aria-label', b.title);
+    // One button at a time is reachable with Tab; arrows move between them.
+    btn.tabIndex = buttonEls.length === 0 ? 0 : -1;
+    // The mouse acts on mousedown so the editor keeps its selection.
     btn.addEventListener('mousedown', (e) => {
       e.preventDefault();
       b.action();
+      refreshButtons();
       updateVisibility();
     });
-    if (b.title === m.link) linkButton = btn;
+    // Enter or Space on a focused button sends a click without a mouse.
+    btn.addEventListener('click', (e) => {
+      if (e.detail !== 0) return;
+      b.action();
+      refreshButtons();
+    });
     buttonRow.appendChild(btn);
+    buttonEls.push(btn);
   }
+
+  /** Marks the buttons for formats the selection already has. */
+  function refreshButtons() {
+    buttons.forEach((b, i) => {
+      if (!b.mark) return;
+      const on = b.mark === 'link' ? editor.getActiveLink() !== null : editor.isActive(b.mark);
+      buttonEls[i].setAttribute('aria-pressed', String(on));
+      buttonEls[i].classList.toggle('is-active', on);
+    });
+  }
+
+  function focusButton(index: number) {
+    const i = (index + buttonEls.length) % buttonEls.length;
+    buttonEls.forEach((btn, j) => (btn.tabIndex = j === i ? 0 : -1));
+    buttonEls[i].focus();
+  }
+
+  buttonRow.addEventListener('keydown', (e) => {
+    const current = buttonEls.indexOf(document.activeElement as HTMLButtonElement);
+    if (current === -1) return;
+    const moves: Record<string, number> = {
+      ArrowRight: current + 1,
+      ArrowLeft: current - 1,
+      Home: 0,
+      End: buttonEls.length - 1,
+    };
+    if (e.key in moves) {
+      e.preventDefault();
+      focusButton(moves[e.key]);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      editor.focus();
+    }
+  });
+
+  // Alt+F10 (as in Google Docs and Word) moves focus from the text to the toolbar.
+  function handleEditorKeyDown(e: KeyboardEvent) {
+    if (e.key !== 'F10' || !e.altKey || editor.state.selection.isCollapsed) return;
+    e.preventDefault();
+    refreshButtons();
+    const sel = window.getSelection();
+    const rect = sel && sel.rangeCount > 0 ? sel.getRangeAt(0).getBoundingClientRect() : null;
+    if (rect && rect.width > 0) show(rect);
+    else menu.style.display = 'flex';
+    focusButton(0);
+  }
+  editor.container.addEventListener('keydown', handleEditorKeyDown);
 
   document.body.appendChild(menu);
 
@@ -143,7 +203,7 @@ export function createBubbleMenu(editor: LevitEditor): BubbleMenuInstance {
       const range = sel.getRangeAt(0);
       const rect = range.getBoundingClientRect();
       if (rect.width > 0 && rect.height > 0) {
-        linkButton?.classList.toggle('is-active', editor.getActiveLink() !== null);
+        refreshButtons();
         show(rect);
         return;
       }
@@ -174,6 +234,7 @@ export function createBubbleMenu(editor: LevitEditor): BubbleMenuInstance {
     hide,
     destroy: () => {
       document.removeEventListener('selectionchange', updateVisibility);
+      editor.container.removeEventListener('keydown', handleEditorKeyDown);
       menu.remove();
     },
   };
