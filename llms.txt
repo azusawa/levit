@@ -324,5 +324,6 @@ The app must still:
 - Treat plugins, `highlightCode` and `uploadImage` as trusted app code. Escape
   document data (block/mark attrs) you put into plugin `toHTML`, `render` or
   `attributes`, and never put it into `style`, `srcdoc` or `srcset`.
-Releases are published from GitHub Actions with npm provenance (`npm audit signatures`).
+Releases after the move to Trusted Publishing are published from GitHub Actions
+with npm provenance (`npm audit signatures`); 0.4.0 and earlier have none.
 Report vulnerabilities privately: https://github.com/azusawa/levit/security/advisories/new

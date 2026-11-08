@@ -273,7 +273,6 @@ describe('slash menu', () => {
     menu.getItems().find((i) => i.id === 'image')!.action(editor);
     expect(prompt).toHaveBeenCalled();
     expect(editor.state.doc.blocks[0]).toMatchObject({ type: 'image', attrs: { src: 'https://x.test/a.png' } });
-    vi.unstubAllGlobals();
     menu.destroy();
   });
 });

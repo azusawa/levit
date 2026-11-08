@@ -325,7 +325,7 @@ Levit은 화면에 그리고, 붙여넣기를 읽고, HTML로 내보내는 모�
 2. **Content-Security-Policy를 쓰세요.** 에디터는 인라인 스크립트나 `eval`이 필요 없습니다. 예: `Content-Security-Policy: script-src 'self'; object-src 'none'; base-uri 'none'`
 3. **플러그인과 옵션은 믿을 수 있는 코드만 넣으세요.** 플러그인, `highlightCode`, `uploadImage`는 앱의 코드로 실행됩니다. 플러그인의 `toHTML`, `render`, `attributes`에 문서 데이터(블록·서식 attrs)를 넣을 때는 직접 이스케이프하고, `style`, `srcdoc`, `srcset`에는 넣지 마세요.
 
-배포된 모든 버전에는 GitHub Actions에서 빌드됐다는 provenance 서명이 붙습니다(`npm audit signatures`로 확인).
+Trusted Publishing으로 바꾼 뒤 배포하는 버전에는 GitHub Actions에서 빌드됐다는 provenance 서명이 붙습니다(`npm audit signatures`로 확인).
 취약점은 [SECURITY.md](SECURITY.md)의 방법으로 비공개 신고해 주세요.
 
 ---

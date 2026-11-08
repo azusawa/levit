@@ -139,3 +139,17 @@ describe('release through GitHub Actions is documented', () => {
     }
   });
 });
+
+describe('security policy', () => {
+  it('supports the version users can install now', () => {
+    const version = JSON.parse(read('packages/levit/package.json')).version.split('.').slice(0, 2).join('.');
+    const supported = read('SECURITY.md').split('\n').filter((line) => line.includes('✅')).join('\n');
+    expect(supported).toContain(`${version}.x`);
+  });
+
+  it('does not promise provenance for versions published before Trusted Publishing', () => {
+    for (const file of ['README.md', 'SECURITY.md']) {
+      expect(read(file)).not.toMatch(/(모든|every) (버전|version)[^\n]*provenance/i);
+    }
+  });
+});

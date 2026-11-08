@@ -23,6 +23,8 @@ export default defineConfig({
   },
   test: {
     name: 'levit',
+    // Undo vi.stubGlobal after every test, even one that failed.
+    unstubGlobals: true,
     environment: 'happy-dom',
     globals: true,
     exclude: ['e2e/**', 'node_modules/**'],

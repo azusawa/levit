@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { execFileSync } from 'node:child_process';
-import { cpSync, mkdtempSync, readFileSync } from 'node:fs';
+import { cpSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -62,5 +62,29 @@ describe('scripts/check-release-tag.mjs', () => {
     execFileSync('node', [join(root, 'scripts/set-version.mjs'), '2.0.0'], { cwd: dir });
     expect(() => check(dir, 'v2.0.1')).toThrow();
     expect(() => check(dir, '2.0.0')).toThrow();
+  });
+});
+
+describe('npm dist-tag for a release', () => {
+  const run = (dir: string, tag: string) => {
+    const output = join(dir, 'github-output');
+    writeFileSync(output, '');
+    execFileSync('node', [join(root, 'scripts/check-release-tag.mjs'), tag], {
+      cwd: dir,
+      env: { ...process.env, GITHUB_OUTPUT: output },
+    });
+    return readFileSync(output, 'utf8');
+  };
+
+  it('is "latest" for a normal version', () => {
+    const dir = copyOfRepo();
+    execFileSync('node', [join(root, 'scripts/set-version.mjs'), '1.0.0'], { cwd: dir });
+    expect(run(dir, 'v1.0.0')).toBe('dist-tag=latest\n');
+  });
+
+  it('is "next" for a prerelease, so users do not get it by default', () => {
+    const dir = copyOfRepo();
+    execFileSync('node', [join(root, 'scripts/set-version.mjs'), '1.1.0-rc.1'], { cwd: dir });
+    expect(run(dir, 'v1.1.0-rc.1')).toBe('dist-tag=next\n');
   });
 });

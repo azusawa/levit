@@ -284,7 +284,7 @@ describe('review fixes: plugin blocks in pasted HTML', () => {
   };
   const types = (html: string) => htmlToDocument(html, { plugins: [embed] }).blocks.map((b) => b.type);
 
-  it('keeps a claimed element inside a list item, even when its tag (video, iframe) is normally skipped', () => {
+  it('keeps a claimed element inside a list item, even when its tag (here video) is normally skipped', () => {
     expect(types('<ul><li>Intro<video src="https://v.test/1"></video></li></ul>')).toEqual(['bullet_list_item', 'embed']);
   });
 

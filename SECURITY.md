@@ -2,13 +2,14 @@
 
 ## 지원하는 버전
 
-보안 수정은 최신 마이너 버전에만 적용합니다. 패키지 세 개(`@yonailab/levit`,
-`@yonailab/levit-react`, `@yonailab/levit-vue`)는 버전이 항상 같습니다.
+보안 수정은 npm에 나와 있는 최신 마이너 버전과 그 바로 전 버전에 적용합니다. 패키지 세 개
+(`@yonailab/levit`, `@yonailab/levit-react`, `@yonailab/levit-vue`)는 버전이 항상 같습니다.
 
 | 버전 | 보안 수정 |
 |---|---|
 | 0.4.x | ✅ |
-| 0.3.x 이하 | ❌ (0.4로 올려 주세요) |
+| 0.3.x | ✅ |
+| 0.2.x 이하 | ❌ (최신 버전으로 올려 주세요) |
 
 ## 취약점 신고
 
@@ -27,8 +28,9 @@ Please report vulnerabilities privately through the link above, not in public is
 
 ## 배포물 확인
 
-모든 버전은 GitHub Actions에서 npm Trusted Publishing으로 배포되고, 어느 저장소와 커밋에서
-빌드됐는지 증명하는 provenance가 붙습니다. 설치한 패키지는 다음 명령으로 확인할 수 있습니다.
+Trusted Publishing으로 바꾼 뒤의 버전은 GitHub Actions에서 배포되고, 어느 저장소와 커밋에서 빌드됐는지
+증명하는 provenance가 붙습니다. 그 전에 직접 배포한 버전(0.3.0 이하, 그리고 첫 0.4.0)에는 provenance가
+없습니다. 설치한 패키지는 다음 명령으로 확인할 수 있습니다.
 
 ```bash
 npm audit signatures

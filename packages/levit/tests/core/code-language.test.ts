@@ -84,7 +84,6 @@ describe('rendering the language', () => {
     expect(down.defaultPrevented).toBe(true);
     expect(prompt).toHaveBeenCalledWith('Code language', 'js');
     expect(editor.state.doc.blocks[0].attrs).toEqual({ language: 'rust' });
-    vi.unstubAllGlobals();
   });
 });
 

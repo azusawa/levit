@@ -8,6 +8,14 @@ const workflowDir = resolve(root, '.github/workflows');
 const workflows = readdirSync(workflowDir).filter((f) => /\.ya?ml$/.test(f));
 const workflow = (name: string) => read(`.github/workflows/${name}`);
 
+/** The text of one job in a workflow: from `  name:` to the next job. */
+function jobSection(text: string, job: string): string {
+  const start = text.indexOf(`\n  ${job}:\n`);
+  expect(start, job).toBeGreaterThan(-1);
+  const next = text.slice(start + 1).search(/\n  [\w-]+:\n/);
+  return next === -1 ? text.slice(start) : text.slice(start, start + 1 + next);
+}
+
 describe('GitHub Actions', () => {
   it.each(workflows)('%s pins every action to a full commit SHA, with the version in a comment', (file) => {
     const uses = Array.from(workflow(file).matchAll(/uses:\s*(\S+)(.*)/g));
@@ -38,9 +46,11 @@ describe('CI', () => {
     expect(ci()).toMatch(/run: npm ci --ignore-scripts/);
   });
 
-  it('fails on known vulnerabilities and checks registry signatures', () => {
-    expect(ci()).toContain('npm audit --audit-level=moderate');
-    expect(ci()).toContain('npm audit signatures');
+  it('fails on known vulnerabilities and checks registry signatures, once per run', () => {
+    const audit = jobSection(ci(), 'audit');
+    expect(audit).toContain('npm audit --audit-level=moderate');
+    expect(audit).toContain('npm audit signatures');
+    expect(jobSection(ci(), 'test')).not.toContain('npm audit');
   });
 });
 
@@ -60,18 +70,37 @@ describe('release workflow (npm Trusted Publishing)', () => {
     expect(release()).not.toMatch(/NPM_TOKEN|NODE_AUTH_TOKEN|secrets\./);
   });
 
-  it('checks the tag matches the package versions, then tests, builds and publishes all packages', () => {
-    const text = release();
+  it('only releases commits that are on main', () => {
+    const build = jobSection(release(), 'build');
+    expect(build).toContain('fetch-depth: 0');
+    expect(build).toContain('git merge-base --is-ancestor "$GITHUB_SHA" origin/main');
+  });
+
+  it('checks the tag, tests, builds and packs in a job without the publish token', () => {
+    const build = jobSection(release(), 'build');
+    expect(build).not.toContain('id-token');
+    expect(build).toMatch(/mkdir -p tarballs/);
     const order = [
       'scripts/check-release-tag.mjs',
       'npm run typecheck',
       'npm test',
       'npm run build',
       'npm run check:package',
-      'npm publish --workspaces',
-    ].map((step) => text.indexOf(step));
+      'npm pack --workspaces',
+      'actions/upload-artifact@',
+    ].map((step) => build.indexOf(step));
     expect(order.every((i) => i > -1)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
+  });
+
+  it('publishes only the packed files in a job that runs no project code', () => {
+    const publish = jobSection(release(), 'publish');
+    expect(publish).toContain('id-token: write');
+    expect(publish).toMatch(/needs: build/);
+    expect(publish).toContain('actions/download-artifact@');
+    expect(publish).toMatch(/for tarball in \S+\/\*\.tgz; do npm publish "\$tarball" --provenance --tag "\$DIST_TAG"; done/);
+    expect(publish).toContain('DIST_TAG: ${{ needs.build.outputs.dist-tag }}');
+    expect(publish).not.toMatch(/npm (ci|install|run|test)|actions\/checkout/);
   });
 });
 

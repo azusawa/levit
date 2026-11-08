@@ -4,6 +4,10 @@ name: Release
 # Publishing: npm accepts a short-lived OIDC token from this workflow, so no
 # npm token is stored anywhere, and each version gets a provenance statement
 # that links it to this repository and commit.
+#
+# The work is split in two jobs. "build" runs the project's code and its dev
+# tools but cannot get the publish token. "publish" can get the token but
+# runs no project code: it only uploads the tarballs that "build" packed.
 
 on:
   push:
@@ -18,8 +22,40 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  build:
+    name: Test and pack
+    runs-on: ubuntu-latest
+    outputs:
+      dist-tag: ${{ steps.tag.outputs.dist-tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # Full history, to check that the tagged commit is on main.
+          fetch-depth: 0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - run: npm ci --ignore-scripts
+      # Only commits that reached main (reviewed, tested) can be released.
+      - run: git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+      - id: tag
+        run: node scripts/check-release-tag.mjs "$GITHUB_REF_NAME"
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - run: npm run check:package
+      - run: mkdir -p tarballs && npm pack --workspaces --pack-destination tarballs
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: tarballs
+          path: tarballs/*.tgz
+          if-no-files-found: error
+          retention-days: 7
+
   publish:
     name: Publish to npm
+    needs: build
     runs-on: ubuntu-latest
     # The "npm" environment can require approval before this job runs.
     environment: npm
@@ -27,17 +63,15 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
       # Node 24 comes with npm 11, which Trusted Publishing needs.
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
-      - run: npm ci --ignore-scripts
-      - run: node scripts/check-release-tag.mjs "$GITHUB_REF_NAME"
-      - run: npm run typecheck
-      - run: npm test
-      - run: npm run build
-      - run: npm run check:package
-      - run: npm publish --workspaces --provenance
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: tarballs
+          path: tarballs
+      # Publishing a tarball runs no package scripts.
+      - env:
+          DIST_TAG: ${{ needs.build.outputs.dist-tag }}
+        run: for tarball in tarballs/*.tgz; do npm publish "$tarball" --provenance --tag "$DIST_TAG"; done
