@@ -98,3 +98,11 @@ describe('validateDocument', () => {
     expect(validateDocument(doc(block('paragraph', {}, [p('a', [{ type: 'color' }])])), { plugins: [plugin] }).valid).toBe(true);
   });
 });
+
+describe('review fixes: validateDocument', () => {
+  it.each(['constructor', 'toString', '__proto__', 'hasOwnProperty'])('refuses the block type %s', (type) => {
+    const result = validateDocument(doc(block(type, { src: 'javascript:alert(1)' })));
+    expect(result.valid).toBe(false);
+    expect(result.errors[0].path).toBe('$.blocks[0].type');
+  });
+});

@@ -224,3 +224,13 @@ describe('while the answer is still streaming', () => {
     expect((document.querySelector('.levit-suggestion-bar') as HTMLElement).style.display).toBe('flex');
   });
 });
+
+describe('review fixes: suggestions', () => {
+  it('accepting a change to whole blocks does not join it to the paragraph above', async () => {
+    const editor = setup([para('z', 'Above.'), para('a', 'One.'), para('b', 'Two.'), para('c', 'Below.')], ['New one.\n\nNew two.\n\nNew three.']);
+    select(editor, 'a', 0, 'b', 4);
+    await runAICommand(editor, 'improve');
+    editor.commands.acceptSuggestions();
+    expect(texts(editor)).toEqual(['Above.', 'New one.', 'New two.', 'New three.', 'Below.']);
+  });
+});

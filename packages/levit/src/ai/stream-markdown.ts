@@ -2,7 +2,7 @@ import type { LevitEditor } from '../core/editor.js';
 import type { BlockNode } from '../core/model/types.js';
 import type { Transaction } from '../core/state/transaction.js';
 import type { EditorState } from '../core/state/state.js';
-import { findBlockIndex, getBlockText } from '../core/model/document.js';
+import { findBlockIndex, generateBlockId, getBlockText, orderedSelection } from '../core/model/document.js';
 import { markdownToDocument } from '../serializers/markdown.js';
 
 export interface StreamMarkdownOptions {
@@ -19,35 +19,49 @@ export interface StreamMarkdownOptions {
    * last update. Used by the AI plugin to show answers as suggestions.
    */
   insert?: (tr: Transaction, blocks: BlockNode[], final: boolean) => void;
+  /** The state to build on. Default: the editor's state when the stream starts. */
+  base?: EditorState;
+  /** Draw at most once per this many milliseconds (the final text always). Default 30. */
+  minInterval?: number;
+  /** Lock editing while streaming. Default true. */
+  lock?: boolean;
 }
-
-let runCount = 0;
 
 /**
  * Streams Markdown (an AI answer) into the editor at the caret, replacing
  * the selection. Headings, lists, bold and the rest appear formatted while
  * the text arrives; formatting that is not closed yet (like "**bo") is shown
  * as if it were. Editing is locked meanwhile, and the whole answer is undone
- * in one step. Resolves with the Markdown received and whether it was aborted.
+ * in one step. If the document is changed some other way meanwhile, the
+ * stream stops so that change is not lost. Resolves with the Markdown
+ * received and whether it was stopped.
  */
 export async function streamMarkdown(
   editor: LevitEditor,
   stream: AsyncIterable<string>,
   options: StreamMarkdownOptions = {}
 ): Promise<{ markdown: string; aborted: boolean }> {
-  const { signal } = options;
+  const { signal, minInterval = 30, lock = true } = options;
   if (signal?.aborted) return { markdown: '', aborted: true };
 
   // Every update starts again from this state, so history gets one entry.
-  const base = editor.state;
+  const base = options.base ?? editor.state;
   const plugins = editor.schema.plugins;
-  const runId = `ai${++runCount}`;
+  // Unique per run (also across page loads), since streamed blocks keep their ids.
+  const runId = generateBlockId('ai');
   let text = '';
   // Blocks before the last blank line are finished: parsed once, kept with
   // fixed ids so the editor does not redraw them on every chunk.
   const stable: BlockNode[] = [];
   let stableLength = 0;
   let aborted = false;
+  // An update this stream did not make means the document changed some other way.
+  let drawing = false;
+  let changedOutside = false;
+  const stopWatching = editor.on('update', () => {
+    if (!drawing) changedOutside = true;
+  });
+  let lastDraw = -Infinity;
 
   // Spaces at the edges of the answer are kept only where it meets text.
   const edges = options.at === 'below' ? { lead: false, trail: false } : textAround(base);
@@ -55,7 +69,9 @@ export async function streamMarkdown(
   const parse = (markdown: string, firstIndex: number): BlockNode[] =>
     markdownToDocument(markdown, { plugins }).blocks.map((block, i) => ({ ...block, id: `${runId}-${firstIndex + i}` }));
 
-  const show = (final: boolean) => {
+  /** Draws the text so far. Returns false when the document was changed from outside. */
+  const show = (final: boolean): boolean => {
+    if (changedOutside) return false;
     const boundary = text.lastIndexOf('\n\n');
     if (boundary > stableLength && !insideCodeFence(text.slice(stableLength, boundary))) {
       const segment = text.slice(stableLength, boundary);
@@ -64,42 +80,57 @@ export async function streamMarkdown(
     }
     const tail = text.slice(stableLength);
     const blocks = [...stable, ...(tail.trim() ? parse(final ? tail : closeOpenMarkdown(tail), stable.length) : [])];
-    if (blocks.length === 0) return;
+    if (blocks.length === 0) return true;
     keepEdgeSpaces(blocks, text, edges);
     const tr = base.tr;
     if (options.at === 'below') openBlockBelow(tr);
     if (options.insert) options.insert(tr, blocks, final);
     else tr.insertFragment(blocks, { keepIds: true });
-    editor.replaceState(tr.apply());
+    drawing = true;
+    try {
+      editor.replaceState(tr.apply(), tr);
+    } finally {
+      drawing = false;
+    }
+    lastDraw = now();
+    return true;
   };
 
-  editor.setEditable(false);
+  const wasEditable = editor.isEditable;
+  if (lock) editor.setEditable(false);
   editor.container.setAttribute('aria-busy', 'true');
+  let failure: unknown = null;
   try {
-    for await (const chunk of stream) {
-      if (signal?.aborted) {
-        aborted = true;
-        break;
+    try {
+      for await (const chunk of stream) {
+        if (signal?.aborted) break;
+        if (!chunk) continue;
+        text += chunk;
+        // Long answers come in many small chunks: draw at most once per interval.
+        if (now() - lastDraw >= minInterval && !show(false)) break;
       }
-      if (!chunk) continue;
-      text += chunk;
-      show(false);
+    } catch (error) {
+      // A fetch stopped by the signal throws AbortError: that is a stop, not a failure.
+      if (!signal?.aborted) failure = error;
     }
     if (signal?.aborted) aborted = true;
-    if (text) show(true);
+    if (!changedOutside && text) show(true);
+    if (changedOutside) aborted = true;
   } finally {
+    stopWatching();
     editor.container.removeAttribute('aria-busy');
-    editor.setEditable(true);
+    if (lock) editor.setEditable(wasEditable);
   }
+  if (failure !== null) throw failure;
   return { markdown: text, aborted };
 }
 
+const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+
 /** Puts the caret in a new paragraph after the last selected block. */
 function openBlockBelow(tr: Transaction): void {
-  const { anchor, head } = tr.selection;
-  const anchorIdx = findBlockIndex(tr.doc, anchor.blockId);
-  const headIdx = findBlockIndex(tr.doc, head.blockId);
-  const last = tr.doc.blocks[Math.max(anchorIdx, headIdx)];
+  const { to } = orderedSelection(tr.doc, tr.selection);
+  const last = tr.doc.blocks[findBlockIndex(tr.doc, to.blockId)];
   const end = { blockId: last.id, offset: getBlockText(last).length };
   tr.setSelection({ anchor: end, head: end, isCollapsed: true });
   tr.splitBlock('paragraph', {});
@@ -128,10 +159,7 @@ function keepEdgeSpaces(blocks: BlockNode[], text: string, edges: { lead: boolea
 
 /** Whether there is text right before and right after the selection. */
 function textAround(state: EditorState): { lead: boolean; trail: boolean } {
-  const { anchor, head } = state.selection;
-  const a = findBlockIndex(state.doc, anchor.blockId);
-  const h = findBlockIndex(state.doc, head.blockId);
-  const [from, to] = a < h || (a === h && anchor.offset <= head.offset) ? [anchor, head] : [head, anchor];
+  const { from, to } = orderedSelection(state.doc, state.selection);
   const toBlock = state.doc.blocks[findBlockIndex(state.doc, to.blockId)];
   return { lead: from.offset > 0, trail: !!toBlock && to.offset < getBlockText(toBlock).length };
 }
@@ -147,6 +175,13 @@ function insideCodeFence(markdown: string): boolean {
 
 const count = (text: string, token: string) => text.split(token).length - 1;
 
+/** A line without its leading "- ", "* " or "+ " list marker. */
+function withoutListMarker(line: string): string {
+  let k = 0;
+  while (line[k] === ' ' || line[k] === '\t') k++;
+  return '-*+'.includes(line[k] ?? '') && (line[k + 1] === ' ' || line[k + 1] === '\t') ? line.slice(k + 2) : line;
+}
+
 /**
  * Closes what the last line leaves open (a code fence, `code`, **bold**,
  * *italic*, ~~strike~~, ==highlight==), so a half-received answer is shown
@@ -154,8 +189,13 @@ const count = (text: string, token: string) => text.split(token).length - 1;
  */
 export function closeOpenMarkdown(markdown: string): string {
   if (insideCodeFence(markdown)) return `${markdown}\n\`\`\``;
-  const line = markdown.slice(markdown.lastIndexOf('\n') + 1);
-  if (count(line, '`') % 2 === 1) return `${markdown}\``;
+  const lastLine = markdown.slice(markdown.lastIndexOf('\n') + 1);
+  if (count(lastLine, '`') % 2 === 1) return `${markdown}\``;
+  // Leave out a list marker ("* item") and `code` spans: their * are not italic.
+  const line = withoutListMarker(lastLine)
+    .split('`')
+    .filter((_, i) => i % 2 === 0)
+    .join('');
   let closing = '';
   const bold = count(line, '**');
   if ((count(line, '*') - bold * 2) % 2 === 1) closing += '*';

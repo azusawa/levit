@@ -221,3 +221,67 @@ describe('getAIContext', () => {
     expect(getAIContext(editor).selectedText).toBe('world');
   });
 });
+
+describe('review fixes: commands', () => {
+  it('locks the editor while waiting for the provider, and uses the selection from the start', async () => {
+    let resolve!: (stream: AsyncIterable<string>) => void;
+    const provider = vi.fn(() => new Promise<AsyncIterable<string>>((r) => (resolve = r)));
+    const editor = editorWith([para('a', 'one two')], provider as never);
+    select(editor, 'a', 4, 7);
+    const run = runAICommand(editor, 'improve');
+    await Promise.resolve();
+    expect(editor.isEditable).toBe(false);
+    select(editor, 'a', 0, 3);
+    resolve((async function* () { yield 'TWO'; })());
+    await run;
+    editor.commands.acceptSuggestions();
+    expect(texts(editor)).toEqual(['one TWO']);
+  });
+
+  it('contextLength: 0 sends no surrounding text', async () => {
+    const { provider, requests } = fakeProvider('x');
+    const editor = editorWith([para('a', 'Before.'), para('b', 'text'), para('c', 'After.')], provider, { ai: { contextLength: 0 } });
+    select(editor, 'b', 0, 4);
+    await runAICommand(editor, 'improve');
+    expect([requests[0].before, requests[0].after]).toEqual(['', '']);
+  });
+
+  it('Escape that something else already handled does not stop the answer', async () => {
+    let release!: () => void;
+    const provider = vi.fn((request: AIRequest) =>
+      (async function* () {
+        yield 'a';
+        await new Promise<void>((r) => {
+          release = r;
+          request.signal.addEventListener('abort', () => r());
+        });
+        yield 'b';
+      })()
+    );
+    const editor = editorWith([para('a', '')], provider as never);
+    const run = runAICommand(editor, 'continue');
+    await vi.waitFor(() => expect(texts(editor)).toEqual(['a']));
+    const handled = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+    handled.preventDefault();
+    document.body.dispatchEvent(handled);
+    release();
+    expect(await run).toEqual({ markdown: 'ab', aborted: false });
+  });
+});
+
+describe('review fixes: a change while the provider is thinking', () => {
+  it('drops the answer instead of writing over the change', async () => {
+    let resolve!: (stream: AsyncIterable<string>) => void;
+    const provider = vi.fn(() => new Promise<AsyncIterable<string>>((r) => (resolve = r)));
+    const editor = editorWith([para('a', 'text')], provider as never);
+    select(editor, 'a', 4, 4);
+    const run = runAICommand(editor, 'continue');
+    await Promise.resolve();
+    editor.chain().setHeading(1).run();
+    resolve((async function* () { yield ' more'; })());
+    expect(await run).toEqual({ markdown: '', aborted: true });
+    expect(editor.state.doc.blocks[0].type).toBe('heading');
+    expect(texts(editor)).toEqual(['text']);
+    expect(editor.isEditable).toBe(true);
+  });
+});

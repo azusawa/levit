@@ -1,4 +1,4 @@
-import { BlockNode, DocumentData, EditorSelection, InlineMark, InlineNode } from './types.js';
+import { BlockNode, DocumentData, EditorPosition, EditorSelection, InlineMark, InlineNode } from './types.js';
 
 let idCounter = 0;
 export function generateBlockId(prefix = 'b'): string {
@@ -180,6 +180,15 @@ export function sliceBlockContent(block: BlockNode, start: number, end: number):
   const [, fromStart] = splitBlockContent(block, start);
   const [middle] = splitBlockContent({ ...block, content: fromStart }, end - start);
   return middle;
+}
+
+/** The two ends of a selection in document order. */
+export function orderedSelection(doc: DocumentData, selection: EditorSelection): { from: EditorPosition; to: EditorPosition } {
+  const { anchor, head } = selection;
+  const a = findBlockIndex(doc, anchor.blockId);
+  const h = findBlockIndex(doc, head.blockId);
+  const forward = a < h || (a === h && anchor.offset <= head.offset);
+  return forward ? { from: { ...anchor }, to: { ...head } } : { from: { ...head }, to: { ...anchor } };
 }
 
 /**

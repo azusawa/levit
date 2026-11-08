@@ -410,12 +410,13 @@ export class LevitEditor {
    * Replaces the whole editor state, for example with one built from an
    * earlier state so a series of changes is undone in one step.
    */
-  replaceState(state: EditorState): void {
+  replaceState(state: EditorState, transaction?: Transaction): void {
     const docChanged = state.doc !== this.state.doc;
     this.state = state;
     if (docChanged) this.render();
     restoreDOMSelection(this.container, this.state.selection);
-    if (docChanged) this.notifyUpdate();
+    if (transaction) this.events.emit('transaction', { editor: this, transaction });
+    if (docChanged) this.notifyUpdate(transaction);
     this.notifySelection();
   }
 

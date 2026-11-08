@@ -169,3 +169,76 @@ describe('spaces at the edges of an answer', () => {
     expect(summary(editor.state.doc)).toEqual([['paragraph', 'a x b']]);
   });
 });
+
+describe('review fixes: streaming', () => {
+  it('gives streamed blocks ids that differ between runs and page loads', async () => {
+    const editor = editorWith('');
+    await streamMarkdown(editor, chunks(['a\n\nb\n\nc'], editor));
+    const first = editor.state.doc.blocks.map((b) => b.id);
+    await streamMarkdown(editor, chunks(['\n\nd\n\ne'], editor));
+    const ids = editor.state.doc.blocks.map((b) => b.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(first.slice(1).every((id) => !/^ai\d+-\d+$/.test(id))).toBe(true);
+  });
+
+  it('a stream that throws AbortError after an abort counts as stopped, and the text is finished', async () => {
+    const editor = editorWith('');
+    const controller = new AbortController();
+    async function* parts() {
+      yield 'Some **bo';
+      controller.abort();
+      throw new DOMException('aborted', 'AbortError');
+    }
+    const result = await streamMarkdown(editor, parts(), { signal: controller.signal });
+    expect(result).toEqual({ markdown: 'Some **bo', aborted: true });
+    // The final render reads the text as written: no ** is added to close it,
+    // so nothing is left bold.
+    expect(editor.state.doc.blocks[0].content.some((n) => n.marks?.some((m) => m.type === 'bold'))).toBe(false);
+  });
+
+  it('stops when the document is changed from outside, and keeps that change', async () => {
+    const editor = editorWith('start', 5);
+    async function* parts() {
+      yield ' one';
+      editor.chain().setHeading(2).run();
+      yield ' two';
+    }
+    const result = await streamMarkdown(editor, parts());
+    expect(result.aborted).toBe(true);
+    expect(editor.state.doc.blocks[0].type).toBe('heading');
+  });
+
+  it('fires a transaction event for each update', async () => {
+    const editor = editorWith('');
+    const transactions: unknown[] = [];
+    editor.on('transaction', ({ transaction }) => transactions.push(transaction));
+    await streamMarkdown(editor, chunks(['a', 'b'], editor), { minInterval: 0 });
+    expect(transactions.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('leaves a read-only editor read-only', async () => {
+    const editor = editorWith('');
+    editor.setEditable(false);
+    await streamMarkdown(editor, chunks(['x'], editor));
+    expect(editor.isEditable).toBe(false);
+  });
+
+  it('draws at most once per interval, but always the final text', async () => {
+    const editor = editorWith('');
+    let renders = 0;
+    editor.on('update', () => renders++);
+    const parts = Array.from({ length: 200 }, () => 'word ');
+    await streamMarkdown(editor, chunks(parts, editor), { minInterval: 10_000 });
+    expect(renders).toBe(2);
+    expect(getBlockText(editor.state.doc.blocks[0])).toBe('word '.repeat(200).trim());
+  });
+});
+
+describe('closeOpenMarkdown', () => {
+  it('does not treat a "* " list marker or * inside `code` as italic', async () => {
+    const { closeOpenMarkdown } = await import('../../src/ai/stream-markdown');
+    expect(closeOpenMarkdown('* first item')).toBe('* first item');
+    expect(closeOpenMarkdown('use `a*b` here')).toBe('use `a*b` here');
+    expect(closeOpenMarkdown('* some *ital')).toBe('* some *ital*');
+  });
+});

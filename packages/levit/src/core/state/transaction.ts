@@ -14,6 +14,7 @@ import {
   MAX_LIST_INDENT,
   mergeBlockContent,
   normalizeInlineNodes,
+  orderedSelection,
   setListIndent,
   sliceBlockContent,
   splitBlockContent,
@@ -80,23 +81,7 @@ export class Transaction {
   }
 
   private normalizeSelectionOrder(): { from: EditorPosition; to: EditorPosition } {
-    const { anchor, head } = this.selection;
-    if (anchor.blockId === head.blockId) {
-      if (anchor.offset <= head.offset) {
-        return { from: { ...anchor }, to: { ...head } };
-      } else {
-        return { from: { ...head }, to: { ...anchor } };
-      }
-    }
-
-    const anchorIdx = findBlockIndex(this.doc, anchor.blockId);
-    const headIdx = findBlockIndex(this.doc, head.blockId);
-
-    if (anchorIdx <= headIdx) {
-      return { from: { ...anchor }, to: { ...head } };
-    } else {
-      return { from: { ...head }, to: { ...anchor } };
-    }
+    return orderedSelection(this.doc, this.selection);
   }
 
   deleteRange(): this {

@@ -2,7 +2,7 @@ import type { LevitEditor } from '../core/editor.js';
 import type { LevitPlugin } from '../core/plugin/plugin.js';
 import type { EditorSelection } from '../core/model/types.js';
 import type { LevitMessages } from '../i18n/messages.js';
-import { findBlockIndex, getBlockText, sliceDocument } from '../core/model/document.js';
+import { getBlockText, orderedSelection, sliceDocument } from '../core/model/document.js';
 import { documentToMarkdown } from '../serializers/markdown.js';
 import { streamMarkdown } from './stream-markdown.js';
 import { proposeReplacement, resolveSuggestions, suggestionMarks, hasSuggestions } from './suggestions.js';
@@ -181,34 +181,56 @@ export async function runAICommand(
 
   const controller = new AbortController();
   running.set(editor, controller);
+  // Escape stops the answer, unless something else (a menu, a dialog) handled it.
   const stopOnEscape = (e: KeyboardEvent) => {
-    if (e.key === 'Escape') controller.abort();
+    if (e.key === 'Escape' && !e.defaultPrevented) controller.abort();
   };
-  document.addEventListener('keydown', stopOnEscape, true);
+  document.addEventListener('keydown', stopOnEscape);
 
+  // Locked from now on, also while waiting for the provider to answer.
+  const wasEditable = editor.isEditable;
+  editor.setEditable(false);
   try {
     // "cursor": write at the end of the selection, keeping the selected text.
     if (command.insert === 'cursor' && !selection.isCollapsed) {
       const end = selectionEnd(editor, selection);
       editor.setSelectionQuietly({ anchor: end, head: end, isCollapsed: true });
     }
-    const stream = await options.provider({
-      command: command.id,
-      prompt: overrides.prompt ?? command.prompt,
-      text,
-      before: summarizeAll ? '' : before,
-      after: summarizeAll ? '' : after,
-      signal: controller.signal,
-    });
+    // The answer goes where the selection was when the command started. If
+    // the document changes while the provider is thinking, the answer is
+    // dropped rather than written over that change.
+    const base = editor.state;
+    let changedWhileWaiting = false;
+    const stopWatching = editor.on('update', () => (changedWhileWaiting = true));
+    let stream: AsyncIterable<string>;
+    try {
+      stream = await options.provider({
+        command: command.id,
+        prompt: overrides.prompt ?? command.prompt,
+        text,
+        before: summarizeAll ? '' : before,
+        after: summarizeAll ? '' : after,
+        signal: controller.signal,
+      });
+    } finally {
+      stopWatching();
+    }
+    if (changedWhileWaiting) {
+      controller.abort();
+      return { markdown: '', aborted: true };
+    }
     const suggest = command.insert === 'replace' && (command.suggest ?? options.suggestions ?? true);
     const id = `ai-${Date.now().toString(36)}-${++suggestionCount}`;
     return await streamMarkdown(editor, stream, {
+      base,
+      lock: false,
       signal: controller.signal,
       at: command.insert === 'below' ? 'below' : 'selection',
       insert: suggest ? (tr, blocks, final) => proposeReplacement(tr, blocks, id, final) : undefined,
     });
   } finally {
-    document.removeEventListener('keydown', stopOnEscape, true);
+    document.removeEventListener('keydown', stopOnEscape);
+    editor.setEditable(wasEditable);
     running.delete(editor);
     // The answer is complete: show the toolbar for its suggestions.
     barUpdates.get(editor)?.();
@@ -225,14 +247,7 @@ function selectionMarkdown(editor: LevitEditor, selection: EditorSelection): str
   return blocks.length > 0 ? documentToMarkdown({ version: 1, blocks }, { plugins: editor.schema.plugins }).trim() : '';
 }
 
-/** The ordered ends of a selection. */
-function ends(editor: LevitEditor, selection: EditorSelection) {
-  const doc = editor.state.doc;
-  const a = findBlockIndex(doc, selection.anchor.blockId);
-  const h = findBlockIndex(doc, selection.head.blockId);
-  const forward = a < h || (a === h && selection.anchor.offset <= selection.head.offset);
-  return forward ? { from: selection.anchor, to: selection.head } : { from: selection.head, to: selection.anchor };
-}
+const ends = (editor: LevitEditor, selection: EditorSelection) => orderedSelection(editor.state.doc, selection);
 
 function selectionEnd(editor: LevitEditor, selection: EditorSelection) {
   return { ...ends(editor, selection).to };
@@ -254,6 +269,8 @@ function surroundingText(editor: LevitEditor, selection: EditorSelection, limit:
     const blocks = sliceDocument(doc, sel);
     return blocks.length > 0 ? documentToMarkdown({ version: 1, blocks }, { plugins: editor.schema.plugins }).trim() : '';
   };
+  // slice(-0) would be the whole text, so no context at all for 0.
+  if (limit <= 0) return { before: '', after: '' };
   return {
     before: markdown(range({ blockId: first.id, offset: 0 }, from)).slice(-limit),
     after: markdown(range(to, docEnd)).slice(0, limit),

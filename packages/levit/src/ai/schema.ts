@@ -144,7 +144,8 @@ export function validateDocument(input: unknown, options: SerializerOptions = {}
     if (!isObject(raw)) return fail(at, 'must be an object');
     const type = raw.type;
     const spec = typeof type === 'string' ? schema.blocks.get(type) : undefined;
-    const known = typeof type === 'string' && (BLOCK_ATTRS[type] !== undefined || spec !== undefined);
+    // hasOwn: names like "constructor" or "__proto__" are not block types.
+    const known = typeof type === 'string' && (Object.hasOwn(BLOCK_ATTRS, type) || spec !== undefined);
     if (!known) return fail(`${at}.type`, `unknown block type ${JSON.stringify(type)}`);
     if (raw.id !== undefined && typeof raw.id !== 'string') fail(`${at}.id`, 'must be a string');
 

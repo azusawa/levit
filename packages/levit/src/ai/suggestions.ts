@@ -7,6 +7,7 @@ import {
   getBlockText,
   mergeBlockContent,
   normalizeInlineNodes,
+  orderedSelection,
   sliceDocument,
   splitBlockContent,
 } from '../core/model/document.js';
@@ -55,14 +56,7 @@ export function hasSuggestions(blocks: BlockNode[], id?: string): boolean {
 const withMark = (nodes: InlineNode[], mark: InlineMark): InlineNode[] =>
   nodes.map((n) => ({ text: n.text, marks: [...(n.marks ?? []).filter((m) => m.type !== mark.type), mark] }));
 
-/** The two ends of a selection in document order. */
-function ordered(tr: Transaction): { from: EditorPosition; to: EditorPosition } {
-  const { anchor, head } = tr.selection;
-  const a = findBlockIndex(tr.doc, anchor.blockId);
-  const h = findBlockIndex(tr.doc, head.blockId);
-  const forward = a < h || (a === h && anchor.offset <= head.offset);
-  return forward ? { from: { ...anchor }, to: { ...head } } : { from: { ...head }, to: { ...anchor } };
-}
+const ordered = (tr: Transaction) => orderedSelection(tr.doc, tr.selection);
 
 /** Calls `change` with the part of each block between `from` and `to`, and puts the result back. */
 function eachRangePart(tr: Transaction, from: EditorPosition, to: EditorPosition, change: (part: InlineNode[], k: number) => InlineNode[]): void {
@@ -213,11 +207,15 @@ export function resolveSuggestions(tr: Transaction, accept: boolean, id?: string
   if (!hasSuggestions(tr.doc.blocks, id)) return false;
   const result: BlockNode[] = [];
   let caretBlock: BlockNode | null = null;
+  // Whether the last block kept is part of the proposal. A block only joins
+  // a block of the same proposal, never an unrelated one above it.
+  let lastKeptInProposal = false;
 
   for (const block of tr.doc.blocks) {
     const nodes = block.content.filter((n) => n.text);
     if (!nodes.some((n) => hasId(n))) {
       result.push(block);
+      lastKeptInProposal = false;
       continue;
     }
     // A removed first run marked `join` means this block's break goes away.
@@ -228,7 +226,7 @@ export function resolveSuggestions(tr: Transaction, accept: boolean, id?: string
 
     if (kept.length === 0) {
       // Only removed text: the whole block goes.
-    } else if (joins && result.length > 0) {
+    } else if (joins && lastKeptInProposal) {
       const previous = result[result.length - 1];
       previous.content = mergeBlockContent(previous.content, kept);
       caretBlock = previous;
@@ -236,6 +234,7 @@ export function resolveSuggestions(tr: Transaction, accept: boolean, id?: string
       block.content = normalizeInlineNodes(kept);
       result.push(block);
       caretBlock = block;
+      lastKeptInProposal = true;
     }
   }
 
