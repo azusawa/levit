@@ -19,6 +19,10 @@
       placeholder: 'Type here',
       // Stands in for a real upload: the image is shown from a local blob URL.
       uploadImage: async (file) => URL.createObjectURL(file),
+      // A tiny highlighter: wraps a few keywords, like highlight.js would.
+      highlightCode: (code) =>
+        code.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c])
+          .replace(/\b(let|const|return)\b/g, '<span class="kw">$1</span>'),
     });
     createBubbleMenu(editor);
     createSlashMenu(editor);

@@ -32,6 +32,13 @@ export function sanitizeImageSrc(src: unknown): string | null {
   return null;
 }
 
+/** A code block language like "ts" or "c++", or null if it is not a plain name. */
+export function normalizeCodeLanguage(language: unknown): string | null {
+  if (typeof language !== 'string') return null;
+  const value = language.trim();
+  return /^[A-Za-z0-9_+#.-]{1,32}$/.test(value) ? value : null;
+}
+
 /** Turns any value into a heading level from 1 to 6 (1 when it is not an integer). */
 export function normalizeHeadingLevel(level: unknown): number {
   const n = typeof level === 'string' && /^\d+$/.test(level) ? Number(level) : level;

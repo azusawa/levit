@@ -1,6 +1,6 @@
 import { BlockNode, DocumentData, InlineNode } from '../core/model/types.js';
 import { createBlock, createDocument, createTextNode, isListItem, listIndent } from '../core/model/document.js';
-import { normalizeHeadingLevel, sanitizeHref, sanitizeImageSrc } from '../core/model/sanitize.js';
+import { normalizeCodeLanguage, normalizeHeadingLevel, sanitizeHref, sanitizeImageSrc } from '../core/model/sanitize.js';
 
 export function documentToMarkdown(doc: DocumentData): string {
   let out = '';
@@ -45,7 +45,7 @@ export function documentToMarkdown(doc: DocumentData): string {
         line = `> ${breaks('> ')}`;
         break;
       case 'code_block':
-        line = `\`\`\`\n${blockText}\n\`\`\``;
+        line = `\`\`\`${normalizeCodeLanguage(block.attrs?.language) ?? ''}\n${blockText}\n\`\`\``;
         break;
       case 'horizontal_rule':
         line = '---';
@@ -222,9 +222,10 @@ export function markdownToDocument(markdown: string): DocumentData {
     }
 
     // Code block (``` ... ```)
-    const codeMatch = trimmed.match(/^```[\w]*\n?([\s\S]*?)```$/);
+    const codeMatch = trimmed.match(/^```([^\s`]*)[^\n]*\n?([\s\S]*?)```$/);
     if (codeMatch) {
-      blocks.push(createBlock('code_block', {}, [createTextNode(codeMatch[1].trim())]));
+      const language = normalizeCodeLanguage(codeMatch[1]);
+      blocks.push(createBlock('code_block', language ? { language } : {}, [createTextNode(codeMatch[2].trim())]));
       continue;
     }
 

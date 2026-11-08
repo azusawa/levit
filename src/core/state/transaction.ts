@@ -19,7 +19,7 @@ import {
   sliceBlockContent,
   splitBlockContent,
 } from '../model/document.js';
-import { sanitizeHref, sanitizeImageSrc } from '../model/sanitize.js';
+import { normalizeCodeLanguage, sanitizeHref, sanitizeImageSrc } from '../model/sanitize.js';
 import {
   lineEndOffset,
   lineStartOffset,
@@ -468,6 +468,34 @@ export class Transaction {
     this.setCaret(next.id, 0);
     this.docChanged = true;
     return this;
+  }
+
+  /**
+   * Sets the language of a code block: the one with blockId, or the selected
+   * ones. An empty or invalid name clears it.
+   */
+  setCodeLanguage(language: string, blockId?: string): this {
+    const name = normalizeCodeLanguage(language);
+    const blocks = blockId
+      ? this.doc.blocks.filter((b) => b.id === blockId)
+      : this.selectedBlocks();
+    for (const block of blocks) {
+      if (block.type !== 'code_block') continue;
+      const attrs = { ...block.attrs };
+      if (name) attrs.language = name;
+      else delete attrs.language;
+      block.attrs = attrs;
+      this.docChanged = true;
+    }
+    return this;
+  }
+
+  private selectedBlocks(): BlockNode[] {
+    const { from, to } = this.normalizeSelectionOrder();
+    const fromIdx = findBlockIndex(this.doc, from.blockId);
+    const toIdx = findBlockIndex(this.doc, to.blockId);
+    if (fromIdx === -1 || toIdx === -1) return [];
+    return this.doc.blocks.slice(fromIdx, toIdx + 1);
   }
 
   /** Selects the whole document. */

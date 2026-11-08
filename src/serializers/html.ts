@@ -6,7 +6,7 @@ import {
   listIndent,
   normalizeInlineNodes,
 } from '../core/model/document.js';
-import { normalizeHeadingLevel, sanitizeHref, sanitizeImageSrc } from '../core/model/sanitize.js';
+import { normalizeCodeLanguage, normalizeHeadingLevel, sanitizeHref, sanitizeImageSrc } from '../core/model/sanitize.js';
 
 /** The element that holds each kind of list item, and how it is opened. */
 const LISTS: Record<string, { tag: string; open: string }> = {
@@ -85,9 +85,11 @@ export function documentToHTML(doc: DocumentData): string {
         if (src) html += `<img src="${escapeHTML(src)}" alt="${escapeHTML(String(block.attrs?.alt ?? ''))}">`;
         break;
       }
-      case 'code_block':
-        html += `<pre><code>${contentHtml}</code></pre>`;
+      case 'code_block': {
+        const language = normalizeCodeLanguage(block.attrs?.language);
+        html += `<pre><code${language ? ` class="language-${language}"` : ''}>${contentHtml}</code></pre>`;
         break;
+      }
       case 'bullet_list_item':
       case 'ordered_list_item':
         // Closed when the next item or the list ends.
@@ -247,12 +249,28 @@ function readBlockElement(el: Element, ctx: Context, out: BlockNode[]): void {
     else readListItem(el, { type: 'task_list_item', depth: ctx.depth ?? 0, checked }, out);
   } else if (tag === 'pre') {
     const text = (el.textContent || '').replace(/\r\n?/g, '\n').replace(/\n$/, '');
-    out.push(createBlock('code_block', {}, [createTextNode(text)]));
+    const language = codeLanguageOf(el);
+    out.push(createBlock('code_block', language ? { language } : {}, [createTextNode(text)]));
   } else if (tag === 'hr') {
     out.push(createBlock('horizontal_rule'));
   } else {
     readBlocks(el, ctx, out);
   }
+}
+
+/** The language of a <pre>: data-language, or a language-x / lang-x class on it or its <code>. */
+function codeLanguageOf(pre: Element): string | null {
+  for (const el of [pre, pre.querySelector('code')]) {
+    if (!el) continue;
+    const data = normalizeCodeLanguage(el.getAttribute('data-language'));
+    if (data) return data;
+    for (const name of Array.from(el.classList)) {
+      const m = /^(?:language|lang)-(.+)$/.exec(name);
+      const language = m && normalizeCodeLanguage(m[1]);
+      if (language) return language;
+    }
+  }
+  return null;
 }
 
 function readLeaf(el: Element, tag: string, ctx: Context, out: BlockNode[]): void {

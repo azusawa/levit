@@ -166,3 +166,38 @@ test.describe('dividers and images', () => {
     expect((await blocks(page)).map((b) => [b.type, text(b)])).toEqual([['paragraph', 'new']]);
   });
 });
+
+test.describe('code block languages', () => {
+  async function codeBlock(page: Page, text: string, language?: string) {
+    await page.evaluate(
+      ([t, l]) =>
+        (window as any).editor.setJSON({
+          version: 1,
+          blocks: [{ type: 'code_block', attrs: l ? { language: l } : {}, content: [{ text: t }] }],
+        }),
+      [text, language] as const
+    );
+  }
+
+  test('clicking the label sets the language', async ({ page }) => {
+    await codeBlock(page, 'print(1)');
+    page.once('dialog', (d) => d.accept('python'));
+    const pre = editorRoot(page).locator('pre');
+    await pre.hover();
+    await pre.locator('.levit-code-language').click();
+    expect((await blocks(page))[0].attrs).toEqual({ language: 'python' });
+    await expect(pre).toHaveAttribute('data-language', 'python');
+  });
+
+  test('typing inside highlighted code keeps text and caret right', async ({ page }) => {
+    await codeBlock(page, 'let a = 1', 'js');
+    await expect(editorRoot(page).locator('code .kw')).toHaveText('let');
+    await editorRoot(page).locator('code').click();
+    await page.keyboard.press(process.platform === 'darwin' ? 'Meta+ArrowRight' : 'End');
+    await page.keyboard.press('Shift+Enter');
+    await page.keyboard.type('return a');
+
+    expect(text((await blocks(page))[0])).toBe('let a = 1\nreturn a');
+    await expect(editorRoot(page).locator('code .kw')).toHaveText(['let', 'return']);
+  });
+});

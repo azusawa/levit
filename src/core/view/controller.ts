@@ -247,8 +247,21 @@ export class InputController {
     }
   }
 
-  /** A click on a task checkbox toggles it without moving the caret. */
+  /**
+   * A click on a task checkbox toggles it, and a click on a code block's
+   * language label asks for a new language. Neither moves the caret.
+   */
   private handleMouseDown(e: MouseEvent): void {
+    const label = (e.target as Element | null)?.closest?.('.levit-code-language');
+    if (label && this.container.contains(label)) {
+      e.preventDefault();
+      const pre = label.closest('[data-block-id]');
+      const blockId = pre?.getAttribute('data-block-id');
+      const language = window.prompt('Code language', pre?.getAttribute('data-language') ?? '');
+      if (blockId && language !== null) this.editor.chain().setCodeLanguage(language, blockId).run();
+      return;
+    }
+
     const box = (e.target as Element | null)?.closest?.('.levit-task-checkbox');
     if (!box || !this.container.contains(box)) return;
     e.preventDefault();

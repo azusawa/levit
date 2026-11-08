@@ -1,14 +1,20 @@
 import { BlockNode, InlineMark, InlineNode } from '../model/types.js';
 import { EditorState } from '../state/state.js';
-import { normalizeHeadingLevel, sanitizeHref, sanitizeImageSrc } from '../model/sanitize.js';
+import { normalizeCodeLanguage, normalizeHeadingLevel, sanitizeHref, sanitizeImageSrc } from '../model/sanitize.js';
 import { isAtomBlock, isListItem, listIndent } from '../model/document.js';
+
+export interface ReconcilerOptions {
+  highlightCode?: (code: string, language: string) => string;
+}
 
 export class DOMReconciler {
   private container: HTMLElement;
+  private options: ReconcilerOptions;
   private renderedSnapshots = new Map<string, string>();
 
-  constructor(container: HTMLElement) {
+  constructor(container: HTMLElement, options: ReconcilerOptions = {}) {
     this.container = container;
+    this.options = options;
   }
 
   /** Forgets what was rendered, so the next render rebuilds every block. */
@@ -187,6 +193,8 @@ export class DOMReconciler {
       return;
     }
     if (block.type === 'task_list_item') this.addCheckbox(el, block);
+    const language = block.type === 'code_block' ? normalizeCodeLanguage(block.attrs?.language) : null;
+    if (block.type === 'code_block') this.addLanguageLabel(el, language);
 
     const hasText = block.content.some((node) => node.text.length > 0);
     if (!hasText) {
@@ -201,7 +209,8 @@ export class DOMReconciler {
     if (block.type === 'code_block') {
       const code = document.createElement('code');
       const text = block.content.map((c) => c.text).join('');
-      code.textContent = text;
+      if (language) code.className = `language-${language}`;
+      this.fillCode(code, text, language);
       el.appendChild(code);
       if (text.endsWith('\n')) el.appendChild(document.createElement('br'));
       return;
@@ -216,6 +225,38 @@ export class DOMReconciler {
     // A trailing newline only shows an empty last line if a <br> follows it.
     if (block.content.map((c) => c.text).join('').endsWith('\n')) {
       el.appendChild(document.createElement('br'));
+    }
+  }
+
+  /**
+   * A label with the code block's language. It shows the name through CSS
+   * (attr()), so it holds no text and caret offsets skip it.
+   */
+  private addLanguageLabel(el: HTMLElement, language: string | null): void {
+    if (language) el.setAttribute('data-language', language);
+    else el.removeAttribute('data-language');
+    const label = document.createElement('span');
+    label.className = 'levit-code-language';
+    label.contentEditable = 'false';
+    label.setAttribute('role', 'button');
+    label.setAttribute('aria-label', language ? `Language: ${language}` : 'Set language');
+    label.setAttribute('data-label', language ?? 'Plain text');
+    el.appendChild(label);
+  }
+
+  /** Puts code into the element, highlighted when a highlighter is set. */
+  private fillCode(code: HTMLElement, text: string, language: string | null): void {
+    code.textContent = text;
+    const highlight = this.options.highlightCode;
+    if (!highlight || !language) return;
+    try {
+      const highlighted = cleanHighlightHTML(highlight(text, language));
+      // The model and the DOM must hold the same text, or caret offsets break.
+      if (highlighted.textContent !== text) return;
+      code.textContent = '';
+      code.appendChild(highlighted);
+    } catch {
+      // Keep the plain text.
     }
   }
 
@@ -294,3 +335,35 @@ export class DOMReconciler {
   }
 }
 
+/**
+ * Parses highlighter output and keeps only text and <span class style>.
+ * Other elements are unwrapped; script and style are dropped with their text.
+ */
+function cleanHighlightHTML(html: string): DocumentFragment {
+  const template = document.createElement('template');
+  template.innerHTML = html;
+  const out = document.createDocumentFragment();
+  const copy = (from: Node, to: Node) => {
+    for (const child of Array.from(from.childNodes)) {
+      if (child.nodeType === Node.TEXT_NODE) {
+        to.appendChild(document.createTextNode(child.nodeValue ?? ''));
+      } else if (child.nodeType === Node.ELEMENT_NODE) {
+        const tag = (child as Element).tagName.toLowerCase();
+        if (tag === 'script' || tag === 'style') continue;
+        if (tag === 'span') {
+          const span = document.createElement('span');
+          for (const name of ['class', 'style']) {
+            const value = (child as Element).getAttribute(name);
+            if (value !== null) span.setAttribute(name, value);
+          }
+          copy(child, span);
+          to.appendChild(span);
+        } else {
+          copy(child, to);
+        }
+      }
+    }
+  };
+  copy(template.content, out);
+  return out;
+}

@@ -22,6 +22,12 @@ export interface EditorOptions {
   uploadImage?: (file: File) => Promise<string>;
   /** Called when something fails in the background, such as an image upload. */
   onError?: (error: unknown) => void;
+  /**
+   * Highlights code blocks that have a language. Returns HTML for the code,
+   * for example from highlight.js or Shiki. Only <span> elements with class
+   * and style are kept, and the text must stay the same.
+   */
+  highlightCode?: (code: string, language: string) => string;
 }
 
 export class ChainedCommands {
@@ -115,6 +121,19 @@ export class ChainedCommands {
   /** Moves the selected list items one level up. */
   outdentListItem(): this {
     this.tr.outdentListItem();
+    return this;
+  }
+
+  /** Turns the selected blocks into code, optionally with a language. */
+  setCodeBlock(language?: string): this {
+    this.tr.setBlockType('code_block', {});
+    if (language) this.tr.setCodeLanguage(language);
+    return this;
+  }
+
+  /** Sets the language of the selected code block, or of the one with blockId. */
+  setCodeLanguage(language: string, blockId?: string): this {
+    this.tr.setCodeLanguage(language, blockId);
     return this;
   }
 
@@ -213,7 +232,7 @@ export class LevitEditor {
       : undefined;
 
     this.state = EditorState.create({ doc: initialDoc });
-    this.reconciler = new DOMReconciler(this.container);
+    this.reconciler = new DOMReconciler(this.container, { highlightCode: options.highlightCode });
     this.controller = new InputController(this, this.container);
 
     // Initial render

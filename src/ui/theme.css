@@ -273,6 +273,37 @@ pre.levit-block-code_block {
   margin: 0.8em 0;
 }
 
+/* The language label sits in the corner. Its text comes from data-label,
+   so the label itself holds no text. */
+.levit-code-language {
+  position: absolute;
+  top: 6px;
+  right: 10px;
+  font-family: var(--levit-font-sans);
+  font-size: 0.75em;
+  line-height: 1.4;
+  color: var(--levit-text-muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.levit-code-language::before {
+  content: attr(data-label);
+}
+
+/* "Plain text" only shows on hover, so plain code blocks stay clean. */
+pre.levit-block-code_block:not([data-language]) .levit-code-language {
+  opacity: 0;
+}
+
+pre.levit-block-code_block:hover .levit-code-language {
+  opacity: 1;
+}
+
+.levit-code-language:hover {
+  color: var(--levit-text);
+}
+
 pre.levit-block-code_block code {
   color: var(--levit-code-text);
   background: transparent;
