@@ -39,3 +39,20 @@ describe('Markdown Serializer & Deserializer', () => {
   });
 });
 
+
+describe('link text with square brackets', () => {
+  it('reads balanced and escaped brackets in link text', () => {
+    for (const md of ['[a [b] c](https://x.test)', '[a \\[b\\] c](https://x.test)']) {
+      const node = markdownToDocument(md).blocks[0].content[0];
+      expect(node.text).toBe('a [b] c');
+      expect(node.marks).toEqual([{ type: 'link', attrs: { href: 'https://x.test' } }]);
+    }
+  });
+
+  it('keeps such a link through a Markdown round trip', () => {
+    const md = documentToMarkdown(markdownToDocument('[a [b] c](https://x.test)'));
+    const node = markdownToDocument(md).blocks[0].content[0];
+    expect(node.text).toBe('a [b] c');
+    expect(node.marks?.[0]?.type).toBe('link');
+  });
+});

@@ -35,7 +35,8 @@ export function documentToMarkdown(doc: DocumentData, options: SerializerOptions
           else if (m.type === 'highlight') t = `==${t}==`;
           else if (m.type === 'link') {
             const href = sanitizeHref(m.attrs?.href);
-            if (href) t = `[${t}](${href})`;
+            // Brackets in link text are escaped so the link reads back whole.
+            if (href) t = `[${t.replace(/[[\]\\]/g, '\\$&')}](${href})`;
           } else {
             const spec = schema.marks.get(m.type);
             if (spec?.toMarkdown) t = spec.toMarkdown(t, m);
@@ -122,10 +123,12 @@ function parseInlineMarkdown(text: string): InlineNode[] {
   const nodes: InlineNode[] = [];
   // Tokens: bold (**...**), italic (*...*), code (`...`), link ([text](url)),
   // strikethrough (~~...~~) and highlight (==...==).
-  // Link text and URLs cannot contain brackets or spaces, so a run of "["
-  // with no match fails at the next bracket instead of scanning the whole
-  // line again from every "[" (which made crafted text take seconds).
-  const tokenRegex = /(\*\*(.*?)\*\*|\*(.*?)\*|`(.*?)`|\[([^[\]\n]*)\]\(([^)\s]*)\)|~~(.+?)~~|==(.+?)==)/g;
+  // Link text is plain characters, escaped characters (\[) or one level of
+  // [brackets]; URLs have no spaces or brackets. Every match attempt stops
+  // at the next bracket, so runs of "[" or "](" cannot make the search scan
+  // the whole line again from each one (which took seconds on crafted text).
+  const tokenRegex =
+    /(\*\*(.*?)\*\*|\*(.*?)\*|`(.*?)`|\[((?:\\.|\[[^[\]\n]*\]|[^[\]\\\n])*)\]\(([^)\s[\]]*)\)|~~(.+?)~~|==(.+?)==)/g;
   let lastIndex = 0;
   let match: RegExpExecArray | null;
 
@@ -146,7 +149,8 @@ function parseInlineMarkdown(text: string): InlineNode[] {
     } else if (match[5] !== undefined && match[6] !== undefined) {
       // Link
       const href = sanitizeHref(match[6]);
-      nodes.push(createTextNode(match[5], href ? [{ type: 'link', attrs: { href } }] : []));
+      const text = match[5].replace(/\\([[\]\\])/g, '$1');
+      nodes.push(createTextNode(text, href ? [{ type: 'link', attrs: { href } }] : []));
     } else if (match[7] !== undefined) {
       nodes.push(createTextNode(match[7], [{ type: 'strike' }]));
     } else if (match[8] !== undefined) {
@@ -165,7 +169,9 @@ function parseInlineMarkdown(text: string): InlineNode[] {
 
 /** Turns Markdown hard breaks ("\\" or two spaces before a newline) into "\n". */
 function readHardBreaks(text: string): string {
-  return text.replace(/(?:\\| {2,})\r?\n/g, '\n').replace(/\r\n/g, '\n');
+  // (?<! ) starts a run of spaces only at its first space, so a long run
+  // without a newline after it is not rescanned from every space.
+  return text.replace(/(?:\\|(?<! ) {2,})\r?\n/g, '\n').replace(/\r\n/g, '\n');
 }
 
 /**
