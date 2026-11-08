@@ -38,5 +38,16 @@ describe('Floating Menus (Bubble Menu & Slash Menu)', () => {
     slashMenu.destroy();
     editor.destroy();
   });
-});
 
+  it('the To-do list item turns the current block into an unchecked task', () => {
+    const editor = new LevitEditor({ element: container });
+    const slashMenu = createSlashMenu(editor);
+    const item = slashMenu.getItems().find((i) => i.id === 'task-list');
+    expect(item).toBeDefined();
+    item!.action(editor);
+    expect(editor.state.doc.blocks[0].type).toBe('task_list_item');
+    expect(editor.state.doc.blocks[0].attrs).toEqual({ checked: false });
+    slashMenu.destroy();
+    editor.destroy();
+  });
+});

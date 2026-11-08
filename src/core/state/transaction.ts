@@ -404,6 +404,8 @@ export class Transaction {
       }
       type = block.type;
       attrs = { ...block.attrs };
+      // A new task starts unchecked.
+      if (type === 'task_list_item') attrs.checked = false;
     }
     type ??= 'paragraph';
     attrs ??= {};
@@ -547,6 +549,15 @@ export class Transaction {
       toIdx += 1;
     }
     return [fromIdx, toIdx];
+  }
+
+  /** Checks or unchecks a task item: the one with blockId, or the one at the caret. */
+  toggleTaskChecked(blockId = this.selection.anchor.blockId): this {
+    const block = this.doc.blocks[findBlockIndex(this.doc, blockId)];
+    if (!block || block.type !== 'task_list_item') return this;
+    block.attrs = { ...block.attrs, checked: block.attrs?.checked !== true };
+    this.docChanged = true;
+    return this;
   }
 
   /** Nests the selected list items one level deeper (Tab). */

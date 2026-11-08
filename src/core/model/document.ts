@@ -137,7 +137,7 @@ export function mergeBlockContent(left: InlineNode[], right: InlineNode[]): Inli
 }
 
 
-export const LIST_ITEM_TYPES = ['bullet_list_item', 'ordered_list_item'] as const;
+export const LIST_ITEM_TYPES = ['bullet_list_item', 'ordered_list_item', 'task_list_item'] as const;
 
 export function isListItem(type: string): boolean {
   return (LIST_ITEM_TYPES as readonly string[]).includes(type);

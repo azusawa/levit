@@ -207,6 +207,48 @@ h3.levit-block-heading {
   font-variant-numeric: tabular-nums;
 }
 
+/* Task items: a real element draws the checkbox, so screen readers and
+   clicks can reach it. It holds no text, so caret offsets skip it. */
+.levit-block-task_list_item::before {
+  content: none;
+}
+
+.levit-task-checkbox {
+  position: absolute;
+  left: 0.15em;
+  top: 0.35em;
+  width: 1em;
+  height: 1em;
+  box-sizing: border-box;
+  border: 1.5px solid var(--levit-text-muted);
+  border-radius: 4px;
+  background: var(--levit-bg);
+  cursor: pointer;
+  user-select: none;
+}
+
+.levit-block-task_list_item[data-checked="true"] > .levit-task-checkbox {
+  background: var(--levit-primary);
+  border-color: var(--levit-primary);
+}
+
+.levit-block-task_list_item[data-checked="true"] > .levit-task-checkbox::after {
+  content: "";
+  position: absolute;
+  left: 0.3em;
+  top: 0.1em;
+  width: 0.25em;
+  height: 0.5em;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.levit-block-task_list_item[data-checked="true"] {
+  color: var(--levit-text-muted);
+  text-decoration: line-through;
+}
+
 /* Blockquote */
 blockquote.levit-block-blockquote {
   border-left: 3px solid var(--levit-quote-border);

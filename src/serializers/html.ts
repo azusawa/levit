@@ -8,9 +8,11 @@ import {
 } from '../core/model/document.js';
 import { normalizeHeadingLevel, sanitizeHref } from '../core/model/sanitize.js';
 
-const LIST_TAGS: Record<string, string> = {
-  bullet_list_item: 'ul',
-  ordered_list_item: 'ol',
+/** The element that holds each kind of list item, and how it is opened. */
+const LISTS: Record<string, { tag: string; open: string }> = {
+  bullet_list_item: { tag: 'ul', open: '<ul>' },
+  ordered_list_item: { tag: 'ol', open: '<ol>' },
+  task_list_item: { tag: 'ul', open: '<ul class="levit-task-list">' },
 };
 
 export function documentToHTML(doc: DocumentData): string {
@@ -19,22 +21,22 @@ export function documentToHTML(doc: DocumentData): string {
   // because a nested list goes inside its parent's <li>.
   const lists: string[] = [];
   const closeListsTo = (depth: number) => {
-    while (lists.length > depth) html += `</li></${lists.pop()}>`;
+    while (lists.length > depth) html += `</li></${LISTS[lists.pop()!].tag}>`;
   };
 
   for (const block of doc.blocks) {
-    const listTag = LIST_TAGS[block.type] ?? null;
-    if (listTag) {
+    const list = LISTS[block.type];
+    if (list) {
       // An item can be at most one level deeper than the list it follows.
       const level = Math.min(listIndent(block), lists.length);
       closeListsTo(level + 1);
       if (lists.length === level + 1) {
-        if (lists[level] === listTag) html += '</li>';
+        if (lists[level] === block.type) html += '</li>';
         else closeListsTo(level);
       }
       if (lists.length === level) {
-        html += `<${listTag}>`;
-        lists.push(listTag);
+        html += list.open;
+        lists.push(block.type);
       }
     } else {
       closeListsTo(0);
@@ -82,6 +84,11 @@ export function documentToHTML(doc: DocumentData): string {
         // Closed when the next item or the list ends.
         html += `<li>${contentHtml}`;
         break;
+      case 'task_list_item': {
+        const checked = block.attrs?.checked === true;
+        html += `<li data-checked="${checked}"><input type="checkbox" disabled${checked ? ' checked' : ''}>${contentHtml}`;
+        break;
+      }
       default:
         html += `<p>${contentHtml}</p>`;
         break;
@@ -130,11 +137,29 @@ const BLOCK_TAGS = new Set([
 ]);
 
 /** The block type for loose content, and the nesting level of the list we are in. */
-type Context = { type: string; depth?: number };
+type Context = { type: string; depth?: number; checked?: boolean };
 
 /** Attributes for a block made in this context: nested list items get their level. */
 function attrsFor(ctx: Context): Record<string, any> {
-  return ctx.type.endsWith('list_item') && ctx.depth ? { indent: ctx.depth } : {};
+  const attrs: Record<string, any> = ctx.type.endsWith('list_item') && ctx.depth ? { indent: ctx.depth } : {};
+  if (ctx.type === 'task_list_item') attrs.checked = ctx.checked === true;
+  return attrs;
+}
+
+/**
+ * Whether an <li> is a checked (true) or open (false) task, or null if it is
+ * not a task. Reads data-checked (Levit, Tiptap) or a leading checkbox (GitHub).
+ */
+function taskState(li: Element): boolean | null {
+  const data = li.getAttribute('data-checked');
+  if (data === 'true' || data === 'false') return data === 'true';
+  for (const child of Array.from(li.childNodes)) {
+    if (child.nodeType === Node.TEXT_NODE && !(child.nodeValue ?? '').trim()) continue;
+    const box = tagOf(child) === 'input' ? (child as Element) : (child as Element).querySelector?.(':scope > input');
+    if (box && box.getAttribute('type') === 'checkbox') return box.hasAttribute('checked');
+    return null;
+  }
+  return null;
 }
 
 export function htmlToDocument(html: string): DocumentData {
@@ -205,7 +230,9 @@ function readBlockElement(el: Element, ctx: Context, out: BlockNode[]): void {
     readBlocks(el, { type: tag === 'ul' ? 'bullet_list_item' : 'ordered_list_item', depth }, out);
   } else if (tag === 'li') {
     const type = ctx.type.endsWith('list_item') ? ctx.type : 'bullet_list_item';
-    readListItem(el, { type, depth: ctx.depth ?? 0 }, out);
+    const checked = taskState(el);
+    if (checked === null) readListItem(el, { type, depth: ctx.depth ?? 0 }, out);
+    else readListItem(el, { type: 'task_list_item', depth: ctx.depth ?? 0, checked }, out);
   } else if (tag === 'pre') {
     const text = (el.textContent || '').replace(/\r\n?/g, '\n').replace(/\n$/, '');
     out.push(createBlock('code_block', {}, [createTextNode(text)]));

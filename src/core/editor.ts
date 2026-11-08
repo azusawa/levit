@@ -93,6 +93,12 @@ export class ChainedCommands {
     return this;
   }
 
+  /** Checks or unchecks a task item (the one at the caret by default). */
+  toggleTaskChecked(blockId?: string): this {
+    this.tr.toggleTaskChecked(blockId);
+    return this;
+  }
+
   /** Nests the selected list items one level deeper. */
   indentListItem(): this {
     this.tr.indentListItem();

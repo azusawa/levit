@@ -156,6 +156,7 @@ export class DOMReconciler {
 
   private applyBlockClasses(el: HTMLElement, block: BlockNode): void {
     el.className = `levit-block levit-block-${block.type}`;
+    if (block.type !== 'task_list_item') el.removeAttribute('data-checked');
     if (isListItem(block.type)) el.classList.add('levit-list-item');
     const indent = listIndent(block);
     if (indent > 0) el.setAttribute('data-indent', String(indent));
@@ -164,6 +165,7 @@ export class DOMReconciler {
 
   private updateBlockContent(el: HTMLElement, block: BlockNode): void {
     el.innerHTML = '';
+    if (block.type === 'task_list_item') this.addCheckbox(el, block);
 
     const hasText = block.content.some((node) => node.text.length > 0);
     if (!hasText) {
@@ -194,6 +196,19 @@ export class DOMReconciler {
     if (block.content.map((c) => c.text).join('').endsWith('\n')) {
       el.appendChild(document.createElement('br'));
     }
+  }
+
+  /** The checkbox of a task item. It holds no text, so offsets ignore it. */
+  private addCheckbox(el: HTMLElement, block: BlockNode): void {
+    const checked = block.attrs?.checked === true;
+    el.setAttribute('data-checked', String(checked));
+    const box = document.createElement('span');
+    box.className = 'levit-task-checkbox';
+    box.contentEditable = 'false';
+    box.setAttribute('role', 'checkbox');
+    box.setAttribute('aria-checked', String(checked));
+    box.setAttribute('aria-label', checked ? 'Mark as not done' : 'Mark as done');
+    el.appendChild(box);
   }
 
   private renderInlineNode(node: InlineNode): Node {

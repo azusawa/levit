@@ -111,10 +111,12 @@ function findDOMPoint(blockEl: HTMLElement, targetOffset: number): { node: Node;
     accumulated += len;
   }
 
-  // If no text node (e.g. empty block with <br>) or targetOffset beyond end
+  // No text (an empty block): put the caret where the text would start,
+  // before the placeholder <br> and after a task checkbox.
+  const br = Array.from(blockEl.childNodes).findIndex((n) => n.nodeName === 'BR');
   return {
     node: blockEl,
-    offset: 0,
+    offset: br === -1 ? 0 : br,
   };
 }
 

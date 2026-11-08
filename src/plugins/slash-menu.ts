@@ -80,6 +80,13 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
       icon: '1.',
       action: (ed) => ed.chain().setBlockType('ordered_list_item').run(),
     },
+    {
+      id: 'task-list',
+      title: 'To-do List',
+      description: 'Track tasks with checkboxes',
+      icon: '☑',
+      action: (ed) => ed.chain().setBlockType('task_list_item', { checked: false }).run(),
+    },
   ];
 
   function renderList() {

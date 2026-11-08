@@ -47,16 +47,18 @@ export function documentToMarkdown(doc: DocumentData): string {
         line = `\`\`\`\n${blockText}\n\`\`\``;
         break;
       case 'bullet_list_item':
-      case 'ordered_list_item': {
+      case 'ordered_list_item':
+      case 'task_list_item': {
         const level = Math.min(listIndent(block), widths.length);
         numbers.length = widths.length = level + 1;
         const ordered = block.type === 'ordered_list_item';
         // A bullet at the same level ends a run of numbers.
         numbers[level] = ordered ? (numbers[level] ?? 0) + 1 : 0;
         const marker = ordered ? `${numbers[level]}. ` : '- ';
+        const box = block.type === 'task_list_item' ? (block.attrs?.checked === true ? '[x] ' : '[ ] ') : '';
         const prefix = ' '.repeat(widths.slice(0, level).reduce((a, b) => a + b, 0));
         widths[level] = marker.length;
-        line = `${prefix}${marker}${breaks(prefix + ' '.repeat(marker.length))}`;
+        line = `${prefix}${marker}${box}${breaks(prefix + ' '.repeat(marker.length))}`;
         break;
       }
       default:
@@ -152,7 +154,7 @@ export function markdownToDocument(markdown: string): DocumentData {
     const listLine = /^(\s*)(?:([-*+])|\d+\.)\s+(.*)$/;
     const continues = (l: string) => /^\s+\S/.test(l) && !listLine.test(l);
     if (listLine.test(lines[0]) && lines.every((l) => listLine.test(l) || continues(l))) {
-      const items: { type: string; text: string; indent: number }[] = [];
+      const items: { type: string; text: string; indent: number; checked?: boolean }[] = [];
       // Columns of the markers of the open parent items. An item indented past
       // its parent's marker is nested under it.
       const parents: number[] = [];
@@ -164,11 +166,18 @@ export function markdownToDocument(markdown: string): DocumentData {
         }
         const column = m[1].replace(/\t/g, '    ').length;
         while (parents.length > 0 && column <= parents[parents.length - 1]) parents.pop();
-        items.push({ type: m[2] ? 'bullet_list_item' : 'ordered_list_item', text: m[3], indent: parents.length });
+        const task = m[2] ? /^\[([ xX])\]\s+(.*)$/.exec(m[3]) : null;
+        items.push({
+          type: task ? 'task_list_item' : m[2] ? 'bullet_list_item' : 'ordered_list_item',
+          text: task ? task[2] : m[3],
+          indent: parents.length,
+          checked: task ? task[1] !== ' ' : undefined,
+        });
         parents.push(column);
       }
       for (const item of items) {
-        const attrs = item.indent > 0 ? { indent: item.indent } : {};
+        const attrs: Record<string, any> = item.indent > 0 ? { indent: item.indent } : {};
+        if (item.checked !== undefined) attrs.checked = item.checked;
         blocks.push(createBlock(item.type, attrs, parseInlineMarkdown(readHardBreaks(item.text))));
       }
       continue;

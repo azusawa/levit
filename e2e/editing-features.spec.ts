@@ -65,3 +65,40 @@ test.describe('nested lists', () => {
     ]);
   });
 });
+
+test.describe('task lists', () => {
+  test('"[] " starts a task, clicking the box checks it and typing continues', async ({ page }) => {
+    await page.keyboard.type('[] buy milk');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('call mom');
+    await editorRoot(page).locator('.levit-task-checkbox').first().click();
+    await page.keyboard.type('!');
+
+    const list = await blocks(page);
+    expect(list.map((b) => [b.type, text(b), b.attrs?.checked])).toEqual([
+      ['task_list_item', 'buy milk', true],
+      ['task_list_item', 'call mom!', false],
+    ]);
+    await expect(editorRoot(page).locator('[role="checkbox"]').first()).toHaveAttribute('aria-checked', 'true');
+  });
+
+  test('typing in an empty task puts the text after the checkbox', async ({ page }) => {
+    await page.keyboard.type('[] ');
+    await page.keyboard.type('a');
+    const [box, item] = await Promise.all([
+      editorRoot(page).locator('.levit-task-checkbox').boundingBox(),
+      editorRoot(page).locator('.levit-block-task_list_item').evaluate((el) => {
+        const range = document.createRange();
+        range.selectNodeContents(el.lastChild!);
+        return range.getBoundingClientRect().left;
+      }),
+    ]);
+    expect(item).toBeGreaterThan(box!.x + box!.width);
+  });
+
+  test('Mod+Enter checks the task at the caret', async ({ page }) => {
+    await page.keyboard.type('[] task');
+    await page.keyboard.press('ControlOrMeta+Enter');
+    expect((await blocks(page)).map((b) => b.attrs?.checked)).toEqual([true]);
+  });
+});

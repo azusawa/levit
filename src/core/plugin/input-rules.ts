@@ -1,5 +1,5 @@
 import { Transaction } from '../state/transaction.js';
-import { findBlockIndex, getBlockText } from '../model/document.js';
+import { findBlockIndex, getBlockText, listIndent } from '../model/document.js';
 
 export interface InputRule {
   match: RegExp;
@@ -46,6 +46,17 @@ export const defaultInputRules: InputRule[] = [
   {
     match: /^[-*]\s$/,
     handler: (tr, _match, blockId) => convertBlock(tr, blockId, 'bullet_list_item'),
+  },
+  // Task list: "[] ", "[ ] " or "[x] ", also inside a bulleted item ("- [ ] ").
+  {
+    match: /^\[([ xX]?)\]\s$/,
+    handler: (tr, match, blockId) => {
+      const block = tr.doc.blocks[findBlockIndex(tr.doc, blockId)];
+      const indent = block ? listIndent(block) : 0;
+      const attrs: Record<string, any> = { checked: match[1].toLowerCase() === 'x' };
+      if (indent > 0) attrs.indent = indent;
+      return convertBlock(tr, blockId, 'task_list_item', attrs);
+    },
   },
   // Numbered list: "1. "
   {

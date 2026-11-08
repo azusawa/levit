@@ -63,6 +63,7 @@ export class InputController {
   private attach(): void {
     this.on(this.container, 'beforeinput', this.handleBeforeInput);
     this.on(this.container, 'keydown', this.handleKeyDown);
+    this.on(this.container, 'mousedown', this.handleMouseDown);
     this.on(this.container, 'compositionstart', this.handleCompositionStart);
     this.on(this.container, 'compositionend', this.handleCompositionEnd);
     this.on(this.container, 'paste', this.handlePaste);
@@ -197,6 +198,12 @@ export class InputController {
       return;
     }
 
+    if (e.key === 'Enter' && isMod && !e.defaultPrevented) {
+      e.preventDefault();
+      this.editor.chain().toggleTaskChecked().run();
+      return;
+    }
+
     if (e.key === 'Enter' && !e.defaultPrevented) {
       e.preventDefault();
       // Browsers disagree on what Shift+Enter means (WebKit sends insertParagraph).
@@ -218,6 +225,15 @@ export class InputController {
       this.editor.chain().deleteForward().run();
       return;
     }
+  }
+
+  /** A click on a task checkbox toggles it without moving the caret. */
+  private handleMouseDown(e: MouseEvent): void {
+    const box = (e.target as Element | null)?.closest?.('.levit-task-checkbox');
+    if (!box || !this.container.contains(box)) return;
+    e.preventDefault();
+    const blockId = box.closest('[data-block-id]')?.getAttribute('data-block-id');
+    if (blockId) this.editor.chain().toggleTaskChecked(blockId).run();
   }
 
   private inListItem(): boolean {
