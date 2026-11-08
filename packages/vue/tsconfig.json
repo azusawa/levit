@@ -1,0 +1,17 @@
+{
+  // Type checks against the core's source, so no build is needed first.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "paths": { "@yonailab/levit": ["../levit/src/index.ts"] }
+  },
+  "include": ["src", "tests"]
+}

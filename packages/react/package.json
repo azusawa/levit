@@ -1,0 +1,57 @@
+{
+  "name": "@yonailab/levit-react",
+  "version": "0.3.0",
+  "description": "React components for the Levit editor.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "check:package": "node ../levit/scripts/check-package.mjs --wrapper",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build && npm run check:package"
+  },
+  "peerDependencies": {
+    "@yonailab/levit": "^0.3.0",
+    "react": ">=18"
+  },
+  "keywords": [
+    "editor",
+    "wysiwyg",
+    "rich-text",
+    "levit",
+    "react"
+  ],
+  "author": "yonailab",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/azusawa/levit.git",
+    "directory": "packages/react"
+  },
+  "homepage": "https://github.com/azusawa/levit/tree/main/packages/react#readme",
+  "bugs": {
+    "url": "https://github.com/azusawa/levit/issues"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  }
+}

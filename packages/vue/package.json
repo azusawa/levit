@@ -1,0 +1,54 @@
+{
+  "name": "@yonailab/levit-vue",
+  "version": "0.3.0",
+  "description": "Vue components for the Levit editor.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "check:package": "node ../levit/scripts/check-package.mjs --wrapper",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build && npm run check:package"
+  },
+  "peerDependencies": {
+    "@yonailab/levit": "^0.3.0",
+    "vue": "^3.3"
+  },
+  "keywords": [
+    "editor",
+    "wysiwyg",
+    "rich-text",
+    "levit",
+    "vue"
+  ],
+  "author": "yonailab",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/azusawa/levit.git",
+    "directory": "packages/vue"
+  },
+  "homepage": "https://github.com/azusawa/levit/tree/main/packages/vue#readme",
+  "bugs": {
+    "url": "https://github.com/azusawa/levit/issues"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "vue": "^3.5.45"
+  }
+}

@@ -4,7 +4,9 @@
   "description": "Levit editor and its React and Vue wrappers",
   "type": "module",
   "workspaces": [
-    "packages/levit"
+    "packages/levit",
+    "packages/react",
+    "packages/vue"
   ],
   "scripts": {
     "dev": "vite",
