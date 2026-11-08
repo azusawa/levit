@@ -16,6 +16,15 @@ import {
   splitBlockContent,
 } from '../model/document.js';
 import { sanitizeHref } from '../model/sanitize.js';
+import {
+  lineEndOffset,
+  lineStartOffset,
+  nextCharOffset,
+  nextWordOffset,
+  previousCharOffset,
+  previousWordOffset,
+} from '../model/text.js';
+import { BlockNode } from '../model/types.js';
 import { EditorState } from './state.js';
 
 export function cloneDocument(doc: DocumentData): DocumentData {
@@ -156,7 +165,28 @@ export class Transaction {
     return this;
   }
 
-  deleteBackward(): this {
+  /** Removes text between two offsets of one block and puts the caret at `start`. */
+  private deleteInBlock(blockIdx: number, start: number, end: number): this {
+    const block = this.doc.blocks[blockIdx];
+    if (start >= end) return this;
+    const [left] = splitBlockContent(block, start);
+    const [, right] = splitBlockContent(block, end);
+    block.content = mergeBlockContent(left, right);
+    this.selection = {
+      anchor: { blockId: block.id, offset: start },
+      head: { blockId: block.id, offset: start },
+      isCollapsed: true,
+    };
+    this.docChanged = true;
+    this.selectionChanged = true;
+    return this;
+  }
+
+  /**
+   * Deletes backward from the caret to `target(text, offset)`. At the start of
+   * a block, leaves a list or merges with the previous block instead.
+   */
+  private deleteBackwardTo(target: (text: string, offset: number) => number): this {
     if (!this.selection.isCollapsed) {
       return this.deleteRange();
     }
@@ -168,19 +198,7 @@ export class Transaction {
     const offset = this.selection.anchor.offset;
 
     if (offset > 0) {
-      // Delete 1 character backward
-      const [left, right] = splitBlockContent(block, offset);
-      const [kept] = splitBlockContent({ ...block, content: left }, offset - 1);
-      block.content = mergeBlockContent(kept, right);
-
-      this.selection = {
-        anchor: { blockId: block.id, offset: offset - 1 },
-        head: { blockId: block.id, offset: offset - 1 },
-        isCollapsed: true,
-      };
-      this.docChanged = true;
-      this.selectionChanged = true;
-      return this;
+      return this.deleteInBlock(blockIdx, target(getBlockText(block), offset), offset);
     }
 
     // Offset is 0 in a list item: leave the list, keep the text
@@ -217,6 +235,136 @@ export class Transaction {
       this.docChanged = true;
     }
 
+    return this;
+  }
+
+  /**
+   * Deletes forward from the caret to `target(text, offset)`. At the end of a
+   * block, pulls the next block up into this one.
+   */
+  private deleteForwardTo(target: (text: string, offset: number) => number): this {
+    if (!this.selection.isCollapsed) {
+      return this.deleteRange();
+    }
+
+    const blockIdx = findBlockIndex(this.doc, this.selection.anchor.blockId);
+    if (blockIdx === -1) return this;
+
+    const block = this.doc.blocks[blockIdx];
+    const text = getBlockText(block);
+    const offset = this.selection.anchor.offset;
+
+    if (offset < text.length) {
+      return this.deleteInBlock(blockIdx, offset, target(text, offset));
+    }
+
+    const next = this.doc.blocks[blockIdx + 1];
+    if (!next) return this;
+    block.content = mergeBlockContent(block.content, next.content);
+    this.doc.blocks.splice(blockIdx + 1, 1);
+    this.selection = {
+      anchor: { blockId: block.id, offset },
+      head: { blockId: block.id, offset },
+      isCollapsed: true,
+    };
+    this.docChanged = true;
+    this.selectionChanged = true;
+    return this;
+  }
+
+  deleteBackward(): this {
+    return this.deleteBackwardTo(previousCharOffset);
+  }
+
+  deleteForward(): this {
+    return this.deleteForwardTo(nextCharOffset);
+  }
+
+  deleteWordBackward(): this {
+    return this.deleteBackwardTo(previousWordOffset);
+  }
+
+  deleteWordForward(): this {
+    return this.deleteForwardTo(nextWordOffset);
+  }
+
+  /** Deletes back to the start of the line. If already there, acts like Backspace. */
+  deleteLineBackward(): this {
+    return this.deleteBackwardTo((text, offset) => {
+      const start = lineStartOffset(text, offset);
+      return start < offset ? start : previousCharOffset(text, offset);
+    });
+  }
+
+  /** Deletes up to the end of the line. If already there, acts like Delete. */
+  deleteLineForward(): this {
+    return this.deleteForwardTo((text, offset) => {
+      const end = lineEndOffset(text, offset);
+      return end > offset ? end : nextCharOffset(text, offset);
+    });
+  }
+
+  /** Inserts a line break inside the current block (Shift+Enter). */
+  insertLineBreak(): this {
+    return this.insertText('\n');
+  }
+
+  /**
+   * Inserts pasted blocks at the caret. A single block is inserted inline.
+   * Several blocks split the current block: its start joins the first pasted
+   * block, its end joins the last one.
+   */
+  insertFragment(fragment: BlockNode[]): this {
+    if (fragment.length === 0) return this;
+
+    if (!this.selection.isCollapsed) {
+      this.deleteRange();
+    }
+
+    const blockIdx = findBlockIndex(this.doc, this.selection.anchor.blockId);
+    if (blockIdx === -1) return this;
+
+    const block = this.doc.blocks[blockIdx];
+    const offset = this.selection.anchor.offset;
+    const [left, right] = splitBlockContent(block, offset);
+    const pasted = fragment.map((b) =>
+      createBlock(b.type, { ...b.attrs }, b.content.map((c) => ({ text: c.text, marks: [...(c.marks ?? [])] })))
+    );
+
+    if (pasted.length === 1) {
+      const inserted = normalizeInlineNodes(pasted[0].content);
+      block.content = normalizeInlineNodes([...left, ...inserted, ...right]);
+      const caretOffset = offset + getBlockText(pasted[0]).length;
+      this.selection = {
+        anchor: { blockId: block.id, offset: caretOffset },
+        head: { blockId: block.id, offset: caretOffset },
+        isCollapsed: true,
+      };
+      this.docChanged = true;
+      this.selectionChanged = true;
+      return this;
+    }
+
+    const first = pasted[0];
+    const last = pasted[pasted.length - 1];
+    const lastLength = getBlockText(last).length;
+
+    // An empty paragraph takes the type of the first pasted block.
+    if (block.type === 'paragraph' && getBlockText(block) === '') {
+      block.type = first.type;
+      block.attrs = { ...first.attrs };
+    }
+    block.content = normalizeInlineNodes([...left, ...first.content]);
+    last.content = normalizeInlineNodes([...last.content, ...right]);
+    this.doc.blocks.splice(blockIdx + 1, 0, ...pasted.slice(1));
+
+    this.selection = {
+      anchor: { blockId: last.id, offset: lastLength },
+      head: { blockId: last.id, offset: lastLength },
+      isCollapsed: true,
+    };
+    this.docChanged = true;
+    this.selectionChanged = true;
     return this;
   }
 
