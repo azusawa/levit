@@ -1,11 +1,15 @@
 import { BlockNode, DocumentData, InlineNode } from '../core/model/types.js';
-import { createBlock, createDocument, createTextNode, isListItem } from '../core/model/document.js';
+import { createBlock, createDocument, createTextNode, isListItem, listIndent } from '../core/model/document.js';
 import { normalizeHeadingLevel, sanitizeHref } from '../core/model/sanitize.js';
 
 export function documentToMarkdown(doc: DocumentData): string {
   let out = '';
   let prevType: string | null = null;
-  let number = 0;
+  let prevIndent = 0;
+  // Per nesting level: the item number, and how far the item's text is
+  // indented (nested items go under the text of their parent).
+  const numbers: number[] = [];
+  const widths: number[] = [];
 
   for (const block of doc.blocks) {
     let blockText = '';
@@ -43,23 +47,34 @@ export function documentToMarkdown(doc: DocumentData): string {
         line = `\`\`\`\n${blockText}\n\`\`\``;
         break;
       case 'bullet_list_item':
-        line = `- ${breaks('  ')}`;
+      case 'ordered_list_item': {
+        const level = Math.min(listIndent(block), widths.length);
+        numbers.length = widths.length = level + 1;
+        const ordered = block.type === 'ordered_list_item';
+        // A bullet at the same level ends a run of numbers.
+        numbers[level] = ordered ? (numbers[level] ?? 0) + 1 : 0;
+        const marker = ordered ? `${numbers[level]}. ` : '- ';
+        const prefix = ' '.repeat(widths.slice(0, level).reduce((a, b) => a + b, 0));
+        widths[level] = marker.length;
+        line = `${prefix}${marker}${breaks(prefix + ' '.repeat(marker.length))}`;
         break;
-      case 'ordered_list_item':
-        number = prevType === 'ordered_list_item' ? number + 1 : 1;
-        line = `${number}. ${breaks(' '.repeat(String(number).length + 2))}`;
-        break;
+      }
       default:
         line = breaks('');
         break;
     }
 
+    if (!isListItem(block.type)) numbers.length = widths.length = 0;
+
     // Items of the same list sit on consecutive lines; everything else is a paragraph.
     if (prevType !== null) {
-      out += prevType === block.type && isListItem(block.type) ? '\n' : '\n\n';
+      const nested = listIndent(block) > 0 || prevIndent > 0;
+      const sameList = isListItem(block.type) && isListItem(prevType) && (prevType === block.type || nested);
+      out += sameList ? '\n' : '\n\n';
     }
     out += line;
     prevType = block.type;
+    prevIndent = listIndent(block);
   }
 
   return out;
@@ -133,18 +148,28 @@ export function markdownToDocument(markdown: string): DocumentData {
     }
 
     // List items: lines start with "-", "*", "+" or "1."; indented lines continue an item.
-    const lines = trimmed.split(/\r?\n/);
-    const listLine = /^\s*(?:([-*+])|\d+\.)\s+(.*)$/;
+    const lines = raw.replace(/^\n+|\s+$/g, '').split(/\r?\n/);
+    const listLine = /^(\s*)(?:([-*+])|\d+\.)\s+(.*)$/;
     const continues = (l: string) => /^\s+\S/.test(l) && !listLine.test(l);
     if (listLine.test(lines[0]) && lines.every((l) => listLine.test(l) || continues(l))) {
-      const items: { type: string; text: string }[] = [];
+      const items: { type: string; text: string; indent: number }[] = [];
+      // Columns of the markers of the open parent items. An item indented past
+      // its parent's marker is nested under it.
+      const parents: number[] = [];
       for (const l of lines) {
         const m = l.match(listLine);
-        if (m) items.push({ type: m[1] ? 'bullet_list_item' : 'ordered_list_item', text: m[2] });
-        else items[items.length - 1].text += `\n${l.trim()}`;
+        if (!m) {
+          items[items.length - 1].text += `\n${l.trim()}`;
+          continue;
+        }
+        const column = m[1].replace(/\t/g, '    ').length;
+        while (parents.length > 0 && column <= parents[parents.length - 1]) parents.pop();
+        items.push({ type: m[2] ? 'bullet_list_item' : 'ordered_list_item', text: m[3], indent: parents.length });
+        parents.push(column);
       }
       for (const item of items) {
-        blocks.push(createBlock(item.type, {}, parseInlineMarkdown(readHardBreaks(item.text))));
+        const attrs = item.indent > 0 ? { indent: item.indent } : {};
+        blocks.push(createBlock(item.type, attrs, parseInlineMarkdown(readHardBreaks(item.text))));
       }
       continue;
     }

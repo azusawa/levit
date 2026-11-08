@@ -156,6 +156,30 @@ h3.levit-block-heading {
   margin-bottom: 0.25em;
 }
 
+/* Nested items (Tab) move right one step per level. */
+.levit-list-item[data-indent="1"] { margin-left: 1.6em; }
+.levit-list-item[data-indent="2"] { margin-left: 3.2em; }
+.levit-list-item[data-indent="3"] { margin-left: 4.8em; }
+.levit-list-item[data-indent="4"] { margin-left: 6.4em; }
+.levit-list-item[data-indent="5"] { margin-left: 8em; }
+.levit-list-item[data-indent="6"] { margin-left: 9.6em; }
+.levit-list-item[data-indent="7"] { margin-left: 11.2em; }
+.levit-list-item[data-indent="8"] { margin-left: 12.8em; }
+
+/* Nested bullets change shape, like most word processors. */
+.levit-block-bullet_list_item[data-indent="1"]::before,
+.levit-block-bullet_list_item[data-indent="4"]::before,
+.levit-block-bullet_list_item[data-indent="7"]::before {
+  content: "◦";
+}
+
+.levit-block-bullet_list_item[data-indent="2"]::before,
+.levit-block-bullet_list_item[data-indent="5"]::before,
+.levit-block-bullet_list_item[data-indent="8"]::before {
+  content: "▪";
+  font-weight: 400;
+}
+
 .levit-list-item::before {
   position: absolute;
   left: 0;

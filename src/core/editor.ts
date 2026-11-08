@@ -93,6 +93,18 @@ export class ChainedCommands {
     return this;
   }
 
+  /** Nests the selected list items one level deeper. */
+  indentListItem(): this {
+    this.tr.indentListItem();
+    return this;
+  }
+
+  /** Moves the selected list items one level up. */
+  outdentListItem(): this {
+    this.tr.outdentListItem();
+    return this;
+  }
+
   setLink(href: string): this {
     this.tr.setLink(href);
     return this;

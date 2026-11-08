@@ -1,7 +1,7 @@
 import { BlockNode, InlineMark, InlineNode } from '../model/types.js';
 import { EditorState } from '../state/state.js';
 import { normalizeHeadingLevel, sanitizeHref } from '../model/sanitize.js';
-import { isListItem } from '../model/document.js';
+import { isListItem, listIndent } from '../model/document.js';
 
 export class DOMReconciler {
   private container: HTMLElement;
@@ -94,17 +94,26 @@ export class DOMReconciler {
     this.updateListNumbers(rendered);
   }
 
-  // Numbers each run of ordered items from 1. Runs end at any other block,
-  // so this has to look at the whole document, not only changed blocks.
+  // Numbers each run of ordered items from 1, separately on every nesting
+  // level. Runs end at any other block, so this has to look at the whole
+  // document, not only changed blocks.
   private updateListNumbers(rendered: [BlockNode, HTMLElement][]): void {
-    let n = 0;
+    const counts: number[] = [];
     for (const [block, el] of rendered) {
-      if (block.type === 'ordered_list_item') {
-        n += 1;
-        if (el.getAttribute('data-number') !== String(n)) el.setAttribute('data-number', String(n));
+      let number: string | null = null;
+      if (isListItem(block.type)) {
+        const level = listIndent(block);
+        counts.length = Math.min(counts.length, level + 1);
+        for (let i = 0; i < level; i++) counts[i] ??= 0;
+        counts[level] = block.type === 'ordered_list_item' ? (counts[level] ?? 0) + 1 : 0;
+        if (block.type === 'ordered_list_item') number = String(counts[level]);
       } else {
-        n = 0;
+        counts.length = 0;
+      }
+      if (number === null) {
         if (el.hasAttribute('data-number')) el.removeAttribute('data-number');
+      } else if (el.getAttribute('data-number') !== number) {
+        el.setAttribute('data-number', number);
       }
     }
   }
@@ -148,6 +157,9 @@ export class DOMReconciler {
   private applyBlockClasses(el: HTMLElement, block: BlockNode): void {
     el.className = `levit-block levit-block-${block.type}`;
     if (isListItem(block.type)) el.classList.add('levit-list-item');
+    const indent = listIndent(block);
+    if (indent > 0) el.setAttribute('data-indent', String(indent));
+    else el.removeAttribute('data-indent');
   }
 
   private updateBlockContent(el: HTMLElement, block: BlockNode): void {

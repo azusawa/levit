@@ -1,5 +1,11 @@
 import { BlockNode, DocumentData, InlineMark, InlineNode } from '../core/model/types.js';
-import { createBlock, createDocument, createTextNode, normalizeInlineNodes } from '../core/model/document.js';
+import {
+  createBlock,
+  createDocument,
+  createTextNode,
+  listIndent,
+  normalizeInlineNodes,
+} from '../core/model/document.js';
 import { normalizeHeadingLevel, sanitizeHref } from '../core/model/sanitize.js';
 
 const LIST_TAGS: Record<string, string> = {
@@ -9,15 +15,29 @@ const LIST_TAGS: Record<string, string> = {
 
 export function documentToHTML(doc: DocumentData): string {
   let html = '';
-  // Consecutive list items of the same kind share one <ul>/<ol>.
-  let openList: string | null = null;
+  // Open lists, one per nesting level. Each has an <li> that is still open,
+  // because a nested list goes inside its parent's <li>.
+  const lists: string[] = [];
+  const closeListsTo = (depth: number) => {
+    while (lists.length > depth) html += `</li></${lists.pop()}>`;
+  };
 
   for (const block of doc.blocks) {
     const listTag = LIST_TAGS[block.type] ?? null;
-    if (listTag !== openList) {
-      if (openList) html += `</${openList}>`;
-      if (listTag) html += `<${listTag}>`;
-      openList = listTag;
+    if (listTag) {
+      // An item can be at most one level deeper than the list it follows.
+      const level = Math.min(listIndent(block), lists.length);
+      closeListsTo(level + 1);
+      if (lists.length === level + 1) {
+        if (lists[level] === listTag) html += '</li>';
+        else closeListsTo(level);
+      }
+      if (lists.length === level) {
+        html += `<${listTag}>`;
+        lists.push(listTag);
+      }
+    } else {
+      closeListsTo(0);
     }
 
     const isCode = block.type === 'code_block';
@@ -59,7 +79,8 @@ export function documentToHTML(doc: DocumentData): string {
         break;
       case 'bullet_list_item':
       case 'ordered_list_item':
-        html += `<li>${contentHtml}</li>`;
+        // Closed when the next item or the list ends.
+        html += `<li>${contentHtml}`;
         break;
       default:
         html += `<p>${contentHtml}</p>`;
@@ -67,7 +88,7 @@ export function documentToHTML(doc: DocumentData): string {
     }
   }
 
-  if (openList) html += `</${openList}>`;
+  closeListsTo(0);
   return html;
 }
 
@@ -108,7 +129,13 @@ const BLOCK_TAGS = new Set([
   ...CONTAINER_TAGS, ...LEAF_TAGS, 'blockquote', 'pre', 'ul', 'ol', 'li', 'hr',
 ]);
 
-type Context = { type: string };
+/** The block type for loose content, and the nesting level of the list we are in. */
+type Context = { type: string; depth?: number };
+
+/** Attributes for a block made in this context: nested list items get their level. */
+function attrsFor(ctx: Context): Record<string, any> {
+  return ctx.type.endsWith('list_item') && ctx.depth ? { indent: ctx.depth } : {};
+}
 
 export function htmlToDocument(html: string): DocumentData {
   if (!html || !html.trim()) {
@@ -140,7 +167,7 @@ function readBlocks(parent: Node, ctx: Context, out: BlockNode[]): void {
     if (run.length > 0) {
       // Loose inline content becomes a block, unless it is only whitespace.
       const content = readInline(run);
-      if (content.some((n) => n.text.length > 0)) out.push(createBlock(ctx.type, {}, content));
+      if (content.some((n) => n.text.length > 0)) out.push(createBlock(ctx.type, attrsFor(ctx), content));
       run = [];
     }
   };
@@ -169,14 +196,16 @@ function readBlockElement(el: Element, ctx: Context, out: BlockNode[]): void {
     out.push(createBlock('heading', { level: parseInt(tag[1], 10) }, readInline(Array.from(el.childNodes))));
   } else if (LEAF_TAGS.has(tag)) {
     // An explicit block is kept even when empty (e.g. <p><br></p> spacing).
-    out.push(createBlock(ctx.type, {}, readInline(Array.from(el.childNodes))));
+    out.push(createBlock(ctx.type, attrsFor(ctx), readInline(Array.from(el.childNodes))));
   } else if (tag === 'blockquote') {
     readBlocks(el, { type: 'blockquote' }, out);
   } else if (tag === 'ul' || tag === 'ol') {
-    readBlocks(el, { type: tag === 'ul' ? 'bullet_list_item' : 'ordered_list_item' }, out);
+    // A list inside another list (usually inside its <li>) is one level deeper.
+    const depth = ctx.depth === undefined ? 0 : ctx.depth + 1;
+    readBlocks(el, { type: tag === 'ul' ? 'bullet_list_item' : 'ordered_list_item', depth }, out);
   } else if (tag === 'li') {
     const type = ctx.type.endsWith('list_item') ? ctx.type : 'bullet_list_item';
-    readListItem(el, type, out);
+    readListItem(el, { type, depth: ctx.depth ?? 0 }, out);
   } else if (tag === 'pre') {
     const text = (el.textContent || '').replace(/\r\n?/g, '\n').replace(/\n$/, '');
     out.push(createBlock('code_block', {}, [createTextNode(text)]));
@@ -188,7 +217,8 @@ function readBlockElement(el: Element, ctx: Context, out: BlockNode[]): void {
 }
 
 /** A list item's own text is one item; nested lists and paragraphs follow it. */
-function readListItem(li: Element, type: string, out: BlockNode[]): void {
+function readListItem(li: Element, ctx: Context, out: BlockNode[]): void {
+  const { type } = ctx;
   const own: Node[] = [];
   const rest: Node[] = [];
   for (const child of Array.from(li.childNodes)) {
@@ -198,15 +228,15 @@ function readListItem(li: Element, type: string, out: BlockNode[]): void {
 
   if (own.length > 0 || rest.length === 0) {
     const content = readInline(own);
-    if (content.some((n) => n.text.length > 0) || rest.length === 0) out.push(createBlock(type, {}, content));
+    if (content.some((n) => n.text.length > 0) || rest.length === 0) out.push(createBlock(type, attrsFor(ctx), content));
   }
   for (const child of rest) {
     if (child.nodeType === Node.ELEMENT_NODE && SKIP_TAGS.has(tagOf(child))) continue;
-    if (isBlockElement(child)) readBlockElement(child as Element, { type }, out);
-    else if (wrapsBlocks(child)) readBlocks(child, { type }, out);
+    if (isBlockElement(child)) readBlockElement(child as Element, ctx, out);
+    else if (wrapsBlocks(child)) readBlocks(child, ctx, out);
     else {
       const content = readInline([child]);
-      if (content.some((n) => n.text.length > 0)) out.push(createBlock(type, {}, content));
+      if (content.some((n) => n.text.length > 0)) out.push(createBlock(type, attrsFor(ctx), content));
     }
   }
 }

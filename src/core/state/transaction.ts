@@ -10,8 +10,11 @@ import {
   findBlockIndex,
   getBlockText,
   isListItem,
+  listIndent,
+  MAX_LIST_INDENT,
   mergeBlockContent,
   normalizeInlineNodes,
+  setListIndent,
   sliceBlockContent,
   splitBlockContent,
 } from '../model/document.js';
@@ -201,6 +204,11 @@ export class Transaction {
       return this.deleteInBlock(blockIdx, target(getBlockText(block), offset), offset);
     }
 
+    // Offset is 0 in a nested list item: move it up a level first.
+    if (listIndent(block) > 0) {
+      return this.outdentListItem();
+    }
+
     // Offset is 0 in a list item: leave the list, keep the text
     if (isListItem(block.type)) {
       block.type = 'paragraph';
@@ -385,6 +393,9 @@ export class Transaction {
     const offset = this.selection.anchor.offset;
 
     if (type === undefined && isListItem(block.type)) {
+      if (getBlockText(block) === '' && listIndent(block) > 0) {
+        return this.outdentListItem();
+      }
       if (getBlockText(block) === '') {
         block.type = 'paragraph';
         block.attrs = {};
@@ -513,6 +524,61 @@ export class Transaction {
       b.content = normalizeInlineNodes([...left, ...mid, ...right]);
     }
 
+    this.docChanged = true;
+    return this;
+  }
+
+  /**
+   * The selected blocks plus the nested items under the last one, so that
+   * moving an item also moves its children.
+   */
+  private listItemRange(): [number, number] | null {
+    const { from, to } = this.normalizeSelectionOrder();
+    const fromIdx = findBlockIndex(this.doc, from.blockId);
+    let toIdx = findBlockIndex(this.doc, to.blockId);
+    if (fromIdx === -1 || toIdx === -1) return null;
+
+    const selected = this.doc.blocks.slice(fromIdx, toIdx + 1).filter((b) => isListItem(b.type));
+    if (selected.length === 0) return null;
+    const minIndent = Math.min(...selected.map(listIndent));
+    while (toIdx + 1 < this.doc.blocks.length) {
+      const next = this.doc.blocks[toIdx + 1];
+      if (!isListItem(next.type) || listIndent(next) <= minIndent) break;
+      toIdx += 1;
+    }
+    return [fromIdx, toIdx];
+  }
+
+  /** Nests the selected list items one level deeper (Tab). */
+  indentListItem(): this {
+    const range = this.listItemRange();
+    if (!range) return this;
+    const [fromIdx, toIdx] = range;
+    const items = this.doc.blocks.slice(fromIdx, toIdx + 1).filter((b) => isListItem(b.type));
+
+    // The first item can only go one level below the item above it.
+    const first = items[0];
+    const firstIdx = this.doc.blocks.indexOf(first);
+    const above = this.doc.blocks[firstIdx - 1];
+    if (!above || !isListItem(above.type) || listIndent(above) < listIndent(first)) return this;
+    if (items.some((b) => listIndent(b) >= MAX_LIST_INDENT)) return this;
+
+    for (const b of items) setListIndent(b, listIndent(b) + 1);
+    this.docChanged = true;
+    return this;
+  }
+
+  /** Moves the selected list items one level up (Shift+Tab). */
+  outdentListItem(): this {
+    const range = this.listItemRange();
+    if (!range) return this;
+    const [fromIdx, toIdx] = range;
+    const items = this.doc.blocks.slice(fromIdx, toIdx + 1).filter((b) => isListItem(b.type));
+    if (listIndent(items[0]) === 0) return this;
+
+    for (const b of items) {
+      if (listIndent(b) > 0) setListIndent(b, listIndent(b) - 1);
+    }
     this.docChanged = true;
     return this;
   }

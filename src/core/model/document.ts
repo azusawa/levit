@@ -143,6 +143,24 @@ export function isListItem(type: string): boolean {
   return (LIST_ITEM_TYPES as readonly string[]).includes(type);
 }
 
+/** Deepest nesting level a list item can have. */
+export const MAX_LIST_INDENT = 8;
+
+/** How deeply a list item is nested: 0 at the top level. */
+export function listIndent(block: BlockNode): number {
+  if (!isListItem(block.type)) return 0;
+  const n = block.attrs?.indent;
+  return Number.isInteger(n) && n > 0 ? Math.min(n, MAX_LIST_INDENT) : 0;
+}
+
+/** Sets a list item's nesting level, leaving no attribute at the top level. */
+export function setListIndent(block: BlockNode, indent: number): void {
+  const attrs = { ...block.attrs };
+  if (indent > 0) attrs.indent = Math.min(indent, MAX_LIST_INDENT);
+  else delete attrs.indent;
+  block.attrs = attrs;
+}
+
 /**
  * Returns the inline nodes between two character offsets of a block.
  */

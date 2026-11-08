@@ -1,5 +1,5 @@
 import { LevitEditor } from '../editor.js';
-import { findBlockIndex, sliceDocument } from '../model/document.js';
+import { findBlockIndex, isListItem, sliceDocument } from '../model/document.js';
 import { readClipboard, writeClipboard } from './clipboard.js';
 import {
   domRangeToEditorSelection,
@@ -188,6 +188,15 @@ export class InputController {
       return;
     }
 
+    // Tab nests list items. Elsewhere it keeps moving focus, so keyboard
+    // users can still leave the editor.
+    if (e.key === 'Tab' && !isMod && !e.altKey && !e.defaultPrevented && this.inListItem()) {
+      e.preventDefault();
+      if (e.shiftKey) this.editor.chain().outdentListItem().run();
+      else this.editor.chain().indentListItem().run();
+      return;
+    }
+
     if (e.key === 'Enter' && !e.defaultPrevented) {
       e.preventDefault();
       // Browsers disagree on what Shift+Enter means (WebKit sends insertParagraph).
@@ -209,6 +218,12 @@ export class InputController {
       this.editor.chain().deleteForward().run();
       return;
     }
+  }
+
+  private inListItem(): boolean {
+    const { doc, selection } = this.editor.state;
+    const block = doc.blocks[findBlockIndex(doc, selection.anchor.blockId)];
+    return !!block && isListItem(block.type);
   }
 
   private handlePaste(e: ClipboardEvent): void {
