@@ -26,28 +26,31 @@ export function documentToMarkdown(doc: DocumentData): string {
       blockText += t;
     }
 
+    // A line break inside a block is a hard break: "\\" at the end of the line.
+    const breaks = (indent: string) => blockText.replace(/\n/g, `\\\n${indent}`);
+
     let line: string;
     switch (block.type) {
       case 'heading': {
         const level = normalizeHeadingLevel(block.attrs?.level);
-        line = `${'#'.repeat(level)} ${blockText}`;
+        line = `${'#'.repeat(level)} ${blockText.replace(/\n/g, ' ')}`;
         break;
       }
       case 'blockquote':
-        line = `> ${blockText}`;
+        line = `> ${breaks('> ')}`;
         break;
       case 'code_block':
         line = `\`\`\`\n${blockText}\n\`\`\``;
         break;
       case 'bullet_list_item':
-        line = `- ${blockText}`;
+        line = `- ${breaks('  ')}`;
         break;
       case 'ordered_list_item':
         number = prevType === 'ordered_list_item' ? number + 1 : 1;
-        line = `${number}. ${blockText}`;
+        line = `${number}. ${breaks(' '.repeat(String(number).length + 2))}`;
         break;
       default:
-        line = blockText;
+        line = breaks('');
         break;
     }
 
@@ -104,6 +107,11 @@ function parseInlineMarkdown(text: string): InlineNode[] {
   return nodes.length > 0 ? nodes : [createTextNode('')];
 }
 
+/** Turns Markdown hard breaks ("\\" or two spaces before a newline) into "\n". */
+function readHardBreaks(text: string): string {
+  return text.replace(/(?:\\| {2,})\r?\n/g, '\n').replace(/\r\n/g, '\n');
+}
+
 export function markdownToDocument(markdown: string): DocumentData {
   if (!markdown || !markdown.trim()) {
     return createDocument();
@@ -124,22 +132,27 @@ export function markdownToDocument(markdown: string): DocumentData {
       continue;
     }
 
-    // List items: every line starts with "-", "*", "+" or "1."
+    // List items: lines start with "-", "*", "+" or "1."; indented lines continue an item.
     const lines = trimmed.split(/\r?\n/);
     const listLine = /^\s*(?:([-*+])|\d+\.)\s+(.*)$/;
-    if (lines.every((l) => listLine.test(l))) {
+    const continues = (l: string) => /^\s+\S/.test(l) && !listLine.test(l);
+    if (listLine.test(lines[0]) && lines.every((l) => listLine.test(l) || continues(l))) {
+      const items: { type: string; text: string }[] = [];
       for (const l of lines) {
-        const m = l.match(listLine)!;
-        const type = m[1] ? 'bullet_list_item' : 'ordered_list_item';
-        blocks.push(createBlock(type, {}, parseInlineMarkdown(m[2])));
+        const m = l.match(listLine);
+        if (m) items.push({ type: m[1] ? 'bullet_list_item' : 'ordered_list_item', text: m[2] });
+        else items[items.length - 1].text += `\n${l.trim()}`;
+      }
+      for (const item of items) {
+        blocks.push(createBlock(item.type, {}, parseInlineMarkdown(readHardBreaks(item.text))));
       }
       continue;
     }
 
-    // Blockquote (> ...)
-    const quoteMatch = trimmed.match(/^>\s*(.*)$/);
-    if (quoteMatch) {
-      blocks.push(createBlock('blockquote', {}, parseInlineMarkdown(quoteMatch[1])));
+    // Blockquote: every line starts with ">"
+    if (lines.every((l) => /^\s*>/.test(l))) {
+      const text = lines.map((l) => l.replace(/^\s*>\s?/, '')).join('\n');
+      blocks.push(createBlock('blockquote', {}, parseInlineMarkdown(readHardBreaks(text))));
       continue;
     }
 
@@ -151,7 +164,7 @@ export function markdownToDocument(markdown: string): DocumentData {
     }
 
     // Default paragraph
-    blocks.push(createBlock('paragraph', {}, parseInlineMarkdown(trimmed)));
+    blocks.push(createBlock('paragraph', {}, parseInlineMarkdown(readHardBreaks(trimmed))));
   }
 
   return createDocument(blocks.length > 0 ? blocks : undefined);

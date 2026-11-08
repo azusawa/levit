@@ -1,5 +1,5 @@
 import { BlockNode, DocumentData, InlineMark, InlineNode } from '../core/model/types.js';
-import { createBlock, createDocument, createTextNode } from '../core/model/document.js';
+import { createBlock, createDocument, createTextNode, normalizeInlineNodes } from '../core/model/document.js';
 import { normalizeHeadingLevel, sanitizeHref } from '../core/model/sanitize.js';
 
 const LIST_TAGS: Record<string, string> = {
@@ -20,9 +20,11 @@ export function documentToHTML(doc: DocumentData): string {
       openList = listTag;
     }
 
+    const isCode = block.type === 'code_block';
     let contentHtml = '';
     for (const node of block.content) {
       let t = escapeHTML(node.text);
+      if (!isCode) t = t.replace(/\n/g, '<br>');
       if (node.marks && node.marks.length > 0) {
         for (const m of node.marks) {
           if (m.type === 'bold') t = `<strong>${t}</strong>`;
@@ -37,6 +39,10 @@ export function documentToHTML(doc: DocumentData): string {
         }
       }
       contentHtml += t;
+    }
+    // Browsers hide a final <br>, so a trailing line break needs a second one.
+    if (!isCode && block.content.map((c) => c.text).join('').endsWith('\n')) {
+      contentHtml += '<br>';
     }
 
     switch (block.type) {
@@ -73,85 +79,230 @@ function escapeHTML(str: string): string {
     .replace(/"/g, '&quot;');
 }
 
+// --- Import ---------------------------------------------------------------
+// Pasted HTML comes from many sources (browsers, Google Docs, Word), so the
+// parser walks the tree: block elements become blocks, everything between
+// them is inline content, and unknown containers are looked through.
+
+/** Elements whose content is never imported. */
+const SKIP_TAGS = new Set([
+  'script', 'style', 'template', 'noscript', 'head', 'meta', 'link', 'title',
+  'iframe', 'object', 'embed', 'svg', 'math', 'img', 'video', 'audio', 'canvas',
+  'button', 'input', 'select', 'textarea',
+]);
+
+/** Block containers that are looked through; their children become blocks. */
+const CONTAINER_TAGS = new Set([
+  'div', 'section', 'article', 'header', 'footer', 'main', 'aside', 'nav',
+  'figure', 'form', 'fieldset', 'details', 'center', 'body', 'html',
+  'table', 'thead', 'tbody', 'tfoot', 'tr', 'dl',
+]);
+
+/** Elements that hold one block of inline content. */
+const LEAF_TAGS = new Set([
+  'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'td', 'th', 'dt', 'dd',
+  'figcaption', 'summary', 'address', 'caption', 'legend',
+]);
+
+const BLOCK_TAGS = new Set([
+  ...CONTAINER_TAGS, ...LEAF_TAGS, 'blockquote', 'pre', 'ul', 'ol', 'li', 'hr',
+]);
+
+type Context = { type: string };
+
 export function htmlToDocument(html: string): DocumentData {
   if (!html || !html.trim()) {
     return createDocument();
   }
 
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(html, 'text/html');
-  const body = doc.body;
-
+  // DOMParser documents are inert: scripts do not run and images do not load.
+  const parsed = new DOMParser().parseFromString(html, 'text/html');
   const blocks: BlockNode[] = [];
-
-  for (let i = 0; i < body.children.length; i++) {
-    const el = body.children[i];
-    const tagName = el.tagName.toLowerCase();
-
-    if (/^h[1-6]$/.test(tagName)) {
-      const level = parseInt(tagName[1], 10);
-      blocks.push(createBlock('heading', { level }, parseDOMNodes(el)));
-    } else if (tagName === 'blockquote') {
-      blocks.push(createBlock('blockquote', {}, parseDOMNodes(el)));
-    } else if (tagName === 'ul' || tagName === 'ol') {
-      const type = tagName === 'ul' ? 'bullet_list_item' : 'ordered_list_item';
-      for (const item of Array.from(el.children)) {
-        if (item.tagName.toLowerCase() === 'li') {
-          blocks.push(createBlock(type, {}, parseDOMNodes(item)));
-        }
-      }
-    } else if (tagName === 'pre') {
-      const code = el.querySelector('code');
-      const text = (code || el).textContent || '';
-      blocks.push(createBlock('code_block', {}, [createTextNode(text)]));
-    } else {
-      blocks.push(createBlock('paragraph', {}, parseDOMNodes(el)));
-    }
-  }
-
+  readBlocks(parsed.body, { type: 'paragraph' }, blocks);
   return createDocument(blocks.length > 0 ? blocks : undefined);
 }
 
-function parseDOMNodes(parent: Element): InlineNode[] {
-  const inlineNodes: InlineNode[] = [];
+const tagOf = (node: Node) => (node as Element).tagName?.toLowerCase() ?? '';
 
-  function walk(node: Node, currentMarks: InlineMark[]) {
-    if (node.nodeType === Node.TEXT_NODE) {
-      const text = node.nodeValue || '';
-      if (text) {
-        inlineNodes.push({
-          text,
-          marks: currentMarks.length > 0 ? [...currentMarks] : [],
-        });
-      }
-      return;
-    }
-
-    if (node.nodeType === Node.ELEMENT_NODE) {
-      const el = node as Element;
-      const tag = el.tagName.toLowerCase();
-      const nextMarks = [...currentMarks];
-
-      if (tag === 'strong' || tag === 'b') nextMarks.push({ type: 'bold' });
-      else if (tag === 'em' || tag === 'i') nextMarks.push({ type: 'italic' });
-      else if (tag === 'u') nextMarks.push({ type: 'underline' });
-      else if (tag === 's' || tag === 'strike' || tag === 'del') nextMarks.push({ type: 'strike' });
-      else if (tag === 'code') nextMarks.push({ type: 'code' });
-      else if (tag === 'a') {
-        const href = sanitizeHref(el.getAttribute('href'));
-        if (href) nextMarks.push({ type: 'link', attrs: { href } });
-      }
-
-      for (let i = 0; i < el.childNodes.length; i++) {
-        walk(el.childNodes[i], nextMarks);
-      }
-    }
-  }
-
-  for (let i = 0; i < parent.childNodes.length; i++) {
-    walk(parent.childNodes[i], []);
-  }
-
-  return inlineNodes.length > 0 ? inlineNodes : [createTextNode('')];
+function isBlockElement(node: Node): boolean {
+  return node.nodeType === Node.ELEMENT_NODE && BLOCK_TAGS.has(tagOf(node));
 }
 
+/** True for an inline element that wraps blocks, like Google Docs' <b> wrapper. */
+function wrapsBlocks(node: Node): boolean {
+  if (node.nodeType !== Node.ELEMENT_NODE || SKIP_TAGS.has(tagOf(node))) return false;
+  return Array.from(node.childNodes).some((c) => isBlockElement(c) || wrapsBlocks(c));
+}
+
+function readBlocks(parent: Node, ctx: Context, out: BlockNode[]): void {
+  let run: Node[] = [];
+  const flush = () => {
+    if (run.length > 0) {
+      // Loose inline content becomes a block, unless it is only whitespace.
+      const content = readInline(run);
+      if (content.some((n) => n.text.length > 0)) out.push(createBlock(ctx.type, {}, content));
+      run = [];
+    }
+  };
+
+  for (const child of Array.from(parent.childNodes)) {
+    if (child.nodeType === Node.ELEMENT_NODE && SKIP_TAGS.has(tagOf(child))) continue;
+    if (child.nodeType !== Node.ELEMENT_NODE && child.nodeType !== Node.TEXT_NODE) continue;
+
+    if (isBlockElement(child)) {
+      flush();
+      readBlockElement(child as Element, ctx, out);
+    } else if (wrapsBlocks(child)) {
+      flush();
+      readBlocks(child, ctx, out);
+    } else {
+      run.push(child);
+    }
+  }
+  flush();
+}
+
+function readBlockElement(el: Element, ctx: Context, out: BlockNode[]): void {
+  const tag = tagOf(el);
+
+  if (/^h[1-6]$/.test(tag)) {
+    out.push(createBlock('heading', { level: parseInt(tag[1], 10) }, readInline(Array.from(el.childNodes))));
+  } else if (LEAF_TAGS.has(tag)) {
+    // An explicit block is kept even when empty (e.g. <p><br></p> spacing).
+    out.push(createBlock(ctx.type, {}, readInline(Array.from(el.childNodes))));
+  } else if (tag === 'blockquote') {
+    readBlocks(el, { type: 'blockquote' }, out);
+  } else if (tag === 'ul' || tag === 'ol') {
+    readBlocks(el, { type: tag === 'ul' ? 'bullet_list_item' : 'ordered_list_item' }, out);
+  } else if (tag === 'li') {
+    const type = ctx.type.endsWith('list_item') ? ctx.type : 'bullet_list_item';
+    readListItem(el, type, out);
+  } else if (tag === 'pre') {
+    const text = (el.textContent || '').replace(/\r\n?/g, '\n').replace(/\n$/, '');
+    out.push(createBlock('code_block', {}, [createTextNode(text)]));
+  } else if (tag === 'hr') {
+    // No horizontal rule block yet.
+  } else {
+    readBlocks(el, ctx, out);
+  }
+}
+
+/** A list item's own text is one item; nested lists and paragraphs follow it. */
+function readListItem(li: Element, type: string, out: BlockNode[]): void {
+  const own: Node[] = [];
+  const rest: Node[] = [];
+  for (const child of Array.from(li.childNodes)) {
+    if (rest.length > 0 || isBlockElement(child) || wrapsBlocks(child)) rest.push(child);
+    else own.push(child);
+  }
+
+  if (own.length > 0 || rest.length === 0) {
+    const content = readInline(own);
+    if (content.some((n) => n.text.length > 0) || rest.length === 0) out.push(createBlock(type, {}, content));
+  }
+  for (const child of rest) {
+    if (child.nodeType === Node.ELEMENT_NODE && SKIP_TAGS.has(tagOf(child))) continue;
+    if (isBlockElement(child)) readBlockElement(child as Element, { type }, out);
+    else if (wrapsBlocks(child)) readBlocks(child, { type }, out);
+    else {
+      const content = readInline([child]);
+      if (content.some((n) => n.text.length > 0)) out.push(createBlock(type, {}, content));
+    }
+  }
+}
+
+function marksFor(el: Element, marks: InlineMark[]): InlineMark[] {
+  const tag = tagOf(el);
+  let next = [...marks];
+  const add = (type: string) => {
+    if (!next.some((m) => m.type === type)) next.push({ type });
+  };
+  const remove = (type: string) => {
+    next = next.filter((m) => m.type !== type);
+  };
+
+  if (tag === 'strong' || tag === 'b') add('bold');
+  else if (tag === 'em' || tag === 'i') add('italic');
+  else if (tag === 'u' || tag === 'ins') add('underline');
+  else if (tag === 's' || tag === 'strike' || tag === 'del') add('strike');
+  else if (tag === 'code' || tag === 'kbd' || tag === 'samp') add('code');
+  else if (tag === 'a') {
+    const href = sanitizeHref(el.getAttribute('href'));
+    if (href) {
+      next = next.filter((m) => m.type !== 'link');
+      next.push({ type: 'link', attrs: { href } });
+    }
+  }
+
+  // Inline styles, as used by Google Docs and Word.
+  const style = (el as HTMLElement).style;
+  if (style) {
+    const weight = style.fontWeight;
+    if (weight === 'bold' || weight === 'bolder' || Number(weight) >= 600) add('bold');
+    else if (weight === 'normal' || weight === 'lighter' || (weight && Number(weight) < 600)) remove('bold');
+
+    if (style.fontStyle === 'italic' || style.fontStyle === 'oblique') add('italic');
+    else if (style.fontStyle === 'normal') remove('italic');
+
+    const decoration = `${style.textDecoration ?? ''} ${style.getPropertyValue('text-decoration-line') ?? ''}`;
+    if (decoration.includes('underline')) add('underline');
+    if (decoration.includes('line-through')) add('strike');
+  }
+
+  return next;
+}
+
+/**
+ * Reads inline nodes the way a browser lays them out: runs of whitespace
+ * become one space, <br> is a line break, and spaces at line edges go away.
+ */
+function readInline(nodes: Node[]): InlineNode[] {
+  const out: InlineNode[] = [];
+
+  const walk = (node: Node, marks: InlineMark[]) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = (node.nodeValue || '').replace(/[ \t\n\r\f]+/g, ' ');
+      if (text) out.push({ text, marks });
+      return;
+    }
+    if (node.nodeType !== Node.ELEMENT_NODE) return;
+    const el = node as Element;
+    const tag = tagOf(el);
+    if (SKIP_TAGS.has(tag)) return;
+    if (tag === 'br') {
+      out.push({ text: '\n', marks });
+      return;
+    }
+    const next = marksFor(el, marks);
+    for (const child of Array.from(el.childNodes)) walk(child, next);
+  };
+  for (const node of nodes) walk(node, []);
+
+  // Drop the trailing <br> browsers add to blocks, then trim around line edges.
+  const last = out[out.length - 1];
+  if (last && last.text === '\n') out.pop();
+
+  // Decide per character which spaces survive: none at a line start or end,
+  // and none right after another space.
+  const text = out.map((n) => n.text).join('');
+  // Index by UTF-16 code unit, like the rest of the model (not by code point).
+  const keep = Array.from({ length: text.length }, (_, i) => {
+    if (text[i] !== ' ') return true;
+    const prev = text[i - 1];
+    const rest = text.slice(i + 1);
+    const atLineStart = prev === undefined || prev === '\n' || prev === ' ';
+    const atLineEnd = /^ *(\n|$)/.test(rest);
+    return !atLineStart && !atLineEnd;
+  });
+
+  let pos = 0;
+  const trimmed: InlineNode[] = [];
+  for (const node of out) {
+    let t = '';
+    for (let i = 0; i < node.text.length; i++, pos++) {
+      if (keep[pos]) t += node.text[i];
+    }
+    if (t) trimmed.push({ text: t.replace(/\u00a0/g, ' '), marks: node.marks?.length ? node.marks : [] });
+  }
+  return trimmed.length > 0 ? normalizeInlineNodes(trimmed) : [createTextNode('')];
+}

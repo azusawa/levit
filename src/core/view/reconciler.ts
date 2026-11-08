@@ -11,7 +11,19 @@ export class DOMReconciler {
     this.container = container;
   }
 
+  /** Forgets what was rendered, so the next render rebuilds every block. */
+  invalidate(): void {
+    this.renderedSnapshots.clear();
+  }
+
   render(state: EditorState): void {
+    // Drop anything the browser put directly into the container.
+    for (const node of Array.from(this.container.childNodes)) {
+      if (!(node instanceof HTMLElement) || !node.hasAttribute('data-block-id')) {
+        node.remove();
+      }
+    }
+
     const activeBlockIds = new Set<string>();
     const currentChildren = Array.from(this.container.children) as HTMLElement[];
     const domBlockMap = new Map<string, HTMLElement>();
@@ -156,6 +168,7 @@ export class DOMReconciler {
       const text = block.content.map((c) => c.text).join('');
       code.textContent = text;
       el.appendChild(code);
+      if (text.endsWith('\n')) el.appendChild(document.createElement('br'));
       return;
     }
 
@@ -163,6 +176,11 @@ export class DOMReconciler {
       if (!node.text) continue;
       const domNode = this.renderInlineNode(node);
       el.appendChild(domNode);
+    }
+
+    // A trailing newline only shows an empty last line if a <br> follows it.
+    if (block.content.map((c) => c.text).join('').endsWith('\n')) {
+      el.appendChild(document.createElement('br'));
     }
   }
 

@@ -86,6 +86,9 @@ levit-editor {
 .levit-block {
   margin: 0 0 0.6em 0;
   position: relative;
+  /* Shift+Enter line breaks are stored as "\n" in the text. */
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
 }
 
 .levit-block:last-child {
