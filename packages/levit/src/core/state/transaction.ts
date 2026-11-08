@@ -349,7 +349,7 @@ export class Transaction {
    * Several blocks split the current block: its start joins the first pasted
    * block, its end joins the last one.
    */
-  insertFragment(fragment: BlockNode[]): this {
+  insertFragment(fragment: BlockNode[], options: { keepIds?: boolean } = {}): this {
     if (fragment.length === 0) return this;
 
     if (!this.selection.isCollapsed) {
@@ -363,8 +363,15 @@ export class Transaction {
     const block = this.doc.blocks[blockIdx];
     const offset = this.selection.anchor.offset;
     const [left, right] = splitBlockContent(block, offset);
+    // Pasted blocks get new ids, unless the caller keeps them (streaming
+    // keeps ids so finished blocks are not redrawn).
     const pasted = fragment.map((b) =>
-      createBlock(b.type, { ...b.attrs }, b.content.map((c) => ({ text: c.text, marks: [...(c.marks ?? [])] })))
+      createBlock(
+        b.type,
+        { ...b.attrs },
+        b.content.map((c) => ({ text: c.text, marks: [...(c.marks ?? [])] })),
+        options.keepIds ? b.id : undefined
+      )
     );
 
     // Images and dividers cannot share a block with text, so they are put
@@ -393,6 +400,11 @@ export class Transaction {
     }
 
     if (pasted.length === 1) {
+      // An empty paragraph takes the type of the pasted block, as below.
+      if (block.type === 'paragraph' && getBlockText(block) === '') {
+        block.type = pasted[0].type;
+        block.attrs = { ...pasted[0].attrs };
+      }
       const inserted = normalizeInlineNodes(pasted[0].content);
       block.content = normalizeInlineNodes([...left, ...inserted, ...right]);
       const caretOffset = offset + getBlockText(pasted[0]).length;

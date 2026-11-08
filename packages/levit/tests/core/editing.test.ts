@@ -197,3 +197,19 @@ describe('insertFragment', () => {
     expect(state.tr.insertFragment([]).docChanged).toBe(false);
   });
 });
+
+describe('insertFragment with one block', () => {
+  const heading = () => createBlock('heading', { level: 2 }, [createTextNode('Title')]);
+
+  it('an empty paragraph takes the type of the block, like with several blocks', () => {
+    let state = stateWith([para('a', '')]);
+    state = state.tr.insertFragment([heading()]).apply();
+    expect(state.doc.blocks.map((b) => [b.type, b.attrs])).toEqual([['heading', { level: 2 }]]);
+  });
+
+  it('into text, only the text of the block goes in', () => {
+    let state = stateWith([para('a', 'ab')], caret('a', 1));
+    state = state.tr.insertFragment([heading()]).apply();
+    expect(summary(state.doc)).toEqual([['paragraph', 'aTitleb']]);
+  });
+});

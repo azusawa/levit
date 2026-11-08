@@ -4,3 +4,4 @@
  */
 export { getDocumentSchema, validateDocument, type ValidationError } from './schema.js';
 export { getAIContext, streamAIResponse, type AIContext } from './stream.js';
+export { streamMarkdown, type StreamMarkdownOptions } from './stream-markdown.js';

@@ -259,7 +259,7 @@ export class LevitEditor {
 
     // Remember the attributes the editor is about to set, so destroy() can
     // give the element back as it was.
-    const owned = ['contenteditable', 'spellcheck', 'data-placeholder', 'aria-placeholder', 'role', 'aria-multiline', 'aria-label'];
+    const owned = ['contenteditable', 'spellcheck', 'data-placeholder', 'aria-placeholder', 'role', 'aria-multiline', 'aria-label', 'aria-readonly', 'aria-busy'];
     for (const name of owned) this.originalAttributes.set(name, this.container.getAttribute(name));
     this.addedRootClass = !this.container.classList.contains('levit-editor-root');
 
@@ -392,6 +392,31 @@ export class LevitEditor {
         this.reportError(error);
       }
     }
+  }
+
+  /** False while editing is locked, for example while an AI answer streams in. */
+  get isEditable(): boolean {
+    return this.container.getAttribute('contenteditable') === 'true';
+  }
+
+  /** Locks or unlocks editing. Commands still work; only typing is blocked. */
+  setEditable(editable: boolean): void {
+    this.container.contentEditable = editable ? 'true' : 'false';
+    if (editable) this.container.removeAttribute('aria-readonly');
+    else this.container.setAttribute('aria-readonly', 'true');
+  }
+
+  /**
+   * Replaces the whole editor state, for example with one built from an
+   * earlier state so a series of changes is undone in one step.
+   */
+  replaceState(state: EditorState): void {
+    const docChanged = state.doc !== this.state.doc;
+    this.state = state;
+    if (docChanged) this.render();
+    restoreDOMSelection(this.container, this.state.selection);
+    if (docChanged) this.notifyUpdate();
+    this.notifySelection();
   }
 
   /** Rebuilds the DOM from the document model, undoing any outside change. */
