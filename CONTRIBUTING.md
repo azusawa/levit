@@ -96,7 +96,7 @@ npm 토큰은 어디에도 저장하지 않습니다. `.github/workflows/release
 node scripts/set-version.mjs 0.4.1   # 세 패키지 버전 + 래퍼가 요구하는 본체 버전을 함께 변경
 npm install                          # package-lock.json 갱신
 git commit -am "Release 0.4.1"
-git tag v0.4.1
+git tag -a v0.4.1 -m "Release 0.4.1"   # 주석 태그: --follow-tags가 함께 올림
 git push --follow-tags               # 태그가 올라가면 Release 워크플로가 시작
 gh release create v0.4.1 --generate-notes   # 배포가 끝나면 GitHub Release 만들기
 ```

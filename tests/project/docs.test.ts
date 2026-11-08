@@ -153,3 +153,11 @@ describe('security policy', () => {
     }
   });
 });
+
+describe('release tags', () => {
+  it('CONTRIBUTING makes annotated tags, which git push --follow-tags sends', () => {
+    const guide = read('CONTRIBUTING.md');
+    expect(guide).toMatch(/git tag -a v[\d.]+ -m/);
+    expect(guide).not.toMatch(/git tag v[\d.]+\s*$/m);
+  });
+});
