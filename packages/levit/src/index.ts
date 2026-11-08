@@ -15,6 +15,7 @@ export {
   ChainedCommands,
   type EditorOptions,
 } from './core/editor.js';
+export type { EditorEvents, EditorEventName, EditorEventHandler } from './core/events.js';
 
 // State & Transactions
 export { EditorState, type EditorStateConfig } from './core/state/state.js';

@@ -8,6 +8,7 @@ import { DOMGuard } from './view/dom-guard.js';
 import { documentFromJSON, documentToJSON } from '../serializers/json.js';
 import { findBlockIndex, getBlockText, sliceBlockContent } from './model/document.js';
 import { applyInputRules } from './plugin/input-rules.js';
+import { EventEmitter, type EditorEventHandler, type EditorEventName } from './events.js';
 
 export interface EditorOptions {
   element: HTMLElement;
@@ -212,10 +213,13 @@ export class LevitEditor {
   private controller: InputController;
   private guard: DOMGuard;
   private options: EditorOptions;
+  private events: EventEmitter;
+  private domListeners: [string, EventListener][] = [];
 
   constructor(options: EditorOptions) {
     this.options = options;
     this.container = options.element;
+    this.events = new EventEmitter((error) => this.reportError(error));
 
     // Configure container
     this.container.classList.add('levit-editor-root');
@@ -238,6 +242,38 @@ export class LevitEditor {
     // Initial render
     this.reconciler.render(this.state);
     this.guard = new DOMGuard(this.container, () => this.controller.composing, () => this.repairDOM());
+
+    for (const name of ['focus', 'blur'] as const) {
+      const listener = (event: Event) => this.events.emit(name, { editor: this, event: event as FocusEvent });
+      this.container.addEventListener(name, listener);
+      this.domListeners.push([name, listener]);
+    }
+  }
+
+  /** Listens to an editor event. Returns a function that stops listening. */
+  on<K extends EditorEventName>(name: K, handler: EditorEventHandler<K>): () => void {
+    return this.events.on(name, handler);
+  }
+
+  off<K extends EditorEventName>(name: K, handler: EditorEventHandler<K>): void {
+    this.events.off(name, handler);
+  }
+
+  /** Sends an error to onError, or to the console when there is none. */
+  private reportError(error: unknown): void {
+    if (this.options.onError) this.options.onError(error);
+    else console.error(error);
+  }
+
+  /** Tells listeners that the document changed. */
+  private notifyUpdate(transaction?: Transaction): void {
+    this.events.emit('update', { editor: this, transaction });
+    this.options.onChange?.(this);
+  }
+
+  private notifySelection(): void {
+    this.events.emit('selectionUpdate', { editor: this, selection: this.state.selection });
+    this.options.onSelectionChange?.(this.state.selection);
   }
 
   /** Renders the model and tells the guard that these DOM changes are ours. */
@@ -255,13 +291,14 @@ export class LevitEditor {
 
     if (tr.docChanged) {
       this.render();
-      this.options.onChange?.(this);
     }
-
     if (tr.selectionChanged || tr.docChanged) {
       restoreDOMSelection(this.container, this.state.selection);
-      this.options.onSelectionChange?.(this.state.selection);
     }
+
+    this.events.emit('transaction', { editor: this, transaction: tr });
+    if (tr.docChanged) this.notifyUpdate(tr);
+    if (tr.selectionChanged || tr.docChanged) this.notifySelection();
   }
 
   /** True when an uploadImage option was given. */
@@ -281,7 +318,7 @@ export class LevitEditor {
         const src = await upload(file);
         this.chain().insertImage({ src, alt: file.name }).run();
       } catch (error) {
-        this.options.onError?.(error);
+        this.reportError(error);
       }
     }
   }
@@ -294,8 +331,9 @@ export class LevitEditor {
   }
 
   setSelectionQuietly(selection: EditorSelection): void {
+    if (sameSelection(selection, this.state.selection)) return;
     this.state = this.state.setSelection(selection);
-    this.options.onSelectionChange?.(selection);
+    this.notifySelection();
   }
 
   undo(): boolean {
@@ -303,7 +341,8 @@ export class LevitEditor {
     this.state = this.state.undo();
     this.render();
     restoreDOMSelection(this.container, this.state.selection);
-    this.options.onChange?.(this);
+    this.notifyUpdate();
+    this.notifySelection();
     return true;
   }
 
@@ -312,7 +351,8 @@ export class LevitEditor {
     this.state = this.state.redo();
     this.render();
     restoreDOMSelection(this.container, this.state.selection);
-    this.options.onChange?.(this);
+    this.notifyUpdate();
+    this.notifySelection();
     return true;
   }
 
@@ -359,7 +399,7 @@ export class LevitEditor {
     const doc = documentFromJSON(json);
     this.state = EditorState.create({ doc });
     this.render();
-    this.options.onChange?.(this);
+    this.notifyUpdate();
   }
 
   focus(): void {
@@ -368,10 +408,22 @@ export class LevitEditor {
   }
 
   destroy(): void {
+    this.events.emit('destroy', { editor: this });
+    this.events.clear();
+    for (const [name, listener] of this.domListeners) this.container.removeEventListener(name, listener);
     this.guard.disconnect();
     this.controller.destroy();
     this.container.innerHTML = '';
   }
+}
+
+function sameSelection(a: EditorSelection, b: EditorSelection): boolean {
+  return (
+    a.anchor.blockId === b.anchor.blockId &&
+    a.anchor.offset === b.anchor.offset &&
+    a.head.blockId === b.head.blockId &&
+    a.head.offset === b.head.offset
+  );
 }
 
 export function createLevitEditor(element: HTMLElement, options: Omit<EditorOptions, 'element'> = {}): LevitEditor {
