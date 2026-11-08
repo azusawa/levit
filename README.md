@@ -25,7 +25,7 @@
 
 1. **Zero Runtime Dependency (런타임 의존성 0개)**
    - 외부 런타임 라이브러리 없이 순수 Web 표준 API(DOM, Selection, InputEvent)와 TypeScript만으로 독자 구현되었습니다.
-   - 번들 크기: **약 16 kB (gzipped)** 로 로딩 속도가 극도로 빠릅니다.
+   - 번들 크기: **약 22 kB (gzipped)** 로 로딩 속도가 극도로 빠릅니다.
 2. **가져다 쓰기 가장 쉬운 구조 (DX & AX First)**
    - 단 3줄의 코드로 모든 웹사이트에 연동 가능합니다.
    - `<levit-editor></levit-editor>` 웹 컴포넌트를 지원하여 React, Vue, Svelte, 바닐라 JS 어디서나 HTML 태그 하나로 동작합니다.
@@ -35,9 +35,13 @@
    - AI 코딩 에이전트(Cursor, Antigravity, Copilot 등)를 위한 `llms.txt` 표준 지원.
 4. **하이브리드 편집 경험 (Modern Hybrid UX)**
    - Notion 스타일의 **슬래시(`/`) 커맨드 메뉴**
-   - 텍스트 선택 시 부드럽게 나타나는 **플로팅 버블 툴바 (Floating Bubble Toolbar)** — 굵게·기울임·밑줄·코드·**링크**·제목·인용
+   - 텍스트 선택 시 부드럽게 나타나는 **플로팅 버블 툴바 (Floating Bubble Toolbar)** — 굵게·기울임·밑줄·취소선·**형광펜**·코드·**링크**·제목·인용
    - **글머리표 / 번호 목록** (Enter로 다음 항목, 빈 항목에서 Enter 또는 맨 앞 Backspace로 목록 종료)
-   - `# `, `> `, ` ``` `, `- `, `* `, `1. ` 실시간 마크다운 단축키 자동 변환
+   - **중첩 목록**: `Tab`으로 한 단계 들여쓰고 `Shift+Tab`으로 내어 씁니다. 번호는 단계마다 따로 매깁니다.
+   - **체크리스트**: `[] ` 또는 `[ ] `로 시작하고, 상자를 누르거나 `Cmd/Ctrl+Enter`로 체크합니다.
+   - **구분선**(`---`)과 **이미지**: 이미지는 URL로 넣거나, `uploadImage`를 연결하면 붙여넣기·끌어다 놓기로 올립니다.
+   - **코드 블록 언어** 지정과 문법 강조 연결 지점(`highlightCode`)
+   - `# `, `> `, ` ``` `, `- `, `* `, `1. `, `[ ] `, `---` 실시간 마크다운 단축키 자동 변환
    - 한글(CJK) IME 조합 중 글자 중복 입력 현상 완벽 방어
 5. **안정적인 입력 처리 (Reliable Input)**
    - 모든 입력(Delete, 단어·줄 삭제, `Shift+Enter` 줄바꿈, 자동 교정)을 문서 모델을 거쳐 처리해, 화면과 저장 데이터가 어긋나지 않습니다.
@@ -77,6 +81,28 @@ const editor = createLevitEditor(container, {
 createBubbleMenu(editor);
 createSlashMenu(editor);
 ```
+
+### 3. 이미지 업로드와 문법 강조 (선택)
+```ts
+import hljs from 'highlight.js';
+
+const editor = createLevitEditor(container, {
+  // 붙여 넣거나 끌어다 놓은 이미지 파일을 올리고, 받은 URL로 이미지를 넣습니다.
+  uploadImage: async (file) => {
+    const body = new FormData();
+    body.append('file', file);
+    const res = await fetch('/api/upload', { method: 'POST', body });
+    return (await res.json()).url;
+  },
+  // 업로드 실패처럼 뒤에서 생긴 오류를 받습니다.
+  onError: (error) => console.error(error),
+  // 언어가 지정된 코드 블록을 강조합니다. span의 class와 style만 남깁니다.
+  highlightCode: (code, language) =>
+    hljs.getLanguage(language) ? hljs.highlight(code, { language }).value : code,
+});
+```
+
+`uploadImage`가 없으면 이미지 파일은 무시되고, 슬래시 메뉴의 **Image**는 URL을 묻습니다.
 
 ---
 

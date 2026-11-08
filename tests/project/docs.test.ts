@@ -77,3 +77,27 @@ describe('CI', () => {
     expect(ci).toMatch(/playwright install --with-deps chrome firefox webkit/);
   });
 });
+
+describe('editing features (phase 2) are documented', () => {
+  it('README lists nested lists, checklists, highlight, dividers, images and code languages', () => {
+    const readme = read('README.md');
+    for (const text of ['중첩 목록', 'Tab', '체크리스트', '형광펜', '구분선', '이미지', 'uploadImage', 'highlightCode', '코드 블록 언어']) {
+      expect(readme).toContain(text);
+    }
+  });
+
+  it('llms.txt documents the new blocks, attrs, marks, keys, commands and options', () => {
+    const llms = read('llms.txt');
+    for (const text of [
+      'task_list_item', 'horizontal_rule', 'image',
+      'attrs.indent', 'attrs.checked', 'attrs.language', 'attrs.src',
+      'highlight',
+      'Tab', 'Shift+Tab', 'Cmd/Ctrl+Shift+X', 'Cmd/Ctrl+Shift+H', 'Cmd/Ctrl+Enter', '`[ ] `', '`---`',
+      'indentListItem', 'outdentListItem', 'toggleTaskChecked', 'insertHorizontalRule', 'insertImage',
+      'setCodeBlock', 'setCodeLanguage', 'toggleHighlight', 'selectAll',
+      'uploadImage', 'highlightCode', 'onError',
+    ]) {
+      expect(llms).toContain(text);
+    }
+  });
+});

@@ -64,26 +64,54 @@ createSlashMenu(editor);
 ```
 
 ### Block types
-`paragraph`, `heading` (`attrs.level` 1-6), `blockquote`, `code_block`,
-`bullet_list_item`, `ordered_list_item`.
+`paragraph`, `heading` (`attrs.level` 1-6), `blockquote`,
+`code_block` (optional `attrs.language`, e.g. `"ts"`),
+`bullet_list_item`, `ordered_list_item`, `task_list_item` (`attrs.checked`: boolean),
+`horizontal_rule`, `image` (`attrs.src`, `attrs.alt`).
 Lists are flat: each list item is its own block, and consecutive items of the
 same type form one list (exported as one `<ul>`/`<ol>` or one Markdown list).
+Nesting is `attrs.indent` (0-8, omitted at the top level) on list items; an
+item is at most one level deeper than the item above it.
+`horizontal_rule` and `image` have no text (`content: [{ "text": "" }]`) and the
+caret never goes inside them. Image `src` must be `http:`, `https:`, `blob:`,
+relative, or a bitmap `data:image/...` URL (no SVG).
+
+```json
+[
+  { "type": "bullet_list_item", "content": [{ "text": "Fruits" }] },
+  { "type": "bullet_list_item", "attrs": { "indent": 1 }, "content": [{ "text": "Apple" }] },
+  { "type": "task_list_item", "attrs": { "checked": true }, "content": [{ "text": "Buy milk" }] },
+  { "type": "horizontal_rule", "content": [{ "text": "" }] },
+  { "type": "image", "attrs": { "src": "https://example.com/a.png", "alt": "A" }, "content": [{ "text": "" }] },
+  { "type": "code_block", "attrs": { "language": "ts" }, "content": [{ "text": "const a = 1;" }] }
+]
+```
 
 ### Marks
-`bold`, `italic`, `underline`, `strike`, `code`, `link` (`attrs.href`).
+`bold`, `italic`, `underline`, `strike`, `highlight`, `code`, `link` (`attrs.href`).
 Link hrefs must be `http:`, `https:`, `mailto:` or relative; anything else
 (e.g. `javascript:`) is dropped on render, import and export.
 
 ### Markdown shortcuts (typed at the start of a block)
 `# ` to `###### ` heading, `> ` quote, ``` code block, `- ` or `* ` bulleted
-list, `1. ` numbered list. Shortcuts do not apply inside code blocks.
+list, `1. ` numbered list, `[] ` / `[ ] ` / `[x] ` task (also after `- `),
+`---` divider. Shortcuts do not apply inside code blocks.
 
 ### Keys and line breaks
 - `Enter` splits the block; `Shift+Enter` inserts a line break inside the block.
   Line breaks are stored as `"\n"` in the text (HTML `<br>`, Markdown `\` at line end).
 - `Backspace` / `Delete` remove one whole character (emoji included).
   `Alt+Backspace` (macOS) or `Ctrl+Backspace` deletes a word; `Cmd+Backspace` (macOS) deletes to the line start.
-- `Cmd/Ctrl+B`, `I`, `U` toggle bold, italic, underline. `Cmd/Ctrl+Z` undo, `Cmd/Ctrl+Shift+Z` or `Ctrl+Y` redo.
+- `Cmd/Ctrl+B`, `I`, `U` toggle bold, italic, underline. `Cmd/Ctrl+Shift+X` toggles
+  strikethrough and `Cmd/Ctrl+Shift+H` highlight. `Cmd/Ctrl+Z` undo, `Cmd/Ctrl+Shift+Z` or `Ctrl+Y` redo.
+- In a list item, `Tab` nests it one level and `Shift+Tab` moves it back up
+  (outside lists, Tab keeps moving focus). Enter on an empty nested item or
+  Backspace at its start moves it up a level first.
+- `Cmd/Ctrl+Enter` checks or unchecks the task at the caret; clicking the box does too.
+- Backspace at the start of the block after an image or divider removes it;
+  Delete at the end of the block before one does too.
+- `Cmd/Ctrl+A` selects the whole document.
+- Clicking a code block's language label (top right) asks for a new language.
 
 ### Paste, copy and drop
 Every edit goes through the document model; the editor cancels the browser's
@@ -98,6 +126,12 @@ extensions are rolled back from the model.
 - `documentToJSON(doc)` / `documentFromJSON(json)`: Clean, deterministic block JSON
 - `documentToMarkdown(doc)` / `markdownToDocument(markdown)`: Lossless Markdown
 - `documentToHTML(doc)` / `htmlToDocument(html)`: Semantic HTML
+
+Nested lists become nested `<ul>`/`<ol>` and Markdown lists indented under
+their parent. Tasks are `- [ ] text` / `- [x] text` in Markdown and
+`<li data-checked><input type="checkbox">` in HTML. Highlight is `==text==` /
+`<mark>`, dividers `---` / `<hr>`, images `![alt](src)` / `<img>`, and code
+languages ```` ```ts ```` / `<code class="language-ts">`.
 
 ## 4. Chained Command API
 ```ts
@@ -114,6 +148,33 @@ editor.chain().insertFragment(blocks).run();   // insert blocks at the caret, li
 editor.chain().setLink('https://example.com').run(); // applies to the selection
 editor.chain().unsetLink().run();
 editor.getActiveLink(); // href of the selected link, or null
+
+editor.chain().indentListItem().run();         // Tab; outdentListItem() is Shift+Tab
+editor.chain().setBlockType('task_list_item', { checked: false }).run();
+editor.chain().toggleTaskChecked().run();      // or toggleTaskChecked(blockId)
+editor.chain().toggleStrike().run();
+editor.chain().toggleHighlight().run();
+editor.chain().insertHorizontalRule().run();
+editor.chain().insertImage({ src: 'https://example.com/a.png', alt: 'A' }).run();
+editor.chain().setCodeBlock('ts').run();       // setCodeLanguage('py') changes it, '' clears it
+editor.chain().selectAll().run();
+```
+
+### Editor options
+```ts
+createLevitEditor(container, {
+  placeholder: 'Write...',
+  onChange: (editor) => {},
+  onSelectionChange: (selection) => {},
+  // Pasted and dropped image files are uploaded with this, then inserted.
+  // Without it, image files are ignored. Images go in one by one, in order.
+  uploadImage: async (file) => 'https://cdn.example.com/a.png',
+  // Errors from background work, such as a failed upload.
+  onError: (error) => console.error(error),
+  // Highlights code blocks that have a language. Return HTML for the code;
+  // only <span class style> is kept and the text must not change.
+  highlightCode: (code, language) => code,
+});
 ```
 
 ## 5. AI Streaming API
