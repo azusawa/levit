@@ -279,6 +279,28 @@ pre.levit-block-code_block code {
   padding: 0;
 }
 
+/* Divider and image: blocks without text */
+.levit-block-horizontal_rule {
+  padding: 0.5em 0;
+}
+
+.levit-block-horizontal_rule hr {
+  border: none;
+  border-top: 1px solid var(--levit-border);
+  margin: 0;
+}
+
+figure.levit-block-image {
+  margin: 0.8em 0;
+  line-height: 0;
+}
+
+figure.levit-block-image img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--levit-radius);
+}
+
 /* Inline Marks */
 strong {
   font-weight: 600;

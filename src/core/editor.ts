@@ -15,6 +15,13 @@ export interface EditorOptions {
   placeholder?: string;
   onChange?: (editor: LevitEditor) => void;
   onSelectionChange?: (selection: EditorSelection) => void;
+  /**
+   * Uploads an image file and returns its URL. When set, pasted and dropped
+   * image files are uploaded and inserted; without it they are ignored.
+   */
+  uploadImage?: (file: File) => Promise<string>;
+  /** Called when something fails in the background, such as an image upload. */
+  onError?: (error: unknown) => void;
 }
 
 export class ChainedCommands {
@@ -108,6 +115,23 @@ export class ChainedCommands {
   /** Moves the selected list items one level up. */
   outdentListItem(): this {
     this.tr.outdentListItem();
+    return this;
+  }
+
+  selectAll(): this {
+    this.tr.selectAll();
+    return this;
+  }
+
+  /** Inserts a divider (horizontal rule) at the caret. */
+  insertHorizontalRule(): this {
+    this.tr.insertHorizontalRule();
+    return this;
+  }
+
+  /** Inserts an image at the caret. Unsafe URLs are ignored. */
+  insertImage(image: { src: string; alt?: string }): this {
+    this.tr.insertImage(image);
     return this;
   }
 
@@ -218,6 +242,28 @@ export class LevitEditor {
     if (tr.selectionChanged || tr.docChanged) {
       restoreDOMSelection(this.container, this.state.selection);
       this.options.onSelectionChange?.(this.state.selection);
+    }
+  }
+
+  /** True when an uploadImage option was given. */
+  get canUploadImages(): boolean {
+    return typeof this.options.uploadImage === 'function';
+  }
+
+  /**
+   * Uploads image files one by one with the uploadImage option and inserts
+   * each at the caret as it finishes. Failures go to onError.
+   */
+  async uploadImages(files: File[]): Promise<void> {
+    const upload = this.options.uploadImage;
+    if (!upload) return;
+    for (const file of files.filter((f) => f.type.startsWith('image/'))) {
+      try {
+        const src = await upload(file);
+        this.chain().insertImage({ src, alt: file.name }).run();
+      } catch (error) {
+        this.options.onError?.(error);
+      }
     }
   }
 

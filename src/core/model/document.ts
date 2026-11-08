@@ -143,6 +143,13 @@ export function isListItem(type: string): boolean {
   return (LIST_ITEM_TYPES as readonly string[]).includes(type);
 }
 
+/** Blocks without text, like dividers and images. The caret never goes inside them. */
+export const ATOM_BLOCK_TYPES = ['horizontal_rule', 'image'] as const;
+
+export function isAtomBlock(type: string): boolean {
+  return (ATOM_BLOCK_TYPES as readonly string[]).includes(type);
+}
+
 /** Deepest nesting level a list item can have. */
 export const MAX_LIST_INDENT = 8;
 

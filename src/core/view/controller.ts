@@ -171,6 +171,14 @@ export class InputController {
       return;
     }
 
+    // Select all ourselves: Chrome selects nothing when the document starts
+    // or ends with an image or divider.
+    if (isMod && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'a') {
+      e.preventDefault();
+      this.editor.chain().selectAll().run();
+      return;
+    }
+
     if (isMod && e.key.toLowerCase() === 'b') {
       e.preventDefault();
       this.editor.chain().toggleBold().run();
@@ -296,7 +304,8 @@ export class InputController {
       return;
     }
     const data = e.dataTransfer;
-    if (!data || data.types.includes('Files')) return;
+    if (!data) return;
+    if (data.types.includes('Files') && !this.editor.canUploadImages) return;
 
     const pos = positionFromPoint(this.container, e.clientX, e.clientY);
     if (pos) this.editor.setSelectionQuietly({ anchor: pos, head: pos, isCollapsed: true });
@@ -306,6 +315,13 @@ export class InputController {
 
   /** Inserts pasted or dropped data at the selection as one undo step. */
   private insertData(data: DataTransfer): void {
+    // Image files (screenshots, files from the desktop) go to the uploader.
+    const images = Array.from(data.files ?? []).filter((f) => f.type.startsWith('image/'));
+    if (images.length > 0 && this.editor.canUploadImages) {
+      void this.editor.uploadImages(images);
+      return;
+    }
+
     const { doc, selection } = this.editor.state;
     const block = doc.blocks[findBlockIndex(doc, selection.anchor.blockId)];
     const content = readClipboard(data, block?.type === 'code_block');

@@ -17,6 +17,8 @@
 
     const editor = createLevitEditor(document.getElementById('editor'), {
       placeholder: 'Type here',
+      // Stands in for a real upload: the image is shown from a local blob URL.
+      uploadImage: async (file) => URL.createObjectURL(file),
     });
     createBubbleMenu(editor);
     createSlashMenu(editor);

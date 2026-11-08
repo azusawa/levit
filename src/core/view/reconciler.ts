@@ -1,7 +1,7 @@
 import { BlockNode, InlineMark, InlineNode } from '../model/types.js';
 import { EditorState } from '../state/state.js';
-import { normalizeHeadingLevel, sanitizeHref } from '../model/sanitize.js';
-import { isListItem, listIndent } from '../model/document.js';
+import { normalizeHeadingLevel, sanitizeHref, sanitizeImageSrc } from '../model/sanitize.js';
+import { isAtomBlock, isListItem, listIndent } from '../model/document.js';
 
 export class DOMReconciler {
   private container: HTMLElement;
@@ -138,7 +138,11 @@ export class DOMReconciler {
         return 'pre';
       case 'bullet_list_item':
       case 'ordered_list_item':
+      case 'task_list_item':
+      case 'horizontal_rule':
         return 'div';
+      case 'image':
+        return 'figure';
       default:
         return 'p';
     }
@@ -158,6 +162,10 @@ export class DOMReconciler {
     el.className = `levit-block levit-block-${block.type}`;
     if (block.type !== 'task_list_item') el.removeAttribute('data-checked');
     if (isListItem(block.type)) el.classList.add('levit-list-item');
+    if (isAtomBlock(block.type)) {
+      el.classList.add('levit-atom');
+      el.contentEditable = 'false';
+    }
     const indent = listIndent(block);
     if (indent > 0) el.setAttribute('data-indent', String(indent));
     else el.removeAttribute('data-indent');
@@ -165,6 +173,19 @@ export class DOMReconciler {
 
   private updateBlockContent(el: HTMLElement, block: BlockNode): void {
     el.innerHTML = '';
+    if (block.type === 'horizontal_rule') {
+      el.appendChild(document.createElement('hr'));
+      return;
+    }
+    if (block.type === 'image') {
+      const img = document.createElement('img');
+      const src = sanitizeImageSrc(block.attrs?.src);
+      if (src) img.src = src;
+      img.alt = typeof block.attrs?.alt === 'string' ? block.attrs.alt : '';
+      img.draggable = false;
+      el.appendChild(img);
+      return;
+    }
     if (block.type === 'task_list_item') this.addCheckbox(el, block);
 
     const hasText = block.content.some((node) => node.text.length > 0);

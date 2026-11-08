@@ -32,6 +32,17 @@ export function domPointToPosition(
   offset: number
 ): EditorPosition | null {
   if (!container.contains(node)) return null;
+  // A point between blocks (select all when the first or last block is an
+  // image): use the start of the block after it, or the end of the last one.
+  if (node === container) {
+    const blocks = Array.from(container.children).filter((el) => el.hasAttribute('data-block-id'));
+    const after = container.childNodes[offset] as Element | undefined;
+    const block = after?.hasAttribute?.('data-block-id') ? after : null;
+    if (block) return { blockId: block.getAttribute('data-block-id')!, offset: 0 };
+    const last = blocks[blocks.length - 1] as HTMLElement | undefined;
+    if (!last) return null;
+    return { blockId: last.getAttribute('data-block-id')!, offset: getOffsetInBlock(last, last, last.childNodes.length) };
+  }
   const block = findAncestorBlock(node, container);
   if (!block) return null;
   return { blockId: block.getAttribute('data-block-id')!, offset: getOffsetInBlock(block, node, offset) };
@@ -120,6 +131,24 @@ function findDOMPoint(blockEl: HTMLElement, targetOffset: number): { node: Node;
   };
 }
 
+/**
+ * The DOM point for an editor position. Blocks that cannot be edited (images,
+ * dividers) have no point inside them, so the point goes before the block
+ * when it starts a selection and after it otherwise.
+ */
+function positionToDOMPoint(
+  container: HTMLElement,
+  blockEl: HTMLElement,
+  offset: number,
+  isStart: boolean
+): { node: Node; offset: number } {
+  if (blockEl.getAttribute('contenteditable') === 'false') {
+    const index = Array.prototype.indexOf.call(container.childNodes, blockEl);
+    return { node: container, offset: isStart ? index : index + 1 };
+  }
+  return findDOMPoint(blockEl, offset);
+}
+
 export function restoreDOMSelection(container: HTMLElement, sel: EditorSelection): void {
   const domSel = window.getSelection();
   if (!domSel) return;
@@ -127,11 +156,11 @@ export function restoreDOMSelection(container: HTMLElement, sel: EditorSelection
   const anchorBlock = container.querySelector(`[data-block-id="${sel.anchor.blockId}"]`) as HTMLElement;
   if (!anchorBlock) return;
 
-  const anchorPoint = findDOMPoint(anchorBlock, sel.anchor.offset);
   const range = document.createRange();
 
   if (sel.isCollapsed) {
-    range.setStart(anchorPoint.node, anchorPoint.offset);
+    const point = positionToDOMPoint(container, anchorBlock, sel.anchor.offset, false);
+    range.setStart(point.node, point.offset);
     range.collapse(true);
     domSel.removeAllRanges();
     domSel.addRange(range);
@@ -141,11 +170,15 @@ export function restoreDOMSelection(container: HTMLElement, sel: EditorSelection
   const headBlock = container.querySelector(`[data-block-id="${sel.head.blockId}"]`) as HTMLElement;
   if (!headBlock) return;
 
-  const headPoint = findDOMPoint(headBlock, sel.head.offset);
+  const forward = anchorBlock === headBlock
+    ? sel.anchor.offset <= sel.head.offset
+    : !!(anchorBlock.compareDocumentPosition(headBlock) & Node.DOCUMENT_POSITION_FOLLOWING);
+  const anchorPoint = positionToDOMPoint(container, anchorBlock, sel.anchor.offset, forward);
+  const headPoint = positionToDOMPoint(container, headBlock, sel.head.offset, !forward);
+  const [start, end] = forward ? [anchorPoint, headPoint] : [headPoint, anchorPoint];
 
-  range.setStart(anchorPoint.node, anchorPoint.offset);
-  range.setEnd(headPoint.node, headPoint.offset);
-
+  range.setStart(start.node, start.offset);
+  range.setEnd(end.node, end.offset);
   domSel.removeAllRanges();
   domSel.addRange(range);
 }

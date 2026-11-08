@@ -15,6 +15,23 @@ export interface SlashMenuInstance {
   destroy: () => void;
 }
 
+/** Opens a file picker when uploads are set up, otherwise asks for a URL. */
+function chooseImage(editor: LevitEditor): void {
+  if (editor.canUploadImages) {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.multiple = true;
+    input.addEventListener('change', () => {
+      void editor.uploadImages(Array.from(input.files ?? []));
+    });
+    input.click();
+    return;
+  }
+  const src = window.prompt('Image URL');
+  if (src && src.trim()) editor.chain().insertImage({ src: src.trim() }).run();
+}
+
 export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
   const menu = document.createElement('div');
   menu.className = 'levit-slash-menu';
@@ -86,6 +103,20 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
       description: 'Track tasks with checkboxes',
       icon: '☑',
       action: (ed) => ed.chain().setBlockType('task_list_item', { checked: false }).run(),
+    },
+    {
+      id: 'divider',
+      title: 'Divider',
+      description: 'A line between sections',
+      icon: '—',
+      action: (ed) => ed.chain().insertHorizontalRule().run(),
+    },
+    {
+      id: 'image',
+      title: 'Image',
+      description: 'Upload an image or add one by URL',
+      icon: '🖼',
+      action: (ed) => chooseImage(ed),
     },
   ];
 

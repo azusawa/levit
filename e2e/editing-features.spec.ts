@@ -102,3 +102,67 @@ test.describe('task lists', () => {
     expect((await blocks(page)).map((b) => b.attrs?.checked)).toEqual([true]);
   });
 });
+
+const PNG =
+  'iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAIAAABLbSncAAAAEklEQVR4nGP4z8CAFTEMIwkAZ6s/wdl1JJcAAAAASUVORK5CYII=';
+
+test.describe('dividers and images', () => {
+  test('"---" draws a divider and typing continues below it; Backspace removes it', async ({ page }) => {
+    await page.keyboard.type('above');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('---');
+    await page.keyboard.type('below');
+    expect((await blocks(page)).map((b) => [b.type, text(b)])).toEqual([
+      ['paragraph', 'above'],
+      ['horizontal_rule', ''],
+      ['paragraph', 'below'],
+    ]);
+    await expect(editorRoot(page).locator('hr')).toBeVisible();
+
+    // Home does not move the caret on a Mac, so jump back over the one word.
+    await page.keyboard.press(process.platform === 'darwin' ? 'Alt+ArrowLeft' : 'Control+ArrowLeft');
+    await page.keyboard.press('Backspace');
+    expect((await blocks(page)).map((b) => b.type)).toEqual(['paragraph', 'paragraph']);
+    await page.keyboard.type('!');
+    expect((await blocks(page)).map(text)).toEqual(['above', '!below']);
+  });
+
+  test('a dropped image file is uploaded and shown', async ({ page }) => {
+    await page.keyboard.type('start');
+    await page.evaluate((png) => {
+      const bytes = Uint8Array.from(atob(png), (c) => c.charCodeAt(0));
+      const dt = new DataTransfer();
+      dt.items.add(new File([bytes], 'dot.png', { type: 'image/png' }));
+      const target = document.querySelector('#editor .levit-block')!;
+      const r = target.getBoundingClientRect();
+      target.dispatchEvent(
+        new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true, clientX: r.right - 1, clientY: r.top + 5 })
+      );
+    }, PNG);
+
+    const image = editorRoot(page).locator('figure img');
+    await expect(image).toBeVisible();
+    expect(await image.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(8);
+    const list = await blocks(page);
+    expect(list.map((b) => b.type)).toEqual(['paragraph', 'image', 'paragraph']);
+    expect(String(list[1].attrs?.src)).toMatch(/^blob:/);
+  });
+
+  test('select all and delete removes images at the edges too', async ({ page }) => {
+    await page.evaluate((png) => {
+      (window as any).editor.setJSON({
+        version: 1,
+        blocks: [
+          { type: 'image', attrs: { src: `data:image/png;base64,${png}`, alt: 'dot' }, content: [{ text: '' }] },
+          { type: 'paragraph', content: [{ text: 'middle' }] },
+          { type: 'image', attrs: { src: `data:image/png;base64,${png}`, alt: 'dot' }, content: [{ text: '' }] },
+        ],
+      });
+    }, PNG);
+    await editorRoot(page).locator('p').click();
+    await page.keyboard.press('ControlOrMeta+a');
+    await page.keyboard.press('Backspace');
+    await page.keyboard.type('new');
+    expect((await blocks(page)).map((b) => [b.type, text(b)])).toEqual([['paragraph', 'new']]);
+  });
+});

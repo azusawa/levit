@@ -1,6 +1,6 @@
 import { BlockNode, DocumentData, InlineNode } from '../core/model/types.js';
 import { createBlock, createDocument, createTextNode, isListItem, listIndent } from '../core/model/document.js';
-import { normalizeHeadingLevel, sanitizeHref } from '../core/model/sanitize.js';
+import { normalizeHeadingLevel, sanitizeHref, sanitizeImageSrc } from '../core/model/sanitize.js';
 
 export function documentToMarkdown(doc: DocumentData): string {
   let out = '';
@@ -47,6 +47,16 @@ export function documentToMarkdown(doc: DocumentData): string {
       case 'code_block':
         line = `\`\`\`\n${blockText}\n\`\`\``;
         break;
+      case 'horizontal_rule':
+        line = '---';
+        break;
+      case 'image': {
+        const src = sanitizeImageSrc(block.attrs?.src);
+        if (!src) continue;
+        const alt = String(block.attrs?.alt ?? '').replace(/[[\]\\]/g, '\\$&');
+        line = `![${alt}](${/[\s()<>]/.test(src) ? `<${src}>` : src})`;
+        break;
+      }
       case 'bullet_list_item':
       case 'ordered_list_item':
       case 'task_list_item': {
@@ -146,6 +156,21 @@ export function markdownToDocument(markdown: string): DocumentData {
   for (const raw of rawBlocks) {
     const trimmed = raw.trim();
     if (!trimmed) continue;
+
+    // Divider: three or more -, * or _
+    if (/^([-*_])(\s*\1){2,}$/.test(trimmed)) {
+      blocks.push(createBlock('horizontal_rule'));
+      continue;
+    }
+
+    // Image on its own line: ![alt](src) or ![alt](<src>)
+    const imageMatch = trimmed.match(/^!\[((?:\\.|[^\]\\])*)\]\((?:<([^>]*)>|(\S*))\)$/);
+    const imageSrc = imageMatch && sanitizeImageSrc(imageMatch[2] ?? imageMatch[3]);
+    if (imageMatch && imageSrc) {
+      const alt = imageMatch[1].replace(/\\(.)/g, '$1');
+      blocks.push(createBlock('image', { src: imageSrc, alt }));
+      continue;
+    }
 
     // Heading (# ... ######)
     const headingMatch = trimmed.match(/^(#{1,6})\s+(.*)$/);

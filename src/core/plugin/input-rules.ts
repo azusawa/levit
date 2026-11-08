@@ -58,6 +58,18 @@ export const defaultInputRules: InputRule[] = [
       return convertBlock(tr, blockId, 'task_list_item', attrs);
     },
   },
+  // Divider: "---" in a paragraph
+  {
+    match: /^---$/,
+    handler: (tr, _match, blockId) => {
+      const block = tr.doc.blocks[findBlockIndex(tr.doc, blockId)];
+      if (block?.type !== 'paragraph') return false;
+      block.content = [{ text: '', marks: [] }];
+      tr.selection = { anchor: { blockId, offset: 0 }, head: { blockId, offset: 0 }, isCollapsed: true };
+      tr.insertHorizontalRule();
+      return true;
+    },
+  },
   // Numbered list: "1. "
   {
     match: /^\d+\.\s$/,

@@ -16,6 +16,22 @@ export function sanitizeHref(href: unknown): string | null {
   return href;
 }
 
+/**
+ * Returns the src if it is safe for an image, otherwise null. Allows http,
+ * https, blob and relative URLs, and data URLs of bitmap images. SVG data
+ * URLs are refused because SVG can carry scripts.
+ */
+export function sanitizeImageSrc(src: unknown): string | null {
+  if (typeof src !== 'string' || src.trim() === '') return null;
+  const normalized = src.replace(/[\u0000- \u007f]/g, '');
+  const scheme = /^([a-z][a-z0-9+.-]*):/i.exec(normalized);
+  if (!scheme) return src;
+  const name = scheme[1].toLowerCase();
+  if (name === 'http' || name === 'https' || name === 'blob') return src;
+  if (name === 'data' && /^data:image\/(png|jpe?g|gif|webp|avif|bmp);/i.test(normalized)) return src;
+  return null;
+}
+
 /** Turns any value into a heading level from 1 to 6 (1 when it is not an integer). */
 export function normalizeHeadingLevel(level: unknown): number {
   const n = typeof level === 'string' && /^\d+$/.test(level) ? Number(level) : level;

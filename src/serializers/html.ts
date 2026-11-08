@@ -6,7 +6,7 @@ import {
   listIndent,
   normalizeInlineNodes,
 } from '../core/model/document.js';
-import { normalizeHeadingLevel, sanitizeHref } from '../core/model/sanitize.js';
+import { normalizeHeadingLevel, sanitizeHref, sanitizeImageSrc } from '../core/model/sanitize.js';
 
 /** The element that holds each kind of list item, and how it is opened. */
 const LISTS: Record<string, { tag: string; open: string }> = {
@@ -77,6 +77,14 @@ export function documentToHTML(doc: DocumentData): string {
       case 'blockquote':
         html += `<blockquote>${contentHtml}</blockquote>`;
         break;
+      case 'horizontal_rule':
+        html += '<hr>';
+        break;
+      case 'image': {
+        const src = sanitizeImageSrc(block.attrs?.src);
+        if (src) html += `<img src="${escapeHTML(src)}" alt="${escapeHTML(String(block.attrs?.alt ?? ''))}">`;
+        break;
+      }
       case 'code_block':
         html += `<pre><code>${contentHtml}</code></pre>`;
         break;
@@ -116,7 +124,7 @@ function escapeHTML(str: string): string {
 /** Elements whose content is never imported. */
 const SKIP_TAGS = new Set([
   'script', 'style', 'template', 'noscript', 'head', 'meta', 'link', 'title',
-  'iframe', 'object', 'embed', 'svg', 'math', 'img', 'video', 'audio', 'canvas',
+  'iframe', 'object', 'embed', 'svg', 'math', 'video', 'audio', 'canvas',
   'button', 'input', 'select', 'textarea',
 ]);
 
@@ -134,7 +142,7 @@ const LEAF_TAGS = new Set([
 ]);
 
 const BLOCK_TAGS = new Set([
-  ...CONTAINER_TAGS, ...LEAF_TAGS, 'blockquote', 'pre', 'ul', 'ol', 'li', 'hr',
+  ...CONTAINER_TAGS, ...LEAF_TAGS, 'blockquote', 'pre', 'ul', 'ol', 'li', 'hr', 'img',
 ]);
 
 /** The block type for loose content, and the nesting level of the list we are in. */
@@ -218,11 +226,14 @@ function readBlocks(parent: Node, ctx: Context, out: BlockNode[]): void {
 function readBlockElement(el: Element, ctx: Context, out: BlockNode[]): void {
   const tag = tagOf(el);
 
-  if (/^h[1-6]$/.test(tag)) {
-    out.push(createBlock('heading', { level: parseInt(tag[1], 10) }, readInline(Array.from(el.childNodes))));
+  if (tag === 'img') {
+    const src = sanitizeImageSrc(el.getAttribute('src'));
+    if (src) out.push(createBlock('image', { src, alt: el.getAttribute('alt') ?? '' }));
+  } else if (/^h[1-6]$/.test(tag) || (LEAF_TAGS.has(tag) && !el.querySelector('img'))) {
+    readLeaf(el, tag, ctx, out);
   } else if (LEAF_TAGS.has(tag)) {
-    // An explicit block is kept even when empty (e.g. <p><br></p> spacing).
-    out.push(createBlock(ctx.type, attrsFor(ctx), readInline(Array.from(el.childNodes))));
+    // A paragraph with images: its text and images become separate blocks.
+    readBlocks(el, ctx, out);
   } else if (tag === 'blockquote') {
     readBlocks(el, { type: 'blockquote' }, out);
   } else if (tag === 'ul' || tag === 'ol') {
@@ -238,10 +249,17 @@ function readBlockElement(el: Element, ctx: Context, out: BlockNode[]): void {
     const text = (el.textContent || '').replace(/\r\n?/g, '\n').replace(/\n$/, '');
     out.push(createBlock('code_block', {}, [createTextNode(text)]));
   } else if (tag === 'hr') {
-    // No horizontal rule block yet.
+    out.push(createBlock('horizontal_rule'));
   } else {
     readBlocks(el, ctx, out);
   }
+}
+
+function readLeaf(el: Element, tag: string, ctx: Context, out: BlockNode[]): void {
+  const content = readInline(Array.from(el.childNodes));
+  if (/^h[1-6]$/.test(tag)) out.push(createBlock('heading', { level: parseInt(tag[1], 10) }, content));
+  // An explicit block is kept even when empty (e.g. <p><br></p> spacing).
+  else out.push(createBlock(ctx.type, attrsFor(ctx), content));
 }
 
 /** A list item's own text is one item; nested lists and paragraphs follow it. */
