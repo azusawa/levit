@@ -155,3 +155,17 @@ describe('streamMarkdown', () => {
     expect(editor.state.doc.blocks.length).toBe(30);
   });
 });
+
+describe('spaces at the edges of an answer', () => {
+  it('are dropped when there is no text next to them', async () => {
+    const editor = editorWith('', 0);
+    await streamMarkdown(editor, chunks([' and more. '], editor));
+    expect(summary(editor.state.doc)).toEqual([['paragraph', 'and more.']]);
+  });
+
+  it('are kept where the answer meets text', async () => {
+    const editor = editorWith('ab', 1);
+    await streamMarkdown(editor, chunks([' x '], editor));
+    expect(summary(editor.state.doc)).toEqual([['paragraph', 'a x b']]);
+  });
+});

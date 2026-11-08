@@ -49,6 +49,8 @@ export interface MarkSpec {
   parseHTML?: (el: Element) => Record<string, any> | null;
   /** JSON Schema of the mark's attrs, used by getDocumentSchema() (for AI output). */
   attrsSchema?: Record<string, unknown>;
+  /** false: text typed right after the mark does not get it. Default true. */
+  inclusive?: boolean;
 }
 
 /** A command factory: takes arguments, returns a change to a transaction. */

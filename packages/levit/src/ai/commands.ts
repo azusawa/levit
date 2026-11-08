@@ -5,6 +5,7 @@ import type { LevitMessages } from '../i18n/messages.js';
 import { findBlockIndex, getBlockText, sliceDocument } from '../core/model/document.js';
 import { documentToMarkdown } from '../serializers/markdown.js';
 import { streamMarkdown } from './stream-markdown.js';
+import { proposeReplacement, resolveSuggestions, suggestionMarks, hasSuggestions } from './suggestions.js';
 
 /** What the AI provider is asked to do. Texts are Markdown. */
 export interface AIRequest {
@@ -45,6 +46,11 @@ export interface AICommand {
   needsSelection?: boolean;
   /** Also show a button in the bubble menu. */
   bubble?: boolean;
+  /**
+   * For 'replace': show the answer as a suggestion to accept or reject
+   * instead of replacing the text. Default: the plugin's `suggestions`.
+   */
+  suggest?: boolean;
 }
 
 export interface AIPluginOptions {
@@ -53,6 +59,8 @@ export interface AIPluginOptions {
   commands?: AICommand[];
   /** Characters of text before and after to send as context. Default 4000. */
   contextLength?: number;
+  /** Show 'replace' answers (like Improve) as suggestions to accept or reject. Default true. */
+  suggestions?: boolean;
 }
 
 /** The built-in commands, with the message keys of their titles. */
@@ -88,6 +96,8 @@ const BUILT_IN: (AICommand & { titleKey: keyof LevitMessages; descriptionKey: ke
 ];
 
 const configs = new WeakMap<LevitPlugin, AIPluginOptions>();
+let suggestionCount = 0;
+const barUpdates = new WeakMap<LevitEditor, () => void>();
 const running = new WeakMap<LevitEditor, AbortController>();
 
 /**
@@ -106,6 +116,20 @@ export function aiPlugin(options: AIPluginOptions): LevitPlugin {
 
   const plugin: LevitPlugin = {
     name: 'ai',
+    marks: suggestionMarks,
+    commands: {
+      /** Accepts the open AI suggestions (or the one with this id). */
+      // Not while an answer is still streaming in.
+      acceptSuggestions: (id?: string) => (tr, editor) => !running.has(editor) && resolveSuggestions(tr, true, id),
+      /** Rejects the open AI suggestions (or the one with this id). */
+      rejectSuggestions: (id?: string) => (tr, editor) => !running.has(editor) && resolveSuggestions(tr, false, id),
+    },
+    // Only act while there is a suggestion; otherwise the key passes on.
+    keymap: {
+      'Mod-Shift-Enter': (editor) => editor.commands.acceptSuggestions(),
+      'Mod-Shift-Backspace': (editor) => editor.commands.rejectSuggestions(),
+    },
+    setup: (editor) => createSuggestionBar(editor),
     slashItems: commands.map((command) => ({
       id: `ai-${command.id}`,
       title: title(command),
@@ -176,13 +200,18 @@ export async function runAICommand(
       after: summarizeAll ? '' : after,
       signal: controller.signal,
     });
+    const suggest = command.insert === 'replace' && (command.suggest ?? options.suggestions ?? true);
+    const id = `ai-${Date.now().toString(36)}-${++suggestionCount}`;
     return await streamMarkdown(editor, stream, {
       signal: controller.signal,
       at: command.insert === 'below' ? 'below' : 'selection',
+      insert: suggest ? (tr, blocks, final) => proposeReplacement(tr, blocks, id, final) : undefined,
     });
   } finally {
     document.removeEventListener('keydown', stopOnEscape, true);
     running.delete(editor);
+    // The answer is complete: show the toolbar for its suggestions.
+    barUpdates.get(editor)?.();
   }
 }
 
@@ -228,5 +257,61 @@ function surroundingText(editor: LevitEditor, selection: EditorSelection, limit:
   return {
     before: markdown(range({ blockId: first.id, offset: 0 }, from)).slice(-limit),
     after: markdown(range(to, docEnd)).slice(0, limit),
+  };
+}
+
+/**
+ * A toolbar with Accept and Reject that floats by the first open suggestion.
+ * Returns the cleanup for editor.destroy().
+ */
+function createSuggestionBar(editor: LevitEditor): () => void {
+  const m = editor.messages;
+  const bar = document.createElement('div');
+  bar.className = 'levit-suggestion-bar';
+  bar.setAttribute('role', 'toolbar');
+  bar.setAttribute('aria-label', m.suggestionToolbar);
+  bar.style.display = 'none';
+
+  const button = (label: string, title: string, command: 'acceptSuggestions' | 'rejectSuggestions') => {
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.className = `levit-suggestion-${command === 'acceptSuggestions' ? 'accept' : 'reject'}`;
+    el.textContent = label;
+    el.title = title;
+    el.setAttribute('aria-label', title);
+    // Mouse: act on mousedown so the editor keeps its selection.
+    el.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      editor.commands[command]();
+    });
+    // Keyboard (Enter or Space): a click without a mouse.
+    el.addEventListener('click', (e) => {
+      if (e.detail === 0) editor.commands[command]();
+    });
+    return el;
+  };
+  bar.append(button(`✓ ${m.suggestionAccept}`, m.suggestionAccept, 'acceptSuggestions'), button(`✕ ${m.suggestionReject}`, m.suggestionReject, 'rejectSuggestions'));
+  document.body.appendChild(bar);
+
+  const update = () => {
+    if (running.has(editor) || !hasSuggestions(editor.state.doc.blocks)) {
+      bar.style.display = 'none';
+      return;
+    }
+    bar.style.display = 'flex';
+    const first = editor.container.querySelector('[data-suggestion]');
+    const rect = first?.getBoundingClientRect();
+    if (rect && rect.height > 0) {
+      bar.style.top = `${rect.bottom + window.scrollY + 6}px`;
+      bar.style.left = `${Math.max(10, rect.left + window.scrollX)}px`;
+    }
+  };
+  const stop = editor.on('update', update);
+  barUpdates.set(editor, update);
+  update();
+  return () => {
+    stop();
+    barUpdates.delete(editor);
+    bar.remove();
   };
 }

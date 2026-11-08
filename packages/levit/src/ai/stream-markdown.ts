@@ -1,6 +1,7 @@
 import type { LevitEditor } from '../core/editor.js';
 import type { BlockNode } from '../core/model/types.js';
 import type { Transaction } from '../core/state/transaction.js';
+import type { EditorState } from '../core/state/state.js';
 import { findBlockIndex, getBlockText } from '../core/model/document.js';
 import { markdownToDocument } from '../serializers/markdown.js';
 
@@ -12,6 +13,12 @@ export interface StreamMarkdownOptions {
    * writes at the caret; 'below' starts a new block after the selected blocks.
    */
   at?: 'selection' | 'below';
+  /**
+   * Puts the answer into a transaction made from the state before the
+   * stream, instead of inserting it at the selection. `final` is true for the
+   * last update. Used by the AI plugin to show answers as suggestions.
+   */
+  insert?: (tr: Transaction, blocks: BlockNode[], final: boolean) => void;
 }
 
 let runCount = 0;
@@ -42,6 +49,9 @@ export async function streamMarkdown(
   let stableLength = 0;
   let aborted = false;
 
+  // Spaces at the edges of the answer are kept only where it meets text.
+  const edges = options.at === 'below' ? { lead: false, trail: false } : textAround(base);
+
   const parse = (markdown: string, firstIndex: number): BlockNode[] =>
     markdownToDocument(markdown, { plugins }).blocks.map((block, i) => ({ ...block, id: `${runId}-${firstIndex + i}` }));
 
@@ -55,10 +65,11 @@ export async function streamMarkdown(
     const tail = text.slice(stableLength);
     const blocks = [...stable, ...(tail.trim() ? parse(final ? tail : closeOpenMarkdown(tail), stable.length) : [])];
     if (blocks.length === 0) return;
-    keepEdgeSpaces(blocks, text);
+    keepEdgeSpaces(blocks, text, edges);
     const tr = base.tr;
     if (options.at === 'below') openBlockBelow(tr);
-    tr.insertFragment(blocks, { keepIds: true });
+    if (options.insert) options.insert(tr, blocks, final);
+    else tr.insertFragment(blocks, { keepIds: true });
     editor.replaceState(tr.apply());
   };
 
@@ -99,11 +110,11 @@ function openBlockBelow(tr: Transaction): void {
  * the answer matter when it goes into the middle of a line ("Hello |world").
  * Puts them back on the first and last text block (replacing them in the list).
  */
-function keepEdgeSpaces(blocks: BlockNode[], text: string): void {
+function keepEdgeSpaces(blocks: BlockNode[], text: string, edges: { lead: boolean; trail: boolean }): void {
   let lead = 0;
-  while (text[lead] === ' ' || text[lead] === '\t') lead++;
+  while (edges.lead && (text[lead] === ' ' || text[lead] === '\t')) lead++;
   let trail = 0;
-  while (trail < text.length - lead && (text[text.length - 1 - trail] === ' ' || text[text.length - 1 - trail] === '\t')) trail++;
+  while (edges.trail && trail < text.length - lead && (text[text.length - 1 - trail] === ' ' || text[text.length - 1 - trail] === '\t')) trail++;
   // Copies: the finished blocks are reused for the next chunk.
   const first = blocks[0];
   if (lead > 0 && first.type === 'paragraph') {
@@ -113,6 +124,16 @@ function keepEdgeSpaces(blocks: BlockNode[], text: string): void {
   if (trail > 0 && last.type === 'paragraph') {
     blocks[blocks.length - 1] = { ...last, content: [...last.content, { text: text.slice(text.length - trail), marks: [] }] };
   }
+}
+
+/** Whether there is text right before and right after the selection. */
+function textAround(state: EditorState): { lead: boolean; trail: boolean } {
+  const { anchor, head } = state.selection;
+  const a = findBlockIndex(state.doc, anchor.blockId);
+  const h = findBlockIndex(state.doc, head.blockId);
+  const [from, to] = a < h || (a === h && anchor.offset <= head.offset) ? [anchor, head] : [head, anchor];
+  const toBlock = state.doc.blocks[findBlockIndex(state.doc, to.blockId)];
+  return { lead: from.offset > 0, trail: !!toBlock && to.offset < getBlockText(toBlock).length };
 }
 
 /** True when a piece of Markdown leaves a ``` code fence open. */

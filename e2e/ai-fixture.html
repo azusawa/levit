@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Levit AI E2E fixture</title>
+  <link rel="icon" type="image/svg+xml" href="/logo.svg">
+  <link rel="stylesheet" href="/packages/levit/src/ui/theme.css">
+  <style>
+    body { margin: 0; padding: 40px; background: var(--levit-bg); }
+    #editor { max-width: 720px; }
+  </style>
+</head>
+<body>
+  <div id="editor"></div>
+  <script type="module">
+    import { createLevitEditor, createBubbleMenu, createSlashMenu } from '/packages/levit/src/index.ts';
+    import { aiPlugin } from '/packages/levit/src/ai/index.ts';
+
+    // A stand-in for a real model: streams a fixed answer in small pieces.
+    const answers = {
+      improve: 'The cat sat on the mat.',
+      continue: ' and then it slept.\n\n## Later\n\n- it woke up\n- it **ate**',
+      summarize: 'A cat sat.',
+    };
+    window.aiRequests = [];
+    async function* provider(request) {
+      window.aiRequests.push({ command: request.command, text: request.text, before: request.before });
+      const answer = window.slowAnswer ?? answers[request.command];
+      for (let i = 0; i < answer.length; i += 4) {
+        if (request.signal.aborted) return;
+        await new Promise((resolve) => setTimeout(resolve, window.slowAnswer ? 120 : 15));
+        yield answer.slice(i, i + 4);
+      }
+    }
+
+    const editor = createLevitEditor(document.getElementById('editor'), {
+      placeholder: 'Type here',
+      plugins: [aiPlugin({ provider })],
+    });
+    createBubbleMenu(editor);
+    createSlashMenu(editor);
+    window.editor = editor;
+    window.editorReady = true;
+  </script>
+</body>
+</html>

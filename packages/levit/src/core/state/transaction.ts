@@ -161,7 +161,8 @@ export class Transaction {
     if (this.storedMarks) {
       marks = [...this.storedMarks];
     } else if (left.length > 0 && left[left.length - 1].text) {
-      marks = left[left.length - 1].marks ? [...left[left.length - 1].marks!] : [];
+      // Marks of the text before the caret carry on, except non-inclusive ones.
+      marks = (left[left.length - 1].marks ?? []).filter((m) => this.state.schema.marks.get(m.type)?.inclusive !== false);
     }
 
     const insertedNode: InlineNode = { text, marks };

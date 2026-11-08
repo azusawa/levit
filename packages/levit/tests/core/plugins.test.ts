@@ -338,3 +338,19 @@ describe('review fixes: shortcuts', () => {
     expect(run).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('marks that do not grow (inclusive: false)', () => {
+  it('text typed right after such a mark does not get it', () => {
+    const plugin: LevitPlugin = { name: 'n', marks: [{ type: 'note', inclusive: false }, { type: 'tag' }] };
+    const editor = editorWith(
+      [createBlock('paragraph', {}, [createTextNode('ab', [{ type: 'note' }, { type: 'tag' }])], 'p')],
+      [plugin]
+    );
+    editor.dispatch(editor.state.tr.setSelection(caret('p', 2)));
+    editor.chain().insertText('c').run();
+    expect(editor.state.doc.blocks[0].content.map((n) => [n.text, n.marks?.map((m) => m.type)])).toEqual([
+      ['ab', ['note', 'tag']],
+      ['c', ['tag']],
+    ]);
+  });
+});

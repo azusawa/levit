@@ -62,6 +62,8 @@ describe('runAICommand', () => {
     expect(requests[0]).toMatchObject({ command: 'improve', text: '**bad text**', before: 'Before.', after: 'After.' });
     expect(requests[0].prompt).toMatch(/improve/i);
     expect(requests[0].signal).toBeInstanceOf(AbortSignal);
+    // Improve proposes the change; accepting it replaces the text.
+    expect(editor.commands.acceptSuggestions()).toBe(true);
     expect(texts(editor)).toEqual(['Before.', 'Better text', 'After.']);
   });
 
@@ -114,6 +116,8 @@ describe('runAICommand', () => {
     select(editor, 'a', 0, 7);
     await runAICommand(editor, 'translate');
     expect(requests[0].prompt).toBe('Translate to English.');
+    // Like Improve, a custom "replace" command proposes its answer.
+    editor.commands.acceptSuggestions();
     expect(texts(editor)).toEqual(['Hello']);
 
     select(editor, 'a', 0, 5);
@@ -192,7 +196,9 @@ describe('menus', () => {
     const bubble = createBubbleMenu(editor);
     const button = bubble.element.querySelector('button[aria-label="Improve writing"]')!;
     button.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
-    await vi.waitFor(() => expect(texts(editor)).toEqual(['Fixed']));
+    await vi.waitFor(() => expect(container.querySelector('ins')?.textContent).toBe('Fixed'));
+    editor.commands.acceptSuggestions();
+    expect(texts(editor)).toEqual(['Fixed']);
     bubble.destroy();
   });
 

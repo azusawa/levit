@@ -60,6 +60,9 @@ export const en = {
   aiContinueDescription: 'Let AI write on from here',
   aiSummarize: 'Summarize',
   aiSummarizeDescription: 'Summary of the selection or document',
+  suggestionToolbar: 'AI suggestion',
+  suggestionAccept: 'Accept',
+  suggestionReject: 'Reject',
 };
 
 export type LevitMessages = typeof en;
@@ -117,6 +120,9 @@ export const ko: LevitMessages = {
   aiContinueDescription: '여기서부터 AI가 이어서 쓰기',
   aiSummarize: '요약',
   aiSummarizeDescription: '선택한 부분이나 문서 전체 요약',
+  suggestionToolbar: 'AI 제안',
+  suggestionAccept: '받아들이기',
+  suggestionReject: '거절하기',
 };
 
 /** Built-in message sets, by language code. */
