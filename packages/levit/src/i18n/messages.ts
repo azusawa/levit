@@ -52,6 +52,14 @@ export const en = {
   codeLanguageLabel: 'Language: {language}',
   setCodeLanguage: 'Set language',
   plainText: 'Plain text',
+
+  // AI plugin
+  aiImprove: 'Improve writing',
+  aiImproveDescription: 'Fix and polish the selected text',
+  aiContinue: 'Continue writing',
+  aiContinueDescription: 'Let AI write on from here',
+  aiSummarize: 'Summarize',
+  aiSummarizeDescription: 'Summary of the selection or document',
 };
 
 export type LevitMessages = typeof en;
@@ -102,6 +110,13 @@ export const ko: LevitMessages = {
   codeLanguageLabel: '언어: {language}',
   setCodeLanguage: '언어 지정',
   plainText: '일반 텍스트',
+
+  aiImprove: '글 다듬기',
+  aiImproveDescription: '선택한 글을 고치고 다듬기',
+  aiContinue: '이어 쓰기',
+  aiContinueDescription: '여기서부터 AI가 이어서 쓰기',
+  aiSummarize: '요약',
+  aiSummarizeDescription: '선택한 부분이나 문서 전체 요약',
 };
 
 /** Built-in message sets, by language code. */

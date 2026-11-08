@@ -1,10 +1,17 @@
 import type { LevitEditor } from '../core/editor.js';
 import type { BlockNode } from '../core/model/types.js';
+import type { Transaction } from '../core/state/transaction.js';
+import { findBlockIndex, getBlockText } from '../core/model/document.js';
 import { markdownToDocument } from '../serializers/markdown.js';
 
 export interface StreamMarkdownOptions {
   /** Stops the stream; what arrived so far is kept. */
   signal?: AbortSignal;
+  /**
+   * Where the answer goes: 'selection' (default) replaces the selection or
+   * writes at the caret; 'below' starts a new block after the selected blocks.
+   */
+  at?: 'selection' | 'below';
 }
 
 let runCount = 0;
@@ -50,6 +57,7 @@ export async function streamMarkdown(
     if (blocks.length === 0) return;
     keepEdgeSpaces(blocks, text);
     const tr = base.tr;
+    if (options.at === 'below') openBlockBelow(tr);
     tr.insertFragment(blocks, { keepIds: true });
     editor.replaceState(tr.apply());
   };
@@ -73,6 +81,17 @@ export async function streamMarkdown(
     editor.setEditable(true);
   }
   return { markdown: text, aborted };
+}
+
+/** Puts the caret in a new paragraph after the last selected block. */
+function openBlockBelow(tr: Transaction): void {
+  const { anchor, head } = tr.selection;
+  const anchorIdx = findBlockIndex(tr.doc, anchor.blockId);
+  const headIdx = findBlockIndex(tr.doc, head.blockId);
+  const last = tr.doc.blocks[Math.max(anchorIdx, headIdx)];
+  const end = { blockId: last.id, offset: getBlockText(last).length };
+  tr.setSelection({ anchor: end, head: end, isCollapsed: true });
+  tr.splitBlock('paragraph', {});
 }
 
 /**

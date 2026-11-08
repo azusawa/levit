@@ -27,6 +27,8 @@ export type {
   MarkSpec,
   PluginCommand,
   PluginSlashItem,
+  PluginBubbleItem,
+  EditorText,
   SerializerOptions,
 } from './core/plugin/plugin.js';
 export type { InputRule } from './core/plugin/input-rules.js';

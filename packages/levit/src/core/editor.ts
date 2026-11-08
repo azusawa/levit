@@ -331,7 +331,7 @@ export class LevitEditor {
   }
 
   /** Sends an error to onError, or to the console when there is none. */
-  private reportError(error: unknown): void {
+  reportError(error: unknown): void {
     if (this.options.onError) this.options.onError(error);
     else console.error(error);
   }

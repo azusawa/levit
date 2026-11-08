@@ -5,3 +5,12 @@
 export { getDocumentSchema, validateDocument, type ValidationError } from './schema.js';
 export { getAIContext, streamAIResponse, type AIContext } from './stream.js';
 export { streamMarkdown, type StreamMarkdownOptions } from './stream-markdown.js';
+export {
+  aiPlugin,
+  runAICommand,
+  stopAI,
+  type AIProvider,
+  type AIRequest,
+  type AICommand,
+  type AIPluginOptions,
+} from './commands.js';

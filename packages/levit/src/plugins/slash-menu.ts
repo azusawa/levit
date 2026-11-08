@@ -129,7 +129,8 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
   ];
 
   // Entries from the editor's plugins go after the built-in ones.
-  items.push(...editor.schema.slashItems);
+  const text = (value: string | ((ed: LevitEditor) => string)) => (typeof value === 'function' ? value(editor) : value);
+  items.push(...editor.schema.slashItems.map((item) => ({ ...item, title: text(item.title), description: text(item.description) })));
 
   // Built with textContent: titles can come from plugins and messages.
   const part = (tag: string, className: string, text?: string) => {

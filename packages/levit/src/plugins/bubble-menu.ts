@@ -47,6 +47,12 @@ export function createBubbleMenu(editor: LevitEditor): BubbleMenuInstance {
     { label: 'H1', title: m.heading1, action: () => editor.chain().setHeading(1).run() },
     { label: 'H2', title: m.heading2, action: () => editor.chain().setHeading(2).run() },
     { label: '”', title: m.quote, action: () => editor.chain().setBlockType('blockquote').run() },
+    // Buttons from plugins, like the AI plugin's "Improve writing".
+    ...editor.schema.bubbleItems.map((item) => ({
+      label: item.label,
+      title: typeof item.title === 'function' ? item.title(editor) : item.title,
+      action: () => item.action(editor),
+    })),
   ];
 
   const buttonEls: HTMLButtonElement[] = [];

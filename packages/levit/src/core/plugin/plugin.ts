@@ -54,12 +54,24 @@ export interface MarkSpec {
 /** A command factory: takes arguments, returns a change to a transaction. */
 export type PluginCommand = (...args: any[]) => (tr: Transaction, editor: LevitEditor) => boolean | void;
 
+/** Text, or a function that picks it for an editor (for example from editor.messages). */
+export type EditorText = string | ((editor: LevitEditor) => string);
+
 /** A slash menu entry. */
 export interface PluginSlashItem {
   id: string;
-  title: string;
-  description: string;
+  title: EditorText;
+  description: EditorText;
   icon: string;
+  action: (editor: LevitEditor) => void;
+}
+
+/** A button in the bubble menu (shown when text is selected). */
+export interface PluginBubbleItem {
+  /** Text on the button, like "✨". */
+  label: string;
+  /** Tooltip and name for screen readers. */
+  title: EditorText;
   action: (editor: LevitEditor) => void;
 }
 
@@ -79,6 +91,8 @@ export interface LevitPlugin {
   inputRules?: InputRule[];
   /** Entries added to the slash menu. */
   slashItems?: PluginSlashItem[];
+  /** Buttons added to the bubble menu. */
+  bubbleItems?: PluginBubbleItem[];
   /** Runs once the editor is ready. May return a cleanup function for destroy(). */
   setup?: (editor: LevitEditor) => void | (() => void);
 }
@@ -94,6 +108,7 @@ export class Schema {
   readonly inputRules: InputRule[] = [];
   readonly keymap: { shortcut: string; run: (editor: LevitEditor) => boolean | void }[] = [];
   readonly slashItems: PluginSlashItem[] = [];
+  readonly bubbleItems: PluginBubbleItem[] = [];
 
   constructor(readonly plugins: readonly LevitPlugin[] = []) {
     for (const plugin of plugins) {
@@ -114,6 +129,7 @@ export class Schema {
       for (const [shortcut, run] of Object.entries(plugin.keymap ?? {})) this.keymap.push({ shortcut, run });
       this.inputRules.push(...(plugin.inputRules ?? []));
       this.slashItems.push(...(plugin.slashItems ?? []));
+      this.bubbleItems.push(...(plugin.bubbleItems ?? []));
     }
   }
 

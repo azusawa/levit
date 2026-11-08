@@ -1,4 +1,5 @@
 import { LevitEditor } from '../core/editor.js';
+import { getBlockText, sliceDocument } from '../core/model/document.js';
 
 export interface AIContext {
   documentText: string;
@@ -16,8 +17,10 @@ export function getAIContext(editor: LevitEditor): AIContext {
   const fullText = editor.getText();
   const summary = fullText.slice(0, 150) + (fullText.length > 150 ? '...' : '');
 
+  const selected = sliceDocument(doc, editor.state.selection);
   return {
     documentText: fullText,
+    selectedText: selected.length > 0 ? selected.map((b) => getBlockText(b)).join('\n') : undefined,
     blockCount: blocks.length,
     currentBlockType: currentBlock.type,
     summary,
