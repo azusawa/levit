@@ -21,6 +21,7 @@ export function documentToMarkdown(doc: DocumentData): string {
           else if (m.type === 'italic') t = `*${t}*`;
           else if (m.type === 'code') t = `\`${t}\``;
           else if (m.type === 'strike') t = `~~${t}~~`;
+          else if (m.type === 'highlight') t = `==${t}==`;
           else if (m.type === 'link') {
             const href = sanitizeHref(m.attrs?.href);
             if (href) t = `[${t}](${href})`;
@@ -89,8 +90,9 @@ function parseInlineMarkdown(text: string): InlineNode[] {
   if (!text) return [createTextNode('')];
 
   const nodes: InlineNode[] = [];
-  // Tokenizer regex for bold (**...**), italic (*...*), code (`...`), link ([text](url))
-  const tokenRegex = /(\*\*(.*?)\*\*|\*(.*?)\*|`(.*?)`|\[(.*?)\]\((.*?)\))/g;
+  // Tokens: bold (**...**), italic (*...*), code (`...`), link ([text](url)),
+  // strikethrough (~~...~~) and highlight (==...==).
+  const tokenRegex = /(\*\*(.*?)\*\*|\*(.*?)\*|`(.*?)`|\[(.*?)\]\((.*?)\)|~~(.+?)~~|==(.+?)==)/g;
   let lastIndex = 0;
   let match: RegExpExecArray | null;
 
@@ -112,6 +114,10 @@ function parseInlineMarkdown(text: string): InlineNode[] {
       // Link
       const href = sanitizeHref(match[6]);
       nodes.push(createTextNode(match[5], href ? [{ type: 'link', attrs: { href } }] : []));
+    } else if (match[7] !== undefined) {
+      nodes.push(createTextNode(match[7], [{ type: 'strike' }]));
+    } else if (match[8] !== undefined) {
+      nodes.push(createTextNode(match[8], [{ type: 'highlight' }]));
     }
 
     lastIndex = tokenRegex.lastIndex;

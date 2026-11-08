@@ -53,6 +53,7 @@ export function documentToHTML(doc: DocumentData): string {
           else if (m.type === 'italic') t = `<em>${t}</em>`;
           else if (m.type === 'underline') t = `<u>${t}</u>`;
           else if (m.type === 'strike') t = `<s>${t}</s>`;
+          else if (m.type === 'highlight') t = `<mark>${t}</mark>`;
           else if (m.type === 'code') t = `<code>${t}</code>`;
           else if (m.type === 'link') {
             const href = sanitizeHref(m.attrs?.href);
@@ -283,6 +284,7 @@ function marksFor(el: Element, marks: InlineMark[]): InlineMark[] {
   else if (tag === 'u' || tag === 'ins') add('underline');
   else if (tag === 's' || tag === 'strike' || tag === 'del') add('strike');
   else if (tag === 'code' || tag === 'kbd' || tag === 'samp') add('code');
+  else if (tag === 'mark') add('highlight');
   else if (tag === 'a') {
     const href = sanitizeHref(el.getAttribute('href'));
     if (href) {

@@ -244,6 +244,10 @@ export class DOMReconciler {
       case 'strike':
         el = document.createElement('s');
         break;
+      case 'highlight':
+        el = document.createElement('mark');
+        el.className = 'levit-highlight';
+        break;
       case 'code':
         el = document.createElement('code');
         el.className = 'levit-inline-code';

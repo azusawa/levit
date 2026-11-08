@@ -142,6 +142,10 @@ export class ChainedCommands {
     return this.toggleMark({ type: 'strike' });
   }
 
+  toggleHighlight(): this {
+    return this.toggleMark({ type: 'highlight' });
+  }
+
   setHeading(level = 1): this {
     this.tr.setBlockType('heading', { level });
     return this;

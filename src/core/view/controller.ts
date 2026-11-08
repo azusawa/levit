@@ -183,6 +183,18 @@ export class InputController {
       return;
     }
 
+    if (isMod && e.shiftKey && e.key.toLowerCase() === 'x') {
+      e.preventDefault();
+      this.editor.chain().toggleStrike().run();
+      return;
+    }
+
+    if (isMod && e.shiftKey && e.key.toLowerCase() === 'h') {
+      e.preventDefault();
+      this.editor.chain().toggleHighlight().run();
+      return;
+    }
+
     if (isMod && e.key.toLowerCase() === 'u') {
       e.preventDefault();
       this.editor.chain().toggleUnderline().run();

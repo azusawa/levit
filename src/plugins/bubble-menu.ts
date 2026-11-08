@@ -36,6 +36,8 @@ export function createBubbleMenu(editor: LevitEditor): BubbleMenuInstance {
     { label: 'B', title: 'Bold', action: () => editor.chain().toggleBold().run() },
     { label: 'I', title: 'Italic', action: () => editor.chain().toggleItalic().run() },
     { label: 'U', title: 'Underline', action: () => editor.chain().toggleUnderline().run() },
+    { label: 'S', title: 'Strikethrough', action: () => editor.chain().toggleStrike().run() },
+    { label: '🖍', title: 'Highlight', action: () => editor.chain().toggleHighlight().run() },
     { label: '</>', title: 'Code', action: () => editor.chain().toggleMark({ type: 'code' }).run() },
     { label: '🔗', title: 'Link', action: () => openLinkField() },
     { label: 'H1', title: 'Heading 1', action: () => editor.chain().setHeading(1).run() },
