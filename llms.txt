@@ -186,21 +186,71 @@ editor.getHTML(); editor.getMarkdown();   // include plugin blocks and marks
 editor.isActive('bold');                  // all selected text has the mark (or the next typed text will)
 editor.getActiveLink();                   // href of the selected link, or null
 editor.undo(); editor.redo(); editor.focus(); editor.destroy();
+editor.setEditable(false); editor.isEditable;   // lock or unlock typing
+editor.replaceState(state);   // e.g. state built from an older one, to undo many changes in one step
+editor.reportError(error);    // to onError, or the console
 ```
 
-## 5. AI Streaming API
+## 5. AI (import from '@yonailab/levit/ai')
+A separate entry point, so editors without AI do not load it. Levit never
+calls an AI service: you pass a provider that returns the answer as a stream
+of Markdown text.
+
 ```ts
-import { streamAIResponse, getAIContext } from '@yonailab/levit';
+import { aiPlugin, runAICommand, stopAI, streamMarkdown, getDocumentSchema, validateDocument } from '@yonailab/levit/ai';
 
-// 1. Get context for prompt
-const context = getAIContext(editor);
-
-// 2. Stream LLM tokens directly into editor
-async function* fetchLLMStream() {
-  // Yield chunks from your LLM API
+interface AIRequest {
+  command: string;      // 'improve' | 'continue' | 'summarize' | your own id
+  prompt: string;       // instructions for the model
+  text: string;         // Markdown of the selection (whole document for summarize without one)
+  before: string;       // Markdown before the selection/caret (contextLength chars, default 4000)
+  after: string;        // Markdown after it
+  signal: AbortSignal;  // aborted on Escape or stopAI(editor)
 }
-await streamAIResponse(editor, fetchLLMStream());
+
+createLevitEditor(el, {
+  plugins: [
+    aiPlugin({
+      provider: (request: AIRequest) => asyncIterableOfStrings, // or a Promise of one
+      commands: [{ id: 'translate', title: 'Translate', prompt: 'Translate to English.', insert: 'replace', needsSelection: true }],
+      suggestions: true,     // 'replace' answers become suggestions (default true)
+      contextLength: 4000,
+    }),
+  ],
+});
+
+await runAICommand(editor, 'improve');                      // { markdown, aborted } or null without a selection
+await runAICommand(editor, 'continue', { prompt: '...' });  // one-off prompt
+stopAI(editor);
 ```
+Built-in commands: `improve` (replace the selection, as a suggestion; also a
+bubble menu button), `continue` (write at the caret), `summarize` (new block
+below the selection, or summarize the whole document). AICommand.insert is
+'replace' | 'cursor' | 'below'. Menu titles come from editor.messages
+(aiImprove, aiContinue, aiSummarize...). One command runs at a time; editing
+is locked meanwhile (contenteditable=false, aria-busy).
+
+Suggestions use plugin marks `suggestion_insert` (<ins>) and
+`suggestion_delete` (<del>) with attrs { id, join? }. Accept or reject with
+the floating toolbar, `Mod-Shift-Enter` / `Mod-Shift-Backspace`, or
+`editor.commands.acceptSuggestions(id?)` / `rejectSuggestions(id?)` (return
+false when there is nothing to resolve or an answer is still streaming).
+HTML export shows <del>/<ins>; Markdown export reads as if accepted.
+
+`streamMarkdown(editor, stream, { signal, at: 'selection' | 'below', insert })`
+streams Markdown into the editor with live formatting (unclosed **bold**,
+code fences... shown as closed meanwhile), undone in one step.
+
+`getDocumentSchema({ plugins })` returns the JSON Schema (2020-12) of a
+document; the built-in one ships as `@yonailab/levit/document.schema.json`.
+Use it as a structured-output or tool schema so a model writes Levit JSON.
+`validateDocument(json, { plugins })` returns { valid, errors: [{ path, message }] }
+and also refuses unsafe link and image URLs. Plugins can describe their attrs
+with `attrsSchema` on BlockSpec and MarkSpec.
+
+Older helpers, still in the main entry: `getAIContext(editor)` (documentText,
+selectedText, blockCount, currentBlockType, summary) and
+`streamAIResponse(editor, stream)` (inserts text as typed, no formatting).
 
 ## 6. Plugins
 A plugin is a plain object. Pass plugins as `createLevitEditor(el, { plugins: [...] })`.
@@ -235,6 +285,7 @@ const plugin: LevitPlugin = {
       tag: 'span',
       attributes: (mark) => ({ style: `color: ${mark.attrs?.color}` }),  // on* attributes are dropped
       toHTML: (text, mark) => `<span style="color: ${mark.attrs?.color}">${text}</span>`,
+      inclusive: false,   // text typed right after it does not get the mark (default true)
       parseHTML: (el) => ((el as HTMLElement).style.color ? { color: (el as HTMLElement).style.color } : null),
     },
   ],
@@ -248,6 +299,8 @@ const plugin: LevitPlugin = {
   inputRules: [{ match: /^!!!\s$/, handler: (tr, match, blockId) => { /* change tr */ return true; } }],
   slashItems: [{ id: 'video', title: 'Video', description: 'Embed a video', icon: '🎬',
     action: (editor) => editor.commands.insertVideo('intro') }],
+  // Bubble menu buttons. Titles (here and in slashItems) may be (editor) => string.
+  bubbleItems: [{ label: '🎬', title: (editor) => 'Video', action: (editor) => {} }],
   setup: (editor) => () => { /* cleanup on destroy */ },
 };
 

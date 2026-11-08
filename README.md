@@ -25,7 +25,7 @@
 
 1. **Zero Runtime Dependency (런타임 의존성 0개)**
    - 외부 런타임 라이브러리 없이 순수 Web 표준 API(DOM, Selection, InputEvent)와 TypeScript만으로 독자 구현되었습니다.
-   - 번들 크기: **약 28 kB (gzipped)**, 사용하는 쪽에서 다시 압축하면 약 23 kB입니다.
+   - 번들 크기: **약 30 kB (gzipped)**, 사용하는 쪽에서 다시 압축하면 약 25 kB입니다. AI 기능(`@yonailab/levit/ai`)은 따로 약 7 kB이고, 쓸 때만 불러옵니다.
 2. **가져다 쓰기 가장 쉬운 구조 (DX & AX First)**
    - 단 3줄의 코드로 모든 웹사이트에 연동 가능합니다.
    - `<levit-editor></levit-editor>` 웹 컴포넌트를 지원하여 React, Vue, Svelte, 바닐라 JS 어디서나 HTML 태그 하나로 동작합니다.
@@ -33,7 +33,8 @@
    - **플러그인**으로 블록, 서식, 명령, 단축키를 직접 추가하고, `editor.on('update', ...)` 같은 이벤트로 변경을 받습니다.
 3. **AI-Native 설계 (AI 친화적)**
    - 결정론적이고 단순한 JSON 스키마를 지원하여 LLM이 문서를 분석하고 생성하기 매우 쉽습니다.
-   - LLM 토큰 응답을 실시간으로 입력해 주는 `streamAIResponse()` 내장.
+   - 글 다듬기·이어 쓰기·요약, 서식이 살아 있는 스트리밍, 받아들이기·거절하기 **제안 모드**를 어떤 AI와도 연결해 씁니다(`aiPlugin`).
+   - 문서 JSON Schema와 검사 함수로 AI가 정확한 형식의 문서를 만들게 합니다.
    - AI 코딩 에이전트(Cursor, Antigravity, Copilot 등)를 위한 `llms.txt` 표준 지원.
 4. **하이브리드 편집 경험 (Modern Hybrid UX)**
    - Notion 스타일의 **슬래시(`/`) 커맨드 메뉴**
@@ -176,26 +177,53 @@ const doc = ref<DocumentData>();
 
 ## 🤖 AI 연동 (AI-Native Integration)
 
-LLM 스트리밍 응답을 에디터에 타이핑하듯 실시간으로 주입할 수 있습니다:
+AI 기능은 별도 진입점 `@yonailab/levit/ai`에 있어서, 쓰지 않으면 번들에 들어가지 않습니다.
+Levit은 AI 서비스를 직접 부르지 않습니다. **`provider` 함수 하나**를 연결하면 OpenAI, Claude, 사내 모델 무엇이든 쓸 수 있습니다.
 
 ```ts
-import { streamAIResponse, getAIContext } from '@yonailab/levit';
+import { createLevitEditor, ko } from '@yonailab/levit';
+import { aiPlugin, runAICommand } from '@yonailab/levit/ai';
 
-// 1. 현재 에디터 컨텍스트 추출 (LLM 프롬프트에 삽입)
-const context = getAIContext(editor);
-console.log(context.documentText);
+const editor = createLevitEditor(container, {
+  messages: ko,
+  plugins: [
+    aiPlugin({
+      // 앱 서버를 거쳐 AI를 부르고, 답을 Markdown 텍스트 스트림으로 돌려줍니다.
+      // API 키는 서버에만 두세요.
+      provider: async function* ({ command, prompt, text, before, after, signal }) {
+        const res = await fetch('/api/ai', {
+          method: 'POST',
+          body: JSON.stringify({ command, prompt, text, before, after }),
+          signal, // Esc를 누르면 요청도 멈춥니다.
+        });
+        const reader = res.body!.pipeThrough(new TextDecoderStream()).getReader();
+        for (;;) {
+          const { value, done } = await reader.read();
+          if (done) return;
+          yield value;
+        }
+      },
+    }),
+  ],
+});
 
-// 2. LLM 스트리밍 토큰 실시간 렌더링
-async function* fetchLLMStream() {
-  const chunks = ['안녕하세요! ', 'AI가 ', '실시간으로 작성하는 내용입니다.'];
-  for (const chunk of chunks) {
-    yield chunk;
-    await new Promise((r) => setTimeout(r, 100));
-  }
-}
-
-await streamAIResponse(editor, fetchLLMStream());
+await runAICommand(editor, 'improve'); // 메뉴 대신 코드로 실행
 ```
+
+- **글 다듬기 · 이어 쓰기 · 요약**: 슬래시(`/`) 메뉴와 버블 메뉴(✨)에 추가됩니다. `commands`로 번역 같은 명령을 더할 수 있습니다.
+- **서식까지 실시간으로**: 답변이 도착하는 동안 제목·목록·굵게가 바로 서식으로 보입니다(`streamMarkdown`). 답변 전체가 실행 취소 한 번으로 되돌아가고, `Esc`로 멈춥니다.
+- **제안 모드**: "다듬기"는 바로 덮어쓰지 않고 바뀐 단어만 <del>지운 글</del>·<ins>새 글</ins>로 보여 줍니다. 옆에 뜨는 버튼, `Cmd/Ctrl+Shift+Enter`(받아들이기) / `Cmd/Ctrl+Shift+Backspace`(거절하기), 또는 `editor.commands.acceptSuggestions()`로 고릅니다.
+- **문서 규격**: `getDocumentSchema()`는 Levit 문서의 JSON Schema를 줍니다(파일로도 `@yonailab/levit/document.schema.json`). AI에게 구조화 출력 형식으로 주면 Markdown 대신 문서 JSON을 바로 만들게 할 수 있고, `validateDocument()`로 넣기 전에 검사합니다(위험한 링크·이미지 주소도 걸러냄).
+
+```ts
+import { getDocumentSchema, validateDocument } from '@yonailab/levit/ai';
+
+const result = validateDocument(jsonFromAI);
+if (result.valid) editor.setJSON(jsonFromAI);
+else console.warn(result.errors); // [{ path: '$.blocks[2].attrs.level', message: 'must be an integer from 1 to 6' }]
+```
+
+기존 `getAIContext()`(문서와 선택한 글)와 `streamAIResponse()`(글자 그대로 넣기)도 계속 쓸 수 있습니다.
 
 ---
 

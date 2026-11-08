@@ -29,6 +29,9 @@ npm 워크스페이스로 패키지 세 개를 함께 관리합니다. 버전은
 - 루트에는 데모(`index.html`), E2E 테스트(`e2e/`), 문서, 저장소 검사(`tests/project/`)가 있습니다.
 - `README.md`, `LICENSE`, `llms.txt`는 루트에서 관리하고, 배포할 때 `packages/levit`으로 복사됩니다.
 - 래퍼의 테스트와 타입 검사는 본체의 소스(`packages/levit/src`)를 직접 읽으므로 빌드가 필요 없습니다.
+- 본체는 진입점이 둘입니다: `@yonailab/levit`과 AI 기능 `@yonailab/levit/ai`(`src/ai/index.ts`).
+- 문서 규격 파일 `packages/levit/schema/levit-document.schema.json`은 코드에서 만듭니다. 블록이나 서식을 바꿨다면
+  `npm run schema -w packages/levit`로 다시 쓰세요. 파일과 코드가 다르면 테스트가 실패합니다.
 
 ## 개발 원칙: TDD
 

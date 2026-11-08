@@ -161,3 +161,27 @@ describe('release tags', () => {
     expect(guide).not.toMatch(/git tag v[\d.]+\s*$/m);
   });
 });
+
+describe('AI features (phase 4) are documented', () => {
+  it('README shows the AI plugin, streaming, suggestions and the schema', () => {
+    const readme = read('README.md');
+    for (const text of ['@yonailab/levit/ai', 'aiPlugin', 'provider', 'streamMarkdown', '제안', 'acceptSuggestions', 'getDocumentSchema', 'validateDocument']) {
+      expect(readme).toContain(text);
+    }
+  });
+
+  it('llms.txt documents the AI API for AI tools', () => {
+    const llms = read('llms.txt');
+    for (const text of [
+      "from '@yonailab/levit/ai'", 'aiPlugin', 'AIRequest', 'runAICommand', 'stopAI', 'streamMarkdown', 'suggestion_insert',
+      'acceptSuggestions', 'rejectSuggestions', 'Mod-Shift-Enter', 'getDocumentSchema', 'validateDocument',
+      'document.schema.json', 'inclusive', 'bubbleItems', 'setEditable', 'replaceState',
+    ]) {
+      expect(llms).toContain(text);
+    }
+  });
+
+  it('CONTRIBUTING says how to update the schema file', () => {
+    expect(read('CONTRIBUTING.md')).toContain('npm run schema');
+  });
+});
