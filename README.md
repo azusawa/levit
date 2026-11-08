@@ -25,7 +25,7 @@
 
 1. **Zero Runtime Dependency (런타임 의존성 0개)**
    - 외부 런타임 라이브러리 없이 순수 Web 표준 API(DOM, Selection, InputEvent)와 TypeScript만으로 독자 구현되었습니다.
-   - 번들 크기: **약 27 kB (gzipped)**, 사용하는 쪽에서 다시 압축하면 약 22 kB입니다.
+   - 번들 크기: **약 28 kB (gzipped)**, 사용하는 쪽에서 다시 압축하면 약 23 kB입니다.
 2. **가져다 쓰기 가장 쉬운 구조 (DX & AX First)**
    - 단 3줄의 코드로 모든 웹사이트에 연동 가능합니다.
    - `<levit-editor></levit-editor>` 웹 컴포넌트를 지원하여 React, Vue, Svelte, 바닐라 JS 어디서나 HTML 태그 하나로 동작합니다.
