@@ -130,3 +130,12 @@ describe('extensibility (phase 3) is documented', () => {
     for (const text of ['packages/levit', 'packages/react', 'packages/vue']) expect(guide).toContain(text);
   });
 });
+
+describe('release through GitHub Actions is documented', () => {
+  it('CONTRIBUTING explains Trusted Publishing, the npm environment and the one-time setup', () => {
+    const guide = read('CONTRIBUTING.md');
+    for (const text of ['Trusted Publishing', 'release.yml', 'environment', 'npm', 'git push --follow-tags', 'npm install-scripts']) {
+      expect(guide).toContain(text);
+    }
+  });
+});

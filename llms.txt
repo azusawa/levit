@@ -309,3 +309,20 @@ const { ref, editor } = useLevitEditor({ placeholder: 'Write' });   // <div ref=
 Both add the bubble and slash menus unless turned off, and a value that comes
 back from onChange / v-model does not reset the caret. The React package is
 marked 'use client'.
+
+## 11. Security
+Levit filters unsafe content when it renders, reads pasted HTML/Markdown and
+exports HTML: unsafe link and image URLs are dropped (no `javascript:`, no SVG
+data URLs), pasted `script`/`iframe`/event attributes are removed, exported
+HTML is escaped, and highlighter output keeps only `<span class style>`.
+The app must still:
+- Validate on the server. Client-side checks can be bypassed: rebuild stored
+  content on the server (`documentFromJSON` then `documentToHTML`) or sanitize
+  the HTML before showing it to other users.
+- Use a Content-Security-Policy, e.g. `script-src 'self'; object-src 'none'; base-uri 'none'`.
+  The editor needs no inline scripts or eval.
+- Treat plugins, `highlightCode` and `uploadImage` as trusted app code. Escape
+  document data (block/mark attrs) you put into plugin `toHTML`, `render` or
+  `attributes`, and never put it into `style`, `srcdoc` or `srcset`.
+Releases are published from GitHub Actions with npm provenance (`npm audit signatures`).
+Report vulnerabilities privately: https://github.com/azusawa/levit/security/advisories/new

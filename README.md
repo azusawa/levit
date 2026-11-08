@@ -311,6 +311,25 @@ createLevitEditor(container, { messages: { bold: 'Gras' } });   // 일부 문구
 
 ---
 
+## 🔒 보안
+
+Levit은 화면에 그리고, 붙여넣기를 읽고, HTML로 내보내는 모든 단계에서 위험한 내용을 걸러 냅니다.
+
+- `javascript:` 같은 위험한 링크와 SVG 이미지 주소를 막습니다.
+- 붙여 넣은 HTML의 `script`, `iframe`, 이벤트 속성을 버리고, 내보내는 HTML은 모두 이스케이프합니다.
+- 문법 강조 결과에서는 `span`의 class와 style만 남깁니다.
+
+그래도 앱에서 꼭 해야 할 일이 있습니다.
+
+1. **서버에서 다시 검사하세요.** 브라우저의 검사는 우회할 수 있습니다. 공격자는 에디터를 거치지 않고 문서 JSON이나 HTML을 서버로 바로 보낼 수 있으므로, 저장하거나 다른 사람에게 보여 줄 때 서버에서 `documentFromJSON` → `documentToHTML`로 다시 만들거나 HTML 정화 도구를 거치세요.
+2. **Content-Security-Policy를 쓰세요.** 에디터는 인라인 스크립트나 `eval`이 필요 없습니다. 예: `Content-Security-Policy: script-src 'self'; object-src 'none'; base-uri 'none'`
+3. **플러그인과 옵션은 믿을 수 있는 코드만 넣으세요.** 플러그인, `highlightCode`, `uploadImage`는 앱의 코드로 실행됩니다. 플러그인의 `toHTML`, `render`, `attributes`에 문서 데이터(블록·서식 attrs)를 넣을 때는 직접 이스케이프하고, `style`, `srcdoc`, `srcset`에는 넣지 마세요.
+
+배포된 모든 버전에는 GitHub Actions에서 빌드됐다는 provenance 서명이 붙습니다(`npm audit signatures`로 확인).
+취약점은 [SECURITY.md](SECURITY.md)의 방법으로 비공개 신고해 주세요.
+
+---
+
 ## 🛠️ 개발에 참여하기
 
 Levit은 TDD로 개발하며, 단위 테스트와 실제 Chrome에서 도는 E2E 테스트를 푸시와 PR마다 GitHub Actions가 실행합니다.

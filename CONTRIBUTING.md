@@ -70,23 +70,58 @@ npm run check:package  # 배포될 패키지 검사 (publint, arethetypeswrong).
 2. 테스트와 함께 변경을 커밋합니다.
 3. 위 검사가 모두 통과하는지 확인하고 PR을 엽니다.
 
+## 의존성과 설치 스크립트
+
+- 의존성 설치 스크립트(postinstall 등)는 실행하지 않습니다. 오염된 패키지가 설치 순간 코드를 실행하는
+  공급망 공격을 막기 위해서입니다.
+  - npm 11은 `package.json`의 `allowScripts`에 허용된 패키지만 스크립트를 실행합니다. 지금은 모두 거부(`false`)입니다.
+  - 새 의존성을 추가한 뒤 `npm install-scripts ls`로 확인하고, 필요 없으면 `npm install-scripts deny <패키지>`로 거부를 기록하세요.
+  - CI는 `npm ci --ignore-scripts`로 설치하고, `npm audit`과 `npm audit signatures`로 취약점과 레지스트리 서명을 검사합니다.
+- Dependabot이 매주 의존성과 GitHub Actions 업데이트를 제안합니다. 새 버전이 나오고 7일이 지난 뒤에만 제안하므로,
+  배포 직후 발견되는 악성 버전을 피할 수 있습니다.
+- GitHub Actions는 태그가 아니라 커밋 SHA로 고정합니다(`uses: actions/checkout@<sha> # v7.0.1`).
+- CodeQL이 PR과 매주 코드를 보안 검사합니다.
+
 ## 배포 절차 (관리자용)
 
 패키지 세 개를 같은 버전으로 함께 배포합니다. (`levit`은 기존 패키지와 이름이 비슷해 npm이 허용하지 않아
 `@yonailab` 아래에 둡니다.) `publishConfig.access`가 `public`이라 `--access` 옵션은 필요 없습니다.
-`npm version`은 워크스페이스에서 커밋·태그를 만들지 않으므로 아래 스크립트를 씁니다.
+
+### 평소 배포: 태그를 올리면 GitHub Actions가 배포
+
+npm 토큰은 어디에도 저장하지 않습니다. `.github/workflows/release.yml`이 npm **Trusted Publishing**(OIDC)으로
+배포하고, 각 버전에 어느 저장소·커밋에서 빌드됐는지 증명하는 provenance가 붙습니다.
 
 ```bash
-node scripts/set-version.mjs 0.4.0   # 세 패키지 버전 + 래퍼가 요구하는 본체 버전을 함께 변경
+node scripts/set-version.mjs 0.4.1   # 세 패키지 버전 + 래퍼가 요구하는 본체 버전을 함께 변경
 npm install                          # package-lock.json 갱신
-git commit -am "Release 0.4.0"
-git tag v0.4.0
-npm login                            # 브라우저에서 패스키로 인증 (로그인은 2시간 유지)
-npm publish --workspaces             # 세 패키지 배포. 각각 타입 검사, 테스트, 빌드, 패키지 검사가 먼저 실행
-git push --follow-tags               # 커밋과 태그를 GitHub에 올리기
-gh release create v0.4.0 --generate-notes   # GitHub Release 만들기
+git commit -am "Release 0.4.1"
+git tag v0.4.1
+git push --follow-tags               # 태그가 올라가면 Release 워크플로가 시작
+gh release create v0.4.1 --generate-notes   # 배포가 끝나면 GitHub Release 만들기
 ```
 
-- `npm login`과 `npm publish`는 브라우저 인증이 필요하므로 일반 터미널에서 실행하세요.
+- Release 워크플로는 태그와 패키지 버전이 같은지 확인하고(`scripts/check-release-tag.mjs`), 타입 검사·테스트·빌드·
+  패키지 검사를 통과해야 `npm publish --workspaces --provenance`를 실행합니다.
+- 배포 작업은 GitHub의 `npm` environment에서 돌고, 그 environment에 승인자를 지정해 두면 승인해야 진행됩니다.
+- `npm version`은 워크스페이스에서 커밋·태그를 만들지 않으므로 `scripts/set-version.mjs`를 씁니다.
+
+### 처음 한 번만 할 설정
+
+1. **첫 배포는 직접 합니다.** npm에 아직 없는 패키지(`@yonailab/levit-react`, `@yonailab/levit-vue`)에는 Trusted
+   Publishing을 설정할 수 없기 때문입니다. 일반 터미널에서 `npm login` 후 `npm publish --workspaces`로 배포하세요.
+   이때 태그를 올리면 Release 워크플로도 시작되지만, 이미 배포된 버전이라 publish 단계에서 실패합니다. 정상입니다.
+2. **npmjs.com에서 패키지마다 Trusted Publisher를 등록합니다.** 패키지 → Settings → Trusted Publisher → GitHub Actions:
+   - Organization or user: `azusawa`
+   - Repository: `levit`
+   - Workflow filename: `release.yml`
+   - Environment name: `npm`
+3. **토큰 배포를 막습니다.** 같은 Settings의 Publishing access에서
+   "Require two-factor authentication and disallow tokens"를 고릅니다.
+4. **GitHub에서 배포 승인을 켭니다.** 저장소 Settings → Environments → `npm` → Required reviewers에 본인을 추가하고,
+   Deployment branches and tags를 `v*` 태그로 제한합니다.
+5. **비공개 취약점 신고를 켭니다.** 저장소 Settings → Security → Private vulnerability reporting → Enable.
+   (`SECURITY.md`가 이 기능으로 신고를 받습니다.)
+
 - 배포 직후 npm에서 새 버전이 보이기까지 1~2분 걸릴 수 있습니다.
 - 한 번 배포한 버전 번호는 다시 쓸 수 없습니다.
