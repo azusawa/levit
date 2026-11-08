@@ -9,6 +9,7 @@ import { documentFromJSON, documentToJSON } from '../serializers/json.js';
 import { findBlockIndex, getBlockText, sliceBlockContent } from './model/document.js';
 import { applyInputRules, defaultInputRules } from './plugin/input-rules.js';
 import { Schema, type LevitPlugin } from './plugin/plugin.js';
+import { en, format, type LevitMessages } from '../i18n/messages.js';
 import { documentToHTML } from '../serializers/html.js';
 import { documentToMarkdown } from '../serializers/markdown.js';
 import { EventEmitter, type EditorEventHandler, type EditorEventName } from './events.js';
@@ -34,6 +35,8 @@ export interface EditorOptions {
   highlightCode?: (code: string, language: string) => string;
   /** Plugins that add blocks, marks, commands, keys and shortcuts. */
   plugins?: LevitPlugin[];
+  /** Text for menus, prompts and screen readers. English by default; pass `ko` or your own. */
+  messages?: Partial<LevitMessages>;
 }
 
 export class ChainedCommands {
@@ -226,6 +229,8 @@ export class LevitEditor {
   public readonly schema: Schema;
   /** Plugin commands, run at once: editor.commands.name(...args). */
   public readonly commands: Record<string, (...args: any[]) => boolean>;
+  /** The messages in use: the defaults with the messages option on top. */
+  public readonly messages: LevitMessages;
   private cleanups: (() => void)[] = [];
   private reconciler: DOMReconciler;
   private controller: InputController;
@@ -239,6 +244,7 @@ export class LevitEditor {
     this.container = options.element;
     this.events = new EventEmitter((error) => this.reportError(error));
     this.schema = new Schema(options.plugins ?? []);
+    this.messages = { ...en, ...options.messages };
     this.commands = {};
     for (const [name, command] of this.schema.commands) {
       this.commands[name] = (...args) => {
@@ -264,7 +270,11 @@ export class LevitEditor {
       : undefined;
 
     this.state = EditorState.create({ doc: initialDoc, schema: this.schema });
-    this.reconciler = new DOMReconciler(this.container, { highlightCode: options.highlightCode, schema: this.schema });
+    this.reconciler = new DOMReconciler(this.container, {
+      highlightCode: options.highlightCode,
+      schema: this.schema,
+      messages: this.messages,
+    });
     this.controller = new InputController(this, this.container);
 
     // Initial render
@@ -281,6 +291,11 @@ export class LevitEditor {
       const cleanup = plugin.setup?.(this);
       if (typeof cleanup === 'function') this.cleanups.push(cleanup);
     }
+  }
+
+  /** A message with its `{placeholders}` filled in. */
+  t(key: keyof LevitMessages, values?: Record<string, string>): string {
+    return format(this.messages[key], values);
   }
 
   /** Listens to an editor event. Returns a function that stops listening. */

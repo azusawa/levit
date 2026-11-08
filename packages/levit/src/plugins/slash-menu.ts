@@ -28,7 +28,7 @@ function chooseImage(editor: LevitEditor): void {
     input.click();
     return;
   }
-  const src = window.prompt('Image URL');
+  const src = window.prompt(editor.messages.imageUrlPrompt);
   if (src && src.trim()) editor.chain().insertImage({ src: src.trim() }).run();
 }
 
@@ -37,84 +37,85 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
   menu.className = 'levit-slash-menu';
   menu.style.display = 'none';
 
+  const m = editor.messages;
   let activeIndex = 0;
   let isOpen = false;
 
   const items: SlashMenuItem[] = [
     {
       id: 'paragraph',
-      title: 'Text',
-      description: 'Plain body text',
+      title: m.paragraph,
+      description: m.paragraphDescription,
       icon: '📝',
       action: (ed) => ed.chain().setParagraph().run(),
     },
     {
       id: 'heading-1',
-      title: 'Heading 1',
-      description: 'Large section heading',
+      title: m.heading1,
+      description: m.heading1Description,
       icon: 'H1',
       action: (ed) => ed.chain().setHeading(1).run(),
     },
     {
       id: 'heading-2',
-      title: 'Heading 2',
-      description: 'Medium section heading',
+      title: m.heading2,
+      description: m.heading2Description,
       icon: 'H2',
       action: (ed) => ed.chain().setHeading(2).run(),
     },
     {
       id: 'heading-3',
-      title: 'Heading 3',
-      description: 'Small subsection heading',
+      title: m.heading3,
+      description: m.heading3Description,
       icon: 'H3',
       action: (ed) => ed.chain().setHeading(3).run(),
     },
     {
       id: 'blockquote',
-      title: 'Quote',
-      description: 'Capture a quote or citation',
+      title: m.quote,
+      description: m.quoteDescription,
       icon: '💬',
       action: (ed) => ed.dispatch(ed.state.tr.setBlockType('blockquote')),
     },
     {
       id: 'code-block',
-      title: 'Code Block',
-      description: 'Code snippet with syntax format',
+      title: m.codeBlock,
+      description: m.codeBlockDescription,
       icon: '💻',
       action: (ed) => ed.dispatch(ed.state.tr.setBlockType('code_block')),
     },
     {
       id: 'bullet-list',
-      title: 'Bulleted List',
-      description: 'Simple list with bullets',
+      title: m.bulletList,
+      description: m.bulletListDescription,
       icon: '•',
       action: (ed) => ed.chain().setBlockType('bullet_list_item').run(),
     },
     {
       id: 'ordered-list',
-      title: 'Numbered List',
-      description: 'List numbered in order',
+      title: m.orderedList,
+      description: m.orderedListDescription,
       icon: '1.',
       action: (ed) => ed.chain().setBlockType('ordered_list_item').run(),
     },
     {
       id: 'task-list',
-      title: 'To-do List',
-      description: 'Track tasks with checkboxes',
+      title: m.taskList,
+      description: m.taskListDescription,
       icon: '☑',
       action: (ed) => ed.chain().setBlockType('task_list_item', { checked: false }).run(),
     },
     {
       id: 'divider',
-      title: 'Divider',
-      description: 'A line between sections',
+      title: m.divider,
+      description: m.dividerDescription,
       icon: '—',
       action: (ed) => ed.chain().insertHorizontalRule().run(),
     },
     {
       id: 'image',
-      title: 'Image',
-      description: 'Upload an image or add one by URL',
+      title: m.image,
+      description: m.imageDescription,
       icon: '🖼',
       action: (ed) => chooseImage(ed),
     },

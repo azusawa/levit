@@ -10,6 +10,7 @@ export interface BubbleMenuInstance {
 }
 
 export function createBubbleMenu(editor: LevitEditor): BubbleMenuInstance {
+  const m = editor.messages;
   const menu = document.createElement('div');
   menu.className = 'levit-bubble-menu';
   menu.style.display = 'none';
@@ -21,8 +22,8 @@ export function createBubbleMenu(editor: LevitEditor): BubbleMenuInstance {
   const linkInput = document.createElement('input');
   linkInput.type = 'text';
   linkInput.className = 'levit-bubble-link-input';
-  linkInput.placeholder = 'https://example.com';
-  linkInput.setAttribute('aria-label', 'Link URL');
+  linkInput.placeholder = m.linkPlaceholder;
+  linkInput.setAttribute('aria-label', m.linkUrl);
   linkInput.style.display = 'none';
   menu.appendChild(linkInput);
 
@@ -33,16 +34,16 @@ export function createBubbleMenu(editor: LevitEditor): BubbleMenuInstance {
   let lastRect: DOMRect | null = null;
 
   const buttons = [
-    { label: 'B', title: 'Bold', action: () => editor.chain().toggleBold().run() },
-    { label: 'I', title: 'Italic', action: () => editor.chain().toggleItalic().run() },
-    { label: 'U', title: 'Underline', action: () => editor.chain().toggleUnderline().run() },
-    { label: 'S', title: 'Strikethrough', action: () => editor.chain().toggleStrike().run() },
-    { label: '🖍', title: 'Highlight', action: () => editor.chain().toggleHighlight().run() },
-    { label: '</>', title: 'Code', action: () => editor.chain().toggleMark({ type: 'code' }).run() },
-    { label: '🔗', title: 'Link', action: () => openLinkField() },
-    { label: 'H1', title: 'Heading 1', action: () => editor.chain().setHeading(1).run() },
-    { label: 'H2', title: 'Heading 2', action: () => editor.chain().setHeading(2).run() },
-    { label: '”', title: 'Quote', action: () => editor.chain().setBlockType('blockquote').run() },
+    { label: 'B', title: m.bold, action: () => editor.chain().toggleBold().run() },
+    { label: 'I', title: m.italic, action: () => editor.chain().toggleItalic().run() },
+    { label: 'U', title: m.underline, action: () => editor.chain().toggleUnderline().run() },
+    { label: 'S', title: m.strikethrough, action: () => editor.chain().toggleStrike().run() },
+    { label: '🖍', title: m.highlight, action: () => editor.chain().toggleHighlight().run() },
+    { label: '</>', title: m.code, action: () => editor.chain().toggleMark({ type: 'code' }).run() },
+    { label: '🔗', title: m.link, action: () => openLinkField() },
+    { label: 'H1', title: m.heading1, action: () => editor.chain().setHeading(1).run() },
+    { label: 'H2', title: m.heading2, action: () => editor.chain().setHeading(2).run() },
+    { label: '”', title: m.quote, action: () => editor.chain().setBlockType('blockquote').run() },
   ];
 
   let linkButton: HTMLButtonElement | null = null;
@@ -59,7 +60,7 @@ export function createBubbleMenu(editor: LevitEditor): BubbleMenuInstance {
       b.action();
       updateVisibility();
     });
-    if (b.title === 'Link') linkButton = btn;
+    if (b.title === m.link) linkButton = btn;
     buttonRow.appendChild(btn);
   }
 

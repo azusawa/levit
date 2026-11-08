@@ -267,7 +267,7 @@ export class InputController {
       e.preventDefault();
       const pre = label.closest('[data-block-id]');
       const blockId = pre?.getAttribute('data-block-id');
-      const language = window.prompt('Code language', pre?.getAttribute('data-language') ?? '');
+      const language = window.prompt(this.editor.messages.codeLanguagePrompt, pre?.getAttribute('data-language') ?? '');
       if (blockId && language !== null) this.editor.chain().setCodeLanguage(language, blockId).run();
       return;
     }

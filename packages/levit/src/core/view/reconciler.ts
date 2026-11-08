@@ -3,11 +3,13 @@ import { EditorState } from '../state/state.js';
 import { normalizeCodeLanguage, normalizeHeadingLevel, sanitizeHref, sanitizeImageSrc } from '../model/sanitize.js';
 import { isListItem, listIndent } from '../model/document.js';
 import { defaultSchema, type Schema } from '../plugin/plugin.js';
+import { en, format, type LevitMessages } from '../../i18n/messages.js';
 
 export interface ReconcilerOptions {
   highlightCode?: (code: string, language: string) => string;
   /** Block and mark types added by plugins. */
   schema?: Schema;
+  messages?: LevitMessages;
 }
 
 export class DOMReconciler {
@@ -16,11 +18,13 @@ export class DOMReconciler {
   private renderedSnapshots = new Map<string, string>();
 
   private schema: Schema;
+  private messages: LevitMessages;
 
   constructor(container: HTMLElement, options: ReconcilerOptions = {}) {
     this.container = container;
     this.options = options;
     this.schema = options.schema ?? defaultSchema;
+    this.messages = options.messages ?? en;
   }
 
   /** Forgets what was rendered, so the next render rebuilds every block. */
@@ -254,8 +258,9 @@ export class DOMReconciler {
     label.className = 'levit-code-language';
     label.contentEditable = 'false';
     label.setAttribute('role', 'button');
-    label.setAttribute('aria-label', language ? `Language: ${language}` : 'Set language');
-    label.setAttribute('data-label', language ?? 'Plain text');
+    const m = this.messages;
+    label.setAttribute('aria-label', language ? format(m.codeLanguageLabel, { language }) : m.setCodeLanguage);
+    label.setAttribute('data-label', language ?? m.plainText);
     el.appendChild(label);
   }
 
@@ -299,7 +304,7 @@ export class DOMReconciler {
     box.contentEditable = 'false';
     box.setAttribute('role', 'checkbox');
     box.setAttribute('aria-checked', String(checked));
-    box.setAttribute('aria-label', checked ? 'Mark as not done' : 'Mark as done');
+    box.setAttribute('aria-label', checked ? this.messages.markNotDone : this.messages.markDone);
     el.appendChild(box);
   }
 

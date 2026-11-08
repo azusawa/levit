@@ -1,4 +1,5 @@
 import { LevitEditor } from '../core/editor.js';
+import { en, locales } from '../i18n/messages.js';
 
 // On the server (SSR) there is no HTMLElement. Fall back to an empty class so
 // importing the package does not throw; the element is only registered in browsers.
@@ -18,11 +19,15 @@ export class LevitEditorElement extends BaseElement {
     this.mountPoint = document.createElement('div');
     this.appendChild(this.mountPoint);
 
-    const placeholder = this.getAttribute('placeholder') || 'Type something or press "/" for commands...';
+    // lang="ko" (or "ko-KR") picks the built-in Korean messages.
+    const lang = (this.getAttribute('lang') ?? '').toLowerCase().split('-')[0];
+    const messages = locales[lang] ?? en;
+    const placeholder = this.getAttribute('placeholder') || messages.placeholder;
 
     this.editor = new LevitEditor({
       element: this.mountPoint,
       placeholder,
+      messages,
       onChange: (ed) => {
         this.dispatchEvent(
           new CustomEvent('input', {
