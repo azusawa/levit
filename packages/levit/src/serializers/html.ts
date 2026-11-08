@@ -6,6 +6,7 @@ import {
   listIndent,
   normalizeInlineNodes,
 } from '../core/model/document.js';
+import { defaultSchema, schemaFor, type BlockSpec, type Schema, type SerializerOptions } from '../core/plugin/plugin.js';
 import { normalizeCodeLanguage, normalizeHeadingLevel, sanitizeHref, sanitizeImageSrc } from '../core/model/sanitize.js';
 
 /** The element that holds each kind of list item, and how it is opened. */
@@ -15,7 +16,13 @@ const LISTS: Record<string, { tag: string; open: string }> = {
   task_list_item: { tag: 'ul', open: '<ul class="levit-task-list">' },
 };
 
-export function documentToHTML(doc: DocumentData): string {
+const BUILT_IN_HTML_BLOCKS = new Set([
+  'paragraph', 'heading', 'blockquote', 'code_block', 'horizontal_rule', 'image',
+  'bullet_list_item', 'ordered_list_item', 'task_list_item',
+]);
+
+export function documentToHTML(doc: DocumentData, options: SerializerOptions = {}): string {
+  const schema = schemaFor(options.plugins);
   let html = '';
   // Open lists, one per nesting level. Each has an <li> that is still open,
   // because a nested list goes inside its parent's <li>.
@@ -58,6 +65,9 @@ export function documentToHTML(doc: DocumentData): string {
           else if (m.type === 'link') {
             const href = sanitizeHref(m.attrs?.href);
             if (href) t = `<a href="${escapeHTML(href)}">${t}</a>`;
+          } else {
+            const spec = schema.marks.get(m.type);
+            if (spec?.toHTML) t = spec.toHTML(t, m);
           }
         }
       }
@@ -100,9 +110,13 @@ export function documentToHTML(doc: DocumentData): string {
         html += `<li data-checked="${checked}"><input type="checkbox" disabled${checked ? ' checked' : ''}>${contentHtml}`;
         break;
       }
-      default:
-        html += `<p>${contentHtml}</p>`;
+      default: {
+        const spec = schema.blocks.get(block.type);
+        if (spec) html += spec.toHTML ? spec.toHTML(block, contentHtml) : spec.atom ? '' : `<p>${contentHtml}</p>`;
+        // A block type nobody defined keeps its text, if it has any.
+        else if (BUILT_IN_HTML_BLOCKS.has(block.type) || contentHtml !== '') html += `<p>${contentHtml}</p>`;
         break;
+      }
     }
   }
 
@@ -173,7 +187,11 @@ function taskState(li: Element): boolean | null {
   return null;
 }
 
-export function htmlToDocument(html: string): DocumentData {
+// The plugins of the htmlToDocument call in progress. Reading is synchronous,
+// so a module variable is enough and keeps the reader functions simple.
+let schema: Schema = defaultSchema;
+
+export function htmlToDocument(html: string, options: SerializerOptions = {}): DocumentData {
   if (!html || !html.trim()) {
     return createDocument();
   }
@@ -181,14 +199,30 @@ export function htmlToDocument(html: string): DocumentData {
   // DOMParser documents are inert: scripts do not run and images do not load.
   const parsed = new DOMParser().parseFromString(html, 'text/html');
   const blocks: BlockNode[] = [];
-  readBlocks(parsed.body, { type: 'paragraph' }, blocks);
+  const previous = schema;
+  schema = schemaFor(options.plugins);
+  try {
+    readBlocks(parsed.body, { type: 'paragraph' }, blocks);
+  } finally {
+    schema = previous;
+  }
   return createDocument(blocks.length > 0 ? blocks : undefined);
 }
 
 const tagOf = (node: Node) => (node as Element).tagName?.toLowerCase() ?? '';
 
+/** The plugin block that claims an element, with the attrs it read. */
+function claimBlock(node: Node): { spec: BlockSpec; attrs: Record<string, any> } | null {
+  if (node.nodeType !== Node.ELEMENT_NODE) return null;
+  for (const spec of schema.blocks.values()) {
+    const attrs = spec.parseHTML?.(node as Element);
+    if (attrs) return { spec, attrs };
+  }
+  return null;
+}
+
 function isBlockElement(node: Node): boolean {
-  return node.nodeType === Node.ELEMENT_NODE && BLOCK_TAGS.has(tagOf(node));
+  return node.nodeType === Node.ELEMENT_NODE && (BLOCK_TAGS.has(tagOf(node)) || claimBlock(node) !== null);
 }
 
 /** True for an inline element that wraps blocks, like Google Docs' <b> wrapper. */
@@ -209,7 +243,7 @@ function readBlocks(parent: Node, ctx: Context, out: BlockNode[]): void {
   };
 
   for (const child of Array.from(parent.childNodes)) {
-    if (child.nodeType === Node.ELEMENT_NODE && SKIP_TAGS.has(tagOf(child))) continue;
+    if (child.nodeType === Node.ELEMENT_NODE && SKIP_TAGS.has(tagOf(child)) && !claimBlock(child)) continue;
     if (child.nodeType !== Node.ELEMENT_NODE && child.nodeType !== Node.TEXT_NODE) continue;
 
     if (isBlockElement(child)) {
@@ -227,8 +261,13 @@ function readBlocks(parent: Node, ctx: Context, out: BlockNode[]): void {
 
 function readBlockElement(el: Element, ctx: Context, out: BlockNode[]): void {
   const tag = tagOf(el);
+  const claimed = claimBlock(el);
 
-  if (tag === 'img') {
+  if (claimed) {
+    const { spec, attrs } = claimed;
+    const content = spec.atom ? [createTextNode('')] : readInline(Array.from(el.childNodes));
+    out.push(createBlock(spec.type, attrs, content));
+  } else if (tag === 'img') {
     const src = sanitizeImageSrc(el.getAttribute('src'));
     if (src) out.push(createBlock('image', { src, alt: el.getAttribute('alt') ?? '' }));
   } else if (/^h[1-6]$/.test(tag) || (LEAF_TAGS.has(tag) && !el.querySelector('img'))) {
@@ -314,6 +353,14 @@ function marksFor(el: Element, marks: InlineMark[]): InlineMark[] {
   const remove = (type: string) => {
     next = next.filter((m) => m.type !== type);
   };
+
+  for (const spec of schema.marks.values()) {
+    const attrs = spec.parseHTML?.(el);
+    if (attrs) {
+      next = next.filter((m) => m.type !== spec.type);
+      next.push(Object.keys(attrs).length > 0 ? { type: spec.type, attrs } : { type: spec.type });
+    }
+  }
 
   if (tag === 'strong' || tag === 'b') add('bold');
   else if (tag === 'em' || tag === 'i') add('italic');

@@ -17,6 +17,17 @@ export {
 } from './core/editor.js';
 export type { EditorEvents, EditorEventName, EditorEventHandler } from './core/events.js';
 
+// Plugins
+export type {
+  LevitPlugin,
+  BlockSpec,
+  MarkSpec,
+  PluginCommand,
+  PluginSlashItem,
+  SerializerOptions,
+} from './core/plugin/plugin.js';
+export type { InputRule } from './core/plugin/input-rules.js';
+
 // State & Transactions
 export { EditorState, type EditorStateConfig } from './core/state/state.js';
 export { Transaction } from './core/state/transaction.js';

@@ -1,10 +1,13 @@
 import { BlockNode, InlineMark, InlineNode } from '../model/types.js';
 import { EditorState } from '../state/state.js';
 import { normalizeCodeLanguage, normalizeHeadingLevel, sanitizeHref, sanitizeImageSrc } from '../model/sanitize.js';
-import { isAtomBlock, isListItem, listIndent } from '../model/document.js';
+import { isListItem, listIndent } from '../model/document.js';
+import { defaultSchema, type Schema } from '../plugin/plugin.js';
 
 export interface ReconcilerOptions {
   highlightCode?: (code: string, language: string) => string;
+  /** Block and mark types added by plugins. */
+  schema?: Schema;
 }
 
 export class DOMReconciler {
@@ -12,9 +15,12 @@ export class DOMReconciler {
   private options: ReconcilerOptions;
   private renderedSnapshots = new Map<string, string>();
 
+  private schema: Schema;
+
   constructor(container: HTMLElement, options: ReconcilerOptions = {}) {
     this.container = container;
     this.options = options;
+    this.schema = options.schema ?? defaultSchema;
   }
 
   /** Forgets what was rendered, so the next render rebuilds every block. */
@@ -133,6 +139,8 @@ export class DOMReconciler {
   }
 
   private getBlockTagName(block: BlockNode): string {
+    const spec = this.schema.blocks.get(block.type);
+    if (spec) return (spec.tag ?? 'div').toLowerCase();
     switch (block.type) {
       case 'heading': {
         const level = normalizeHeadingLevel(block.attrs?.level);
@@ -168,7 +176,9 @@ export class DOMReconciler {
     el.className = `levit-block levit-block-${block.type}`;
     if (block.type !== 'task_list_item') el.removeAttribute('data-checked');
     if (isListItem(block.type)) el.classList.add('levit-list-item');
-    if (isAtomBlock(block.type)) {
+    const spec = this.schema.blocks.get(block.type);
+    if (spec?.className) el.classList.add(...spec.className.split(/\s+/).filter(Boolean));
+    if (this.schema.isAtom(block.type)) {
       el.classList.add('levit-atom');
       el.contentEditable = 'false';
     }
@@ -181,6 +191,11 @@ export class DOMReconciler {
     el.innerHTML = '';
     if (block.type === 'horizontal_rule') {
       el.appendChild(document.createElement('hr'));
+      return;
+    }
+    const spec = this.schema.blocks.get(block.type);
+    if (spec?.atom) {
+      spec.render?.(block, el);
       return;
     }
     if (block.type === 'image') {
@@ -260,6 +275,21 @@ export class DOMReconciler {
     }
   }
 
+  /** A plugin mark's element, or a plain span for marks nobody defined. */
+  private createPluginMark(mark: InlineMark): HTMLElement {
+    const spec = this.schema.marks.get(mark.type);
+    const el = document.createElement(spec?.tag ?? 'span');
+    if (spec?.className) el.className = spec.className;
+    for (const [name, value] of Object.entries(spec?.attributes?.(mark) ?? {})) {
+      // Plugins may set styles and data, but never script.
+      if (/^on/i.test(name) || !/^[a-z][a-z0-9-:]*$/i.test(name)) continue;
+      if (/^(href|src|xlink:href|action|formaction)$/i.test(name) && !sanitizeHref(value)) continue;
+      el.setAttribute(name, String(value));
+    }
+    el.setAttribute('data-mark', mark.type);
+    return el;
+  }
+
   /** The checkbox of a task item. It holds no text, so offsets ignore it. */
   private addCheckbox(el: HTMLElement, block: BlockNode): void {
     const checked = block.attrs?.checked === true;
@@ -325,8 +355,7 @@ export class DOMReconciler {
         break;
       }
       default:
-        el = document.createElement('span');
-        el.setAttribute('data-mark', mark.type);
+        el = this.createPluginMark(mark);
         break;
     }
 

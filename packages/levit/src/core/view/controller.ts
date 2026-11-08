@@ -1,6 +1,7 @@
 import { LevitEditor } from '../editor.js';
 import { findBlockIndex, isListItem, sliceDocument } from '../model/document.js';
 import { readClipboard, writeClipboard } from './clipboard.js';
+import { matchesShortcut } from '../plugin/plugin.js';
 import {
   domRangeToEditorSelection,
   domSelectionToEditorSelection,
@@ -155,6 +156,15 @@ export class InputController {
     const isMod = e.metaKey || e.ctrlKey;
     const hasModifier = isMod || e.altKey;
 
+    // Plugin shortcuts come first; a handler returning false passes the key on.
+    for (const { shortcut, run } of this.editor.schema.keymap) {
+      if (!matchesShortcut(e, shortcut)) continue;
+      if (run(this.editor) !== false) {
+        e.preventDefault();
+        return;
+      }
+    }
+
     if (isMod && e.key.toLowerCase() === 'z') {
       e.preventDefault();
       if (e.shiftKey) {
@@ -296,7 +306,7 @@ export class InputController {
     const blocks = sliceDocument(this.editor.state.doc, this.editor.state.selection);
     if (blocks.length === 0 || !e.clipboardData) return false;
     e.preventDefault();
-    writeClipboard(e.clipboardData, blocks);
+    writeClipboard(e.clipboardData, blocks, this.editor.schema.plugins);
     return true;
   }
 
@@ -337,7 +347,7 @@ export class InputController {
 
     const { doc, selection } = this.editor.state;
     const block = doc.blocks[findBlockIndex(doc, selection.anchor.blockId)];
-    const content = readClipboard(data, block?.type === 'code_block');
+    const content = readClipboard(data, block?.type === 'code_block', this.editor.schema.plugins);
     if (!content) return;
     if ('text' in content) this.editor.chain().insertPlainText(content.text).run();
     else this.editor.chain().insertFragment(content.blocks).run();

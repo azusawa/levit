@@ -120,6 +120,9 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
     },
   ];
 
+  // Entries from the editor's plugins go after the built-in ones.
+  items.push(...editor.schema.slashItems);
+
   function renderList() {
     menu.innerHTML = '';
     items.forEach((item, index) => {

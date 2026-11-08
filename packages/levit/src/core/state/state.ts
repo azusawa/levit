@@ -2,12 +2,15 @@ import { DocumentData, EditorSelection, InlineMark } from '../model/types.js';
 import { createDocument } from '../model/document.js';
 import { cloneDocument, cloneSelection, Transaction } from './transaction.js';
 import { HistoryItem, HistoryManager } from './history.js';
+import { defaultSchema, type Schema } from '../plugin/plugin.js';
 
 export interface EditorStateConfig {
   doc?: DocumentData;
   selection?: EditorSelection;
   history?: HistoryManager;
   storedMarks?: InlineMark[] | null;
+  /** Block and mark types added by plugins. */
+  schema?: Schema;
 }
 
 export class EditorState {
@@ -15,17 +18,20 @@ export class EditorState {
   public readonly selection: EditorSelection;
   public readonly history: HistoryManager;
   public readonly storedMarks: InlineMark[] | null;
+  public readonly schema: Schema;
 
   constructor(
     doc: DocumentData,
     selection: EditorSelection,
     history: HistoryManager,
-    storedMarks: InlineMark[] | null = null
+    storedMarks: InlineMark[] | null = null,
+    schema: Schema = defaultSchema
   ) {
     this.doc = doc;
     this.selection = selection;
     this.history = history;
     this.storedMarks = storedMarks;
+    this.schema = schema;
   }
 
   static create(config?: EditorStateConfig): EditorState {
@@ -39,7 +45,7 @@ export class EditorState {
           isCollapsed: true,
         };
     const history = config?.history?.clone() || new HistoryManager();
-    return new EditorState(doc, selection, history, config?.storedMarks || null);
+    return new EditorState(doc, selection, history, config?.storedMarks || null, config?.schema);
   }
 
   get tr(): Transaction {
@@ -51,7 +57,8 @@ export class EditorState {
       this.doc,
       cloneSelection(selection),
       this.history,
-      this.storedMarks
+      this.storedMarks,
+      this.schema
     );
   }
 
@@ -70,7 +77,8 @@ export class EditorState {
       tr.doc,
       tr.selection,
       newHistory,
-      tr.storedMarks
+      tr.storedMarks,
+      this.schema
     );
   }
 
@@ -88,7 +96,8 @@ export class EditorState {
       result.previous.doc,
       result.previous.selection,
       result.newHistory,
-      null
+      null,
+      this.schema
     );
   }
 
@@ -106,7 +115,8 @@ export class EditorState {
       result.next.doc,
       result.next.selection,
       result.newHistory,
-      null
+      null,
+      this.schema
     );
   }
 }

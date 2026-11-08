@@ -9,7 +9,6 @@ import {
   createBlock,
   findBlockIndex,
   getBlockText,
-  isAtomBlock,
   isListItem,
   listIndent,
   MAX_LIST_INDENT,
@@ -69,6 +68,11 @@ export class Transaction {
     this.storedMarks = state.storedMarks ? [...state.storedMarks] : null;
   }
 
+  /** True for blocks without text (dividers, images, atom plugin blocks). */
+  isAtom(type: string): boolean {
+    return this.state.schema.isAtom(type);
+  }
+
   setSelection(selection: EditorSelection): this {
     this.selection = cloneSelection(selection);
     this.selectionChanged = true;
@@ -117,7 +121,7 @@ export class Transaction {
       const [, endRight] = splitBlockContent(endBlock, to.offset);
 
       // A selection that starts at an image or divider removes it too.
-      if (isAtomBlock(startBlock.type)) {
+      if (this.isAtom(startBlock.type)) {
         startBlock.type = 'paragraph';
         startBlock.attrs = {};
       }
@@ -207,7 +211,7 @@ export class Transaction {
     const block = this.doc.blocks[blockIdx];
     const offset = this.selection.anchor.offset;
 
-    if (isAtomBlock(block.type)) return this.removeAtomBlock(blockIdx);
+    if (this.isAtom(block.type)) return this.removeAtomBlock(blockIdx);
 
     if (offset > 0) {
       return this.deleteInBlock(blockIdx, target(getBlockText(block), offset), offset);
@@ -227,7 +231,7 @@ export class Transaction {
     }
 
     // Offset is 0 after an image or divider: remove it, keep the caret.
-    if (blockIdx > 0 && isAtomBlock(this.doc.blocks[blockIdx - 1].type)) {
+    if (blockIdx > 0 && this.isAtom(this.doc.blocks[blockIdx - 1].type)) {
       this.doc.blocks.splice(blockIdx - 1, 1);
       this.docChanged = true;
       return this;
@@ -278,7 +282,7 @@ export class Transaction {
     const text = getBlockText(block);
     const offset = this.selection.anchor.offset;
 
-    if (isAtomBlock(block.type)) return this.removeAtomBlock(blockIdx);
+    if (this.isAtom(block.type)) return this.removeAtomBlock(blockIdx);
 
     if (offset < text.length) {
       return this.deleteInBlock(blockIdx, offset, target(text, offset));
@@ -286,7 +290,7 @@ export class Transaction {
 
     const next = this.doc.blocks[blockIdx + 1];
     if (!next) return this;
-    if (isAtomBlock(next.type)) {
+    if (this.isAtom(next.type)) {
       this.doc.blocks.splice(blockIdx + 1, 1);
       this.docChanged = true;
       return this;
@@ -363,6 +367,23 @@ export class Transaction {
       createBlock(b.type, { ...b.attrs }, b.content.map((c) => ({ text: c.text, marks: [...(c.marks ?? [])] })))
     );
 
+    // Images and dividers cannot share a block with text, so they are put
+    // between the two halves of the current block.
+    const first = pasted[0];
+    const last = pasted[pasted.length - 1];
+    if (this.isAtom(first.type) || this.isAtom(last.type)) {
+      block.content = left;
+      const after: BlockNode[] = [];
+      if (this.isAtom(last.type)) after.push(createBlock(block.type, { ...block.attrs }, right));
+      else last.content = normalizeInlineNodes([...last.content, ...right]);
+      this.doc.blocks.splice(blockIdx + 1, 0, ...pasted, ...after);
+      if (block.type === 'paragraph' && getBlockText(block) === '') this.doc.blocks.splice(blockIdx, 1);
+      if (after[0]) this.setCaret(after[0].id, 0);
+      else this.setCaret(last.id, getBlockText(last).length - getBlockText({ ...last, content: right }).length);
+      this.docChanged = true;
+      return this;
+    }
+
     if (pasted.length === 1) {
       const inserted = normalizeInlineNodes(pasted[0].content);
       block.content = normalizeInlineNodes([...left, ...inserted, ...right]);
@@ -377,8 +398,6 @@ export class Transaction {
       return this;
     }
 
-    const first = pasted[0];
-    const last = pasted[pasted.length - 1];
     const lastLength = getBlockText(last).length;
 
     // An empty paragraph takes the type of the first pasted block.
@@ -403,7 +422,7 @@ export class Transaction {
   /** Moves the caret out of an image or divider into a new paragraph after it. */
   private leaveAtomBlock(): void {
     const idx = findBlockIndex(this.doc, this.selection.anchor.blockId);
-    if (idx === -1 || !isAtomBlock(this.doc.blocks[idx].type)) return;
+    if (idx === -1 || !this.isAtom(this.doc.blocks[idx].type)) return;
     const paragraph = createBlock('paragraph');
     this.doc.blocks.splice(idx + 1, 0, paragraph);
     this.setCaret(paragraph.id, 0);
@@ -415,7 +434,7 @@ export class Transaction {
     this.doc.blocks.splice(idx, 1);
     if (this.doc.blocks.length === 0) this.doc.blocks.push(createBlock('paragraph'));
     const prev = this.doc.blocks[idx - 1];
-    if (prev && !isAtomBlock(prev.type)) this.setCaret(prev.id, getBlockText(prev).length);
+    if (prev && !this.isAtom(prev.type)) this.setCaret(prev.id, getBlockText(prev).length);
     else this.setCaret(this.doc.blocks[Math.min(idx, this.doc.blocks.length - 1)].id, 0);
     this.docChanged = true;
     return this;
@@ -435,7 +454,7 @@ export class Transaction {
    * otherwise it goes after the caret's block, splitting it if needed. The
    * caret moves to the block after it, which is a new paragraph if needed.
    */
-  private insertAtomBlock(type: string, attrs: Record<string, any>): this {
+  insertAtom(type: string, attrs: Record<string, any> = {}): this {
     if (!this.selection.isCollapsed) this.deleteRange();
     let idx = findBlockIndex(this.doc, this.selection.anchor.blockId);
     if (idx === -1) return this;
@@ -450,7 +469,7 @@ export class Transaction {
       block.attrs = { ...attrs };
       atom = block;
     } else {
-      if (offset < text.length && !isAtomBlock(block.type)) {
+      if (offset < text.length && !this.isAtom(block.type)) {
         const [left, right] = splitBlockContent(block, offset);
         block.content = left;
         this.doc.blocks.splice(idx + 1, 0, createBlock(block.type, { ...block.attrs }, right));
@@ -461,7 +480,7 @@ export class Transaction {
     }
 
     let next = this.doc.blocks[idx + 1];
-    if (!next || isAtomBlock(next.type)) {
+    if (!next || this.isAtom(next.type)) {
       next = createBlock('paragraph');
       this.doc.blocks.splice(idx + 1, 0, next);
     }
@@ -511,14 +530,14 @@ export class Transaction {
 
   /** Inserts a divider (horizontal rule) at the caret. */
   insertHorizontalRule(): this {
-    return this.insertAtomBlock('horizontal_rule', {});
+    return this.insertAtom('horizontal_rule', {});
   }
 
   /** Inserts an image at the caret. Does nothing when src is not a safe image URL. */
   insertImage({ src, alt = '' }: { src: string; alt?: string }): this {
     const safe = sanitizeImageSrc(src);
     if (!safe) return this;
-    return this.insertAtomBlock('image', { src: safe, alt });
+    return this.insertAtom('image', { src: safe, alt });
   }
 
   /**

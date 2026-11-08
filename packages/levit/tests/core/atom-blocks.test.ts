@@ -316,3 +316,31 @@ describe('select all', () => {
     expect([range.endContainer, range.endOffset]).toEqual([container, 3]);
   });
 });
+
+describe('pasting HTML that is only an image', () => {
+  it('inserts the image (copying an image from a web page)', () => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const editor = new LevitEditor({ element: container });
+    editor.focus();
+    const dt = new DataTransfer();
+    dt.setData('text/html', '<meta charset="utf-8"><img src="https://x.test/a.png" alt="cat">');
+    container.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+    expect(editor.state.doc.blocks[0]).toMatchObject({ type: 'image', attrs: { src: 'https://x.test/a.png', alt: 'cat' } });
+  });
+});
+
+describe('insertFragment with an image', () => {
+  it('splits the line around a pasted image and puts the caret after it', () => {
+    let state = stateWith([para('a', 'abcd')], caret('a', 2));
+    state = state.tr.insertFragment([img('x')]).apply();
+    expect(summary(state.doc)).toEqual([['paragraph', 'ab'], ['image', ''], ['paragraph', 'cd']]);
+    expect(state.selection.anchor).toEqual({ blockId: state.doc.blocks[2].id, offset: 0 });
+  });
+
+  it('an image pasted into an empty paragraph replaces it', () => {
+    let state = stateWith([para('a', '')], caret('a', 0));
+    state = state.tr.insertFragment([img('x')]).apply();
+    expect(types(state.doc)).toEqual(['image', 'paragraph']);
+  });
+});

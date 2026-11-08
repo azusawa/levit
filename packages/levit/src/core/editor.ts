@@ -7,7 +7,10 @@ import { InputController } from './view/controller.js';
 import { DOMGuard } from './view/dom-guard.js';
 import { documentFromJSON, documentToJSON } from '../serializers/json.js';
 import { findBlockIndex, getBlockText, sliceBlockContent } from './model/document.js';
-import { applyInputRules } from './plugin/input-rules.js';
+import { applyInputRules, defaultInputRules } from './plugin/input-rules.js';
+import { Schema, type LevitPlugin } from './plugin/plugin.js';
+import { documentToHTML } from '../serializers/html.js';
+import { documentToMarkdown } from '../serializers/markdown.js';
 import { EventEmitter, type EditorEventHandler, type EditorEventName } from './events.js';
 
 export interface EditorOptions {
@@ -29,6 +32,8 @@ export interface EditorOptions {
    * and style are kept, and the text must stay the same.
    */
   highlightCode?: (code: string, language: string) => string;
+  /** Plugins that add blocks, marks, commands, keys and shortcuts. */
+  plugins?: LevitPlugin[];
 }
 
 export class ChainedCommands {
@@ -42,7 +47,15 @@ export class ChainedCommands {
 
   insertText(text: string): this {
     this.tr.insertText(text);
-    applyInputRules(this.tr);
+    applyInputRules(this.tr, [...this.editor.schema.inputRules, ...defaultInputRules]);
+    return this;
+  }
+
+  /** Runs a plugin command by name as part of this chain. */
+  exec(name: string, ...args: any[]): this {
+    const command = this.editor.schema.commands.get(name);
+    if (!command) throw new Error(`Unknown command "${name}"`);
+    command(...args)(this.tr, this.editor);
     return this;
   }
 
@@ -209,6 +222,11 @@ export class ChainedCommands {
 export class LevitEditor {
   public state: EditorState;
   public readonly container: HTMLElement;
+  /** Block and mark types, commands and keys added by plugins. */
+  public readonly schema: Schema;
+  /** Plugin commands, run at once: editor.commands.name(...args). */
+  public readonly commands: Record<string, (...args: any[]) => boolean>;
+  private cleanups: (() => void)[] = [];
   private reconciler: DOMReconciler;
   private controller: InputController;
   private guard: DOMGuard;
@@ -220,6 +238,16 @@ export class LevitEditor {
     this.options = options;
     this.container = options.element;
     this.events = new EventEmitter((error) => this.reportError(error));
+    this.schema = new Schema(options.plugins ?? []);
+    this.commands = {};
+    for (const [name, command] of this.schema.commands) {
+      this.commands[name] = (...args) => {
+        const tr = this.state.tr;
+        if (command(...args)(tr, this) === false) return false;
+        this.dispatch(tr);
+        return true;
+      };
+    }
 
     // Configure container
     this.container.classList.add('levit-editor-root');
@@ -235,8 +263,8 @@ export class LevitEditor {
       ? documentFromJSON(options.initialContent)
       : undefined;
 
-    this.state = EditorState.create({ doc: initialDoc });
-    this.reconciler = new DOMReconciler(this.container, { highlightCode: options.highlightCode });
+    this.state = EditorState.create({ doc: initialDoc, schema: this.schema });
+    this.reconciler = new DOMReconciler(this.container, { highlightCode: options.highlightCode, schema: this.schema });
     this.controller = new InputController(this, this.container);
 
     // Initial render
@@ -247,6 +275,11 @@ export class LevitEditor {
       const listener = (event: Event) => this.events.emit(name, { editor: this, event: event as FocusEvent });
       this.container.addEventListener(name, listener);
       this.domListeners.push([name, listener]);
+    }
+
+    for (const plugin of this.schema.plugins) {
+      const cleanup = plugin.setup?.(this);
+      if (typeof cleanup === 'function') this.cleanups.push(cleanup);
     }
   }
 
@@ -395,9 +428,19 @@ export class LevitEditor {
     return documentToJSON(this.state.doc);
   }
 
+  /** The document as HTML, including plugin blocks and marks. */
+  getHTML(): string {
+    return documentToHTML(this.state.doc, { plugins: this.schema.plugins });
+  }
+
+  /** The document as Markdown, including plugin blocks and marks. */
+  getMarkdown(): string {
+    return documentToMarkdown(this.state.doc, { plugins: this.schema.plugins });
+  }
+
   setJSON(json: any): void {
     const doc = documentFromJSON(json);
-    this.state = EditorState.create({ doc });
+    this.state = EditorState.create({ doc, schema: this.schema });
     this.render();
     this.notifyUpdate();
   }
@@ -408,6 +451,13 @@ export class LevitEditor {
   }
 
   destroy(): void {
+    for (const cleanup of this.cleanups.splice(0)) {
+      try {
+        cleanup();
+      } catch (error) {
+        this.reportError(error);
+      }
+    }
     this.events.emit('destroy', { editor: this });
     this.events.clear();
     for (const [name, listener] of this.domListeners) this.container.removeEventListener(name, listener);

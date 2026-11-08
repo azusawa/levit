@@ -1,8 +1,15 @@
 import { BlockNode, DocumentData, InlineNode } from '../core/model/types.js';
 import { createBlock, createDocument, createTextNode, isListItem, listIndent } from '../core/model/document.js';
+import { schemaFor, type SerializerOptions } from '../core/plugin/plugin.js';
 import { normalizeCodeLanguage, normalizeHeadingLevel, sanitizeHref, sanitizeImageSrc } from '../core/model/sanitize.js';
 
-export function documentToMarkdown(doc: DocumentData): string {
+const BUILT_IN_MARKDOWN_BLOCKS = new Set([
+  'paragraph', 'heading', 'blockquote', 'code_block', 'horizontal_rule', 'image',
+  'bullet_list_item', 'ordered_list_item', 'task_list_item',
+]);
+
+export function documentToMarkdown(doc: DocumentData, options: SerializerOptions = {}): string {
+  const schema = schemaFor(options.plugins);
   let out = '';
   let prevType: string | null = null;
   let prevIndent = 0;
@@ -25,6 +32,9 @@ export function documentToMarkdown(doc: DocumentData): string {
           else if (m.type === 'link') {
             const href = sanitizeHref(m.attrs?.href);
             if (href) t = `[${t}](${href})`;
+          } else {
+            const spec = schema.marks.get(m.type);
+            if (spec?.toMarkdown) t = spec.toMarkdown(t, m);
           }
         }
       }
@@ -72,9 +82,15 @@ export function documentToMarkdown(doc: DocumentData): string {
         line = `${prefix}${marker}${box}${breaks(prefix + ' '.repeat(marker.length))}`;
         break;
       }
-      default:
-        line = breaks('');
+      default: {
+        const spec = schema.blocks.get(block.type);
+        if (spec?.toMarkdown) line = spec.toMarkdown(block, blockText);
+        else if (spec?.atom) continue;
+        // A block type nobody defined keeps its text, if it has any.
+        else if (!spec && !BUILT_IN_MARKDOWN_BLOCKS.has(block.type) && blockText === '') continue;
+        else line = breaks('');
         break;
+      }
     }
 
     if (!isListItem(block.type)) numbers.length = widths.length = 0;
@@ -145,7 +161,8 @@ function readHardBreaks(text: string): string {
   return text.replace(/(?:\\| {2,})\r?\n/g, '\n').replace(/\r\n/g, '\n');
 }
 
-export function markdownToDocument(markdown: string): DocumentData {
+export function markdownToDocument(markdown: string, options: SerializerOptions = {}): DocumentData {
+  const schema = schemaFor(options.plugins);
   if (!markdown || !markdown.trim()) {
     return createDocument();
   }
@@ -156,6 +173,18 @@ export function markdownToDocument(markdown: string): DocumentData {
   for (const raw of rawBlocks) {
     const trimmed = raw.trim();
     if (!trimmed) continue;
+
+    // Plugin blocks get the first look.
+    let claimed = false;
+    for (const spec of schema.blocks.values()) {
+      const result = spec.parseMarkdown?.(trimmed);
+      if (!result) continue;
+      const content = spec.atom ? [createTextNode('')] : parseInlineMarkdown(readHardBreaks(result.text ?? ''));
+      blocks.push(createBlock(spec.type, { ...result.attrs }, content));
+      claimed = true;
+      break;
+    }
+    if (claimed) continue;
 
     // Divider: three or more -, * or _
     if (/^([-*_])(\s*\1){2,}$/.test(trimmed)) {
