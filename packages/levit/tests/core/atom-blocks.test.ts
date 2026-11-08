@@ -268,11 +268,12 @@ describe('slash menu', () => {
   it('Image asks for a URL when no upload function is set', () => {
     const editor = new LevitEditor({ element: container });
     const menu = createSlashMenu(editor);
-    const prompt = vi.spyOn(window, 'prompt').mockReturnValue('https://x.test/a.png');
+    const prompt = vi.fn(() => 'https://x.test/a.png');
+    vi.stubGlobal('prompt', prompt);
     menu.getItems().find((i) => i.id === 'image')!.action(editor);
     expect(prompt).toHaveBeenCalled();
     expect(editor.state.doc.blocks[0]).toMatchObject({ type: 'image', attrs: { src: 'https://x.test/a.png' } });
-    prompt.mockRestore();
+    vi.unstubAllGlobals();
     menu.destroy();
   });
 });

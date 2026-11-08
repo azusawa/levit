@@ -277,19 +277,19 @@ describe('review fixes: plugin blocks in pasted HTML', () => {
       {
         type: 'embed',
         atom: true,
-        toHTML: (block) => `<iframe src="${block.attrs?.src}"></iframe>`,
-        parseHTML: (el) => (el.tagName === 'IFRAME' ? { src: el.getAttribute('src') } : null),
+        toHTML: (block) => `<video src="${block.attrs?.src}"></video>`,
+        parseHTML: (el) => (el.tagName === 'VIDEO' ? { src: el.getAttribute('src') } : null),
       },
     ],
   };
   const types = (html: string) => htmlToDocument(html, { plugins: [embed] }).blocks.map((b) => b.type);
 
-  it('keeps a claimed element inside a list item, even when its tag is normally skipped', () => {
-    expect(types('<ul><li>Intro<iframe src="https://v.test/1"></iframe></li></ul>')).toEqual(['bullet_list_item', 'embed']);
+  it('keeps a claimed element inside a list item, even when its tag (video, iframe) is normally skipped', () => {
+    expect(types('<ul><li>Intro<video src="https://v.test/1"></video></li></ul>')).toEqual(['bullet_list_item', 'embed']);
   });
 
   it('pulls a claimed element out of a paragraph, like an image', () => {
-    expect(types('<p>text<iframe src="https://v.test/1"></iframe>after</p>')).toEqual(['paragraph', 'embed', 'paragraph']);
+    expect(types('<p>text<video src="https://v.test/1"></video>after</p>')).toEqual(['paragraph', 'embed', 'paragraph']);
   });
 
   it('asks each plugin about each element only once', () => {

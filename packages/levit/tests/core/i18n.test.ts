@@ -49,10 +49,11 @@ describe('messages', () => {
     expect(bubble.element.querySelector('input')!.getAttribute('aria-label')).toBe(ko.linkUrl);
     bubble.destroy();
 
-    const prompt = vi.spyOn(window, 'prompt').mockReturnValue(null);
+    const prompt = vi.fn(() => null);
+    vi.stubGlobal('prompt', prompt);
     container.querySelector('.levit-code-language')!.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
     expect(prompt).toHaveBeenCalledWith(ko.codeLanguagePrompt, '');
-    prompt.mockRestore();
+    vi.unstubAllGlobals();
   });
 
   it('a partial set of messages overrides only those', () => {

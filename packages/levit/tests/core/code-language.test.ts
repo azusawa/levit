@@ -76,14 +76,15 @@ describe('rendering the language', () => {
 
   it('clicking the label asks for a new language', () => {
     const editor = editorWith([code('c', 'x', 'js')]);
-    const prompt = vi.spyOn(window, 'prompt').mockReturnValue('rust');
+    const prompt = vi.fn(() => 'rust');
+    vi.stubGlobal('prompt', prompt);
     const label = editor.container.querySelector('.levit-code-language')!;
     const down = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
     label.dispatchEvent(down);
     expect(down.defaultPrevented).toBe(true);
     expect(prompt).toHaveBeenCalledWith('Code language', 'js');
     expect(editor.state.doc.blocks[0].attrs).toEqual({ language: 'rust' });
-    prompt.mockRestore();
+    vi.unstubAllGlobals();
   });
 });
 
