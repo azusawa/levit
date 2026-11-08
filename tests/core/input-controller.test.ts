@@ -146,6 +146,13 @@ describe('keyboard', () => {
     return ev;
   };
 
+  it('Shift+Enter inserts a line break, even where the browser reports a paragraph', () => {
+    setup([p('ab')]);
+    select('b0', 1);
+    expect(key('Enter', { shiftKey: true }).defaultPrevented).toBe(true);
+    expect(texts()).toEqual(['a\nb']);
+  });
+
   it('Delete removes the next character', () => {
     setup([p('abc')]);
     select('b0', 1);

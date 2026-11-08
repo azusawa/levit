@@ -68,6 +68,7 @@ test.describe('typing', () => {
 test.describe('Korean IME composition', () => {
   // Drive Chrome's real IME pipeline through the DevTools protocol:
   // imeSetComposition = text still being composed, insertText = commit.
+  test.skip(({ browserName }) => browserName !== 'chromium', 'Uses the Chrome DevTools protocol');
   async function composeKorean(page: Page, steps: string[][]) {
     const cdp = await page.context().newCDPSession(page);
     for (const syllable of steps) {

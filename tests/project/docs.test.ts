@@ -45,3 +45,35 @@ describe('CONTRIBUTING.md', () => {
     }
   });
 });
+
+describe('input features are documented', () => {
+  it('README lists paste, line breaks and the DOM guard', () => {
+    const readme = read('README.md');
+    expect(readme).toContain('붙여넣기');
+    expect(readme).toContain('Shift+Enter');
+    expect(readme).toMatch(/Chrome.*Firefox.*Safari/);
+  });
+
+  it('llms.txt documents keys, line breaks and paste for AI tools', () => {
+    const llms = read('llms.txt');
+    expect(llms).toContain('Shift+Enter');
+    expect(llms).toContain('"\\n"');
+    expect(llms).toMatch(/paste/i);
+    for (const command of ['deleteForward', 'insertLineBreak', 'insertFragment']) {
+      expect(llms).toContain(command);
+    }
+  });
+
+  it('CONTRIBUTING explains how to get the E2E browsers', () => {
+    const guide = read('CONTRIBUTING.md');
+    expect(guide).toContain('npx playwright install firefox webkit');
+    expect(guide).toMatch(/Firefox/);
+  });
+});
+
+describe('CI', () => {
+  it('runs the E2E tests in Chrome, Firefox and WebKit', () => {
+    const ci = read('.github/workflows/ci.yml');
+    expect(ci).toMatch(/playwright install --with-deps chrome firefox webkit/);
+  });
+});

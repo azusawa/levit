@@ -78,6 +78,22 @@ Link hrefs must be `http:`, `https:`, `mailto:` or relative; anything else
 `# ` to `###### ` heading, `> ` quote, ``` code block, `- ` or `* ` bulleted
 list, `1. ` numbered list. Shortcuts do not apply inside code blocks.
 
+### Keys and line breaks
+- `Enter` splits the block; `Shift+Enter` inserts a line break inside the block.
+  Line breaks are stored as `"\n"` in the text (HTML `<br>`, Markdown `\` at line end).
+- `Backspace` / `Delete` remove one whole character (emoji included).
+  `Alt+Backspace` (macOS) or `Ctrl+Backspace` deletes a word; `Cmd+Backspace` (macOS) deletes to the line start.
+- `Cmd/Ctrl+B`, `I`, `U` toggle bold, italic, underline. `Cmd/Ctrl+Z` undo, `Cmd/Ctrl+Shift+Z` or `Ctrl+Y` redo.
+
+### Paste, copy and drop
+Every edit goes through the document model; the editor cancels the browser's
+own DOM changes. Paste reads HTML first (web pages, Google Docs), then
+multi-line Markdown, then plain text (one paragraph per line). Inside a code
+block, paste inserts plain text. Copy/cut write Levit HTML plus plain text.
+Text dropped from outside is inserted at the drop point; drag-moving text
+inside the editor is not supported yet. DOM changes made by scripts or
+extensions are rolled back from the model.
+
 ## 3. Serializers & Formats
 - `documentToJSON(doc)` / `documentFromJSON(json)`: Clean, deterministic block JSON
 - `documentToMarkdown(doc)` / `markdownToDocument(markdown)`: Lossless Markdown
@@ -92,6 +108,9 @@ editor.chain()
   .run();
 
 editor.chain().setBlockType('bullet_list_item').run();
+editor.chain().insertLineBreak().run();        // same as Shift+Enter
+editor.chain().deleteForward().run();          // also deleteWordBackward/Forward, deleteLineBackward/Forward
+editor.chain().insertFragment(blocks).run();   // insert blocks at the caret, like a paste
 editor.chain().setLink('https://example.com').run(); // applies to the selection
 editor.chain().unsetLink().run();
 editor.getActiveLink(); // href of the selected link, or null

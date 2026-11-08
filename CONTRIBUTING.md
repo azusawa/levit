@@ -6,12 +6,13 @@ Levit에 기여해 주셔서 감사합니다. 이 문서는 개발 환경, 테�
 ## 개발 환경
 
 - Node.js 18 이상 (CI는 Node 20, 22에서 검사)
-- E2E 테스트용 Google Chrome
+- E2E 테스트용 브라우저: 설치된 Google Chrome, 그리고 Playwright의 Firefox와 WebKit
 
 ```bash
 git clone https://github.com/azusawa/levit.git
 cd levit
 npm ci
+npx playwright install firefox webkit   # E2E용 Firefox, WebKit(Safari 엔진) 내려받기
 npm run dev        # 데모 페이지 실행 (Vite)
 ```
 
@@ -30,7 +31,8 @@ npm run dev        # 데모 페이지 실행 (Vite)
 ```bash
 npm test               # 단위 테스트 (Vitest, happy-dom)
 npm run test:watch     # 단위 테스트를 파일 변경마다 다시 실행
-npm run test:e2e       # 실제 Chrome에서 도는 E2E 테스트 (Playwright)
+npm run test:e2e       # 실제 브라우저(Chrome, Firefox, WebKit)에서 도는 E2E 테스트 (Playwright)
+npx playwright test --project=chromium   # 한 브라우저만 실행
 npm run typecheck      # 타입 검사
 npm run build          # 라이브러리 빌드 및 타입 선언 파일 생성
 npm run check:package  # 배포될 패키지 검사 (publint, arethetypeswrong)

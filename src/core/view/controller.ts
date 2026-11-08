@@ -188,9 +188,11 @@ export class InputController {
       return;
     }
 
-    if (e.key === 'Enter' && !e.shiftKey && !e.defaultPrevented) {
+    if (e.key === 'Enter' && !e.defaultPrevented) {
       e.preventDefault();
-      this.editor.chain().splitBlock().run();
+      // Browsers disagree on what Shift+Enter means (WebKit sends insertParagraph).
+      if (e.shiftKey) this.editor.chain().insertLineBreak().run();
+      else this.editor.chain().splitBlock().run();
       return;
     }
 

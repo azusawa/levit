@@ -33,7 +33,7 @@ jobs:
       - run: npm run check:package
 
   e2e:
-    name: Browser tests (Chrome)
+    name: Browser tests (Chrome, Firefox, WebKit)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -42,8 +42,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      # The tests run in Google Chrome (channel: 'chrome').
-      - run: npx playwright install --with-deps chrome
+      # Google Chrome (channel: 'chrome') plus Playwright's Firefox and WebKit.
+      - run: npx playwright install --with-deps chrome firefox webkit
       - run: npm run test:e2e
       - uses: actions/upload-artifact@v4
         if: failure()
