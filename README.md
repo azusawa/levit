@@ -25,10 +25,12 @@
 
 1. **Zero Runtime Dependency (런타임 의존성 0개)**
    - 외부 런타임 라이브러리 없이 순수 Web 표준 API(DOM, Selection, InputEvent)와 TypeScript만으로 독자 구현되었습니다.
-   - 번들 크기: **약 22 kB (gzipped)** 로 로딩 속도가 극도로 빠릅니다.
+   - 번들 크기: **약 27 kB (gzipped)**, 사용하는 쪽에서 다시 압축하면 약 22 kB입니다.
 2. **가져다 쓰기 가장 쉬운 구조 (DX & AX First)**
    - 단 3줄의 코드로 모든 웹사이트에 연동 가능합니다.
    - `<levit-editor></levit-editor>` 웹 컴포넌트를 지원하여 React, Vue, Svelte, 바닐라 JS 어디서나 HTML 태그 하나로 동작합니다.
+   - React(`@yonailab/levit-react`)와 Vue(`@yonailab/levit-vue`) 전용 컴포넌트도 있습니다.
+   - **플러그인**으로 블록, 서식, 명령, 단축키를 직접 추가하고, `editor.on('update', ...)` 같은 이벤트로 변경을 받습니다.
 3. **AI-Native 설계 (AI 친화적)**
    - 결정론적이고 단순한 JSON 스키마를 지원하여 LLM이 문서를 분석하고 생성하기 매우 쉽습니다.
    - LLM 토큰 응답을 실시간으로 입력해 주는 `streamAIResponse()` 내장.
@@ -49,6 +51,9 @@
    - 복사·잘라내기는 목록과 서식을 그대로 유지하고, 밖에서 끌어다 놓은 글은 놓은 위치에 들어갑니다.
    - 확장 프로그램이나 스크립트가 편집 영역을 직접 바꾸면 감지해서 되돌립니다.
    - Chrome, Firefox, Safari(WebKit)에서 자동 테스트로 확인합니다.
+6. **다국어와 접근성**
+   - 메뉴와 안내 문구는 영어가 기본이고, `messages: ko`로 한국어를 쓰거나 원하는 문구로 바꿉니다.
+   - 스크린 리더가 편집 영역, 슬래시 메뉴, 서식 도구 모음을 읽어 줍니다. `Alt+F10`으로 도구 모음에 들어가 키보드만으로 서식을 바꿀 수 있습니다.
 
 ---
 
@@ -103,6 +108,47 @@ const editor = createLevitEditor(container, {
 ```
 
 `uploadImage`가 없으면 이미지 파일은 무시되고, 슬래시 메뉴의 **Image**는 URL을 묻습니다.
+
+---
+
+## ⚛️ React / Vue
+
+```bash
+npm install @yonailab/levit @yonailab/levit-react   # React 18, 19
+npm install @yonailab/levit @yonailab/levit-vue     # Vue 3
+```
+
+```tsx
+// React
+import { useState } from 'react';
+import { LevitEditor } from '@yonailab/levit-react';
+import { ko, type DocumentData } from '@yonailab/levit';
+import '@yonailab/levit/levit.css';
+
+export function Note() {
+  const [doc, setDoc] = useState<DocumentData>();
+  return <LevitEditor value={doc} onChange={setDoc} messages={ko} />;
+}
+```
+
+```vue
+<!-- Vue -->
+<script setup lang="ts">
+import { ref } from 'vue';
+import { LevitEditor } from '@yonailab/levit-vue';
+import type { DocumentData } from '@yonailab/levit';
+import '@yonailab/levit/levit.css';
+
+const doc = ref<DocumentData>();
+</script>
+
+<template>
+  <LevitEditor v-model="doc" />
+</template>
+```
+
+에디터 옵션은 그대로 props로 넘기고, 메뉴는 기본으로 켜집니다. 직접 화면을 구성하려면 `useLevitEditor()`를 씁니다.
+자세한 내용은 [React 패키지](packages/react/README.md), [Vue 패키지](packages/vue/README.md) 문서를 보세요.
 
 ---
 
@@ -176,9 +222,65 @@ const docFromHtml = htmlToDocument('<h1>제목</h1><p>본문</p>');
 
 ---
 
+## 🔌 플러그인과 이벤트
+
+플러그인 하나로 블록 종류, 서식, 명령, 단축키, 입력 단축키, 슬래시 메뉴 항목을 추가합니다.
+블록과 서식마다 HTML·Markdown 변환 방법도 정할 수 있습니다.
+
+```ts
+import { createLevitEditor, type LevitPlugin } from '@yonailab/levit';
+
+const callout: LevitPlugin = {
+  name: 'callout',
+  blocks: [{
+    type: 'callout',
+    tag: 'aside',
+    className: 'my-callout',
+    toHTML: (block, content) => `<aside class="callout">${content}</aside>`,
+    parseHTML: (el) => (el.matches('aside.callout') ? {} : null),
+  }],
+  commands: {
+    setCallout: () => (tr) => void tr.setBlockType('callout'),
+  },
+  keymap: { 'Mod-Shift-c': (editor) => editor.commands.setCallout() },
+  slashItems: [{
+    id: 'callout', title: 'Callout', description: 'A highlighted note', icon: '💡',
+    action: (editor) => editor.commands.setCallout(),
+  }],
+};
+
+const editor = createLevitEditor(container, { plugins: [callout] });
+
+// 이벤트: update, selectionUpdate, transaction, focus, blur, destroy
+const stop = editor.on('update', ({ editor }) => save(editor.getJSON()));
+editor.getHTML();      // 플러그인 블록까지 포함한 HTML
+editor.isActive('bold'); // 선택한 글이 굵은지
+```
+
+이미지처럼 글이 없는 블록은 `atom: true`와 `render(block, el)`로 직접 그립니다.
+
+---
+
+## 🌐 다국어와 ♿ 접근성
+
+```ts
+import { createLevitEditor, ko } from '@yonailab/levit';
+
+createLevitEditor(container, { messages: ko });                 // 한국어
+createLevitEditor(container, { messages: { bold: 'Gras' } });   // 일부 문구만 바꾸기
+```
+
+웹 컴포넌트는 `<levit-editor lang="ko">`로 한국어를 씁니다.
+
+- 편집 영역은 스크린 리더에 "여러 줄 텍스트 입력란"으로 알려집니다.
+- 슬래시 메뉴는 방향키로 고르는 항목을 읽어 줍니다.
+- 글을 선택하고 `Alt+F10`을 누르면 서식 도구 모음으로 이동합니다. 방향키로 버튼을 고르고, `Enter`로 적용하고, `Esc`로 글로 돌아갑니다. 켜진 서식은 "눌림"으로 읽어 줍니다.
+
+---
+
 ## 🎨 모던 테마 및 커스터마이징
 
-CSS 변수(`--levit-*`)를 통해 디자인을 완벽히 커스터마이징할 수 있습니다:
+모든 색은 CSS 변수(`--levit-*`)로 정해져 있어, 변수만 바꾸면 테마 전체가 바뀝니다:
 
 ```css
 :root {
@@ -194,6 +296,18 @@ CSS 변수(`--levit-*`)를 통해 디자인을 완벽히 커스터마이징할 �
   --levit-text: #f1f5f9;
 }
 ```
+
+| 변수 | 용도 |
+|---|---|
+| `--levit-bg`, `--levit-surface`, `--levit-border` | 배경, 메뉴 배경, 테두리 |
+| `--levit-text`, `--levit-text-muted`, `--levit-placeholder` | 글자, 흐린 글자, 안내 문구 |
+| `--levit-primary`, `--levit-primary-hover`, `--levit-on-primary` | 강조색, 강조색 위 글자(체크 표시) |
+| `--levit-selection`, `--levit-highlight` | 선택 영역, 형광펜 |
+| `--levit-code-bg`, `--levit-code-text`, `--levit-quote-border` | 코드, 인용 |
+| `--levit-danger` | 잘못된 입력(링크 주소) |
+| `--levit-font-sans`, `--levit-font-mono`, `--levit-radius`, `--levit-shadow` | 글꼴, 모서리, 그림자 |
+
+변수는 상속되므로 `.levit-editor-root`에 지정하면 그 에디터에만 적용됩니다. 메뉴는 `body`에 붙으므로 메뉴까지 바꾸려면 `:root`에 지정하세요.
 
 ---
 

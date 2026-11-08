@@ -200,6 +200,7 @@
       streamAIResponse,
       documentToMarkdown,
       documentToHTML,
+      ko,
     } from './packages/levit/src/index.ts';
 
     const container = document.getElementById('editor-container');
@@ -209,6 +210,7 @@
     let currentTab = 'json';
 
     const editor = createLevitEditor(container, {
+      messages: ko,
       placeholder: '자유롭게 글을 작성해보세요. (마크다운 # , > , ``` 지원 또는 "/" 입력)',
       initialContent: {
         version: 1,

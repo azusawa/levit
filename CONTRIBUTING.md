@@ -16,6 +16,20 @@ npx playwright install firefox webkit   # E2E용 Firefox, WebKit(Safari 엔진) 
 npm run dev        # 데모 페이지 실행 (Vite)
 ```
 
+## 저장소 구조
+
+npm 워크스페이스로 패키지 세 개를 함께 관리합니다. 버전은 셋이 항상 같습니다.
+
+| 경로 | 패키지 | 내용 |
+|---|---|---|
+| `packages/levit` | `@yonailab/levit` | 에디터 본체 (런타임 의존성 0개) |
+| `packages/react` | `@yonailab/levit-react` | React 컴포넌트와 훅 |
+| `packages/vue` | `@yonailab/levit-vue` | Vue 3 컴포넌트와 컴포저블 |
+
+- 루트에는 데모(`index.html`), E2E 테스트(`e2e/`), 문서, 저장소 검사(`tests/project/`)가 있습니다.
+- `README.md`, `LICENSE`, `llms.txt`는 루트에서 관리하고, 배포할 때 `packages/levit`으로 복사됩니다.
+- 래퍼의 테스트와 타입 검사는 본체의 소스(`packages/levit/src`)를 직접 읽으므로 빌드가 필요 없습니다.
+
 ## 개발 원칙: TDD
 
 모든 변경은 TDD(테스트 주도 개발)로 진행합니다.
@@ -29,18 +43,19 @@ npm run dev        # 데모 페이지 실행 (Vite)
 ## 검사 명령
 
 ```bash
-npm test               # 단위 테스트 (Vitest, happy-dom)
+npm test               # 모든 패키지의 단위 테스트 (Vitest, happy-dom)
+npx vitest run --project react   # 한 패키지만 (levit, react, vue, project)
 npm run test:watch     # 단위 테스트를 파일 변경마다 다시 실행
 npm run test:e2e       # 실제 브라우저(Chrome, Firefox, WebKit)에서 도는 E2E 테스트 (Playwright)
 npx playwright test --project=chromium   # 한 브라우저만 실행
-npm run typecheck      # 타입 검사
-npm run build          # 라이브러리 빌드 및 타입 선언 파일 생성
-npm run check:package  # 배포될 패키지 검사 (publint, arethetypeswrong)
+npm run typecheck      # 모든 패키지 타입 검사
+npm run build          # 모든 패키지 빌드 (본체 먼저)
+npm run check:package  # 배포될 패키지 검사 (publint, arethetypeswrong). build 다음에 실행
 ```
 
 푸시와 PR마다 GitHub Actions가 위 검사를 모두 실행합니다.
 
-- 단위 테스트: `tests/`
+- 단위 테스트: `packages/*/tests/`, 저장소 검사: `tests/project/`
 - E2E 테스트: `e2e/` (테스트용 페이지는 `e2e/fixture.html`)
 
 ## 코드 스타일
@@ -57,15 +72,19 @@ npm run check:package  # 배포될 패키지 검사 (publint, arethetypeswrong)
 
 ## 배포 절차 (관리자용)
 
-npm 패키지 이름은 `@yonailab/levit`입니다. (`levit`은 기존 패키지와 이름이 비슷해 npm이 허용하지 않습니다.)
-`publishConfig.access`가 `public`이라 `--access` 옵션은 필요 없습니다.
+패키지 세 개를 같은 버전으로 함께 배포합니다. (`levit`은 기존 패키지와 이름이 비슷해 npm이 허용하지 않아
+`@yonailab` 아래에 둡니다.) `publishConfig.access`가 `public`이라 `--access` 옵션은 필요 없습니다.
+`npm version`은 워크스페이스에서 커밋·태그를 만들지 않으므로 아래 스크립트를 씁니다.
 
 ```bash
-npm login                # 브라우저에서 패스키로 인증 (로그인은 2시간 유지)
-npm version patch        # 버전 올리기 + 커밋 + 태그 (minor / major 도 가능)
-npm publish              # 배포 전에 타입 검사, 단위 테스트, 빌드, 패키지 검사가 자동 실행
-git push --follow-tags   # 커밋과 태그를 GitHub에 올리기
-gh release create v0.1.1 --generate-notes   # GitHub Release 만들기 (버전은 실제 값으로)
+node scripts/set-version.mjs 0.4.0   # 세 패키지 버전 + 래퍼가 요구하는 본체 버전을 함께 변경
+npm install                          # package-lock.json 갱신
+git commit -am "Release 0.4.0"
+git tag v0.4.0
+npm login                            # 브라우저에서 패스키로 인증 (로그인은 2시간 유지)
+npm publish --workspaces             # 세 패키지 배포. 각각 타입 검사, 테스트, 빌드, 패키지 검사가 먼저 실행
+git push --follow-tags               # 커밋과 태그를 GitHub에 올리기
+gh release create v0.4.0 --generate-notes   # GitHub Release 만들기
 ```
 
 - `npm login`과 `npm publish`는 브라우저 인증이 필요하므로 일반 터미널에서 실행하세요.

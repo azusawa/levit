@@ -174,7 +174,18 @@ createLevitEditor(container, {
   // Highlights code blocks that have a language. Return HTML for the code;
   // only <span class style> is kept and the text must not change.
   highlightCode: (code, language) => code,
+  plugins: [],      // see "6. Plugins"
+  messages: ko,     // see "8. Messages"; English by default
 });
+```
+
+### Other editor methods
+```ts
+editor.getJSON(); editor.setJSON(json); editor.getText();
+editor.getHTML(); editor.getMarkdown();   // include plugin blocks and marks
+editor.isActive('bold');                  // all selected text has the mark (or the next typed text will)
+editor.getActiveLink();                   // href of the selected link, or null
+editor.undo(); editor.redo(); editor.focus(); editor.destroy();
 ```
 
 ## 5. AI Streaming API
@@ -191,3 +202,110 @@ async function* fetchLLMStream() {
 await streamAIResponse(editor, fetchLLMStream());
 ```
 
+## 6. Plugins
+A plugin is a plain object. Pass plugins as `createLevitEditor(el, { plugins: [...] })`.
+Plugins may not redefine built-in block or mark types, or each other's.
+
+```ts
+import type { LevitPlugin } from '@yonailab/levit';
+
+const plugin: LevitPlugin = {
+  name: 'example',
+  blocks: [
+    {
+      type: 'callout',              // editable block with text
+      tag: 'aside',                 // element, default 'div'
+      className: 'my-callout',
+      toHTML: (block, content) => `<aside class="callout">${content}</aside>`,
+      toMarkdown: (block, text) => `> [!NOTE]\n> ${text}`,
+      parseHTML: (el) => (el.matches('aside.callout') ? {} : null),       // attrs, or null to skip
+      parseMarkdown: (raw) => (raw.startsWith('> [!NOTE]') ? { text: raw.slice(12) } : null),
+    },
+    {
+      type: 'video',
+      atom: true,                   // no text, like an image: caret skips it, Backspace after it removes it
+      render: (block, el) => { /* draw into el (non-editable) */ },
+      toHTML: (block) => `<div data-video="${block.attrs?.id}"></div>`,
+      parseHTML: (el) => (el.hasAttribute('data-video') ? { id: el.getAttribute('data-video') } : null),
+    },
+  ],
+  marks: [
+    {
+      type: 'color',
+      tag: 'span',
+      attributes: (mark) => ({ style: `color: ${mark.attrs?.color}` }),  // on* attributes are dropped
+      toHTML: (text, mark) => `<span style="color: ${mark.attrs?.color}">${text}</span>`,
+      parseHTML: (el) => ((el as HTMLElement).style.color ? { color: (el as HTMLElement).style.color } : null),
+    },
+  ],
+  // Command factories: arguments in, a change to the transaction out (return false to cancel).
+  commands: {
+    insertVideo: (id: string) => (tr) => void tr.insertAtom('video', { id }),
+  },
+  // 'Mod' is Cmd on macOS, Ctrl elsewhere. Return false to let the built-in key run.
+  keymap: { 'Mod-Shift-v': (editor) => editor.commands.insertVideo('intro') },
+  // Typed at the start of a block; checked before the built-in rules.
+  inputRules: [{ match: /^!!!\s$/, handler: (tr, match, blockId) => { /* change tr */ return true; } }],
+  slashItems: [{ id: 'video', title: 'Video', description: 'Embed a video', icon: '🎬',
+    action: (editor) => editor.commands.insertVideo('intro') }],
+  setup: (editor) => () => { /* cleanup on destroy */ },
+};
+
+editor.commands.insertVideo('v1');                      // runs at once, returns true unless cancelled
+editor.chain().exec('insertVideo', 'v1').insertText('caption').run();
+documentToHTML(doc, { plugins }); htmlToDocument(html, { plugins });   // serializers take plugins too
+documentToMarkdown(doc, { plugins }); markdownToDocument(md, { plugins });
+```
+Without the plugin, unknown blocks export as plain paragraphs of their text (or nothing if empty).
+
+## 7. Events
+```ts
+const stop = editor.on('update', ({ editor, transaction }) => {});   // document changed (also undo/redo/setJSON)
+editor.on('selectionUpdate', ({ editor, selection }) => {});
+editor.on('transaction', ({ editor, transaction }) => {});           // every dispatch
+editor.on('focus', ({ event }) => {}); editor.on('blur', ({ event }) => {});
+editor.on('destroy', ({ editor }) => {});
+stop();                       // or editor.off(name, handler)
+```
+A handler that throws does not stop the others; the error goes to `onError` (or the console).
+
+## 8. Messages and accessibility
+```ts
+import { ko, en } from '@yonailab/levit';
+createLevitEditor(el, { messages: ko });                // Korean menus, prompts and labels
+createLevitEditor(el, { messages: { bold: 'Gras' } });  // override some messages
+editor.t('codeLanguageLabel', { language: 'ts' });      // a message with {placeholders} filled
+```
+`<levit-editor lang="ko">` uses Korean. The editor element is `role="textbox"`
+with `aria-multiline` and an `aria-label` (unless the page names it). The slash
+menu is a `listbox` the editor points at with `aria-activedescendant`. The
+bubble menu is a `toolbar`: `Alt+F10` moves focus to it from selected text,
+arrows/Home/End move between buttons, Enter or Space presses one, Escape
+returns to the text, and `aria-pressed` says which formats are on.
+
+## 9. Theming
+Every color is a CSS variable (`--levit-bg`, `--levit-surface`, `--levit-border`,
+`--levit-text`, `--levit-text-muted`, `--levit-placeholder`, `--levit-primary`,
+`--levit-primary-hover`, `--levit-on-primary`, `--levit-selection`, `--levit-highlight`,
+`--levit-code-bg`, `--levit-code-text`, `--levit-quote-border`, `--levit-danger`),
+plus `--levit-font-sans`, `--levit-font-mono`, `--levit-radius`, `--levit-shadow`.
+Dark mode: `[data-theme="dark"]`, or the system setting unless `[data-theme="light"]`.
+
+## 10. React and Vue
+```bash
+npm install @yonailab/levit @yonailab/levit-react   # React 18/19
+npm install @yonailab/levit @yonailab/levit-vue     # Vue 3
+```
+```tsx
+import { LevitEditor, useLevitEditor } from '@yonailab/levit-react';
+<LevitEditor value={doc} onChange={(json, editor) => setDoc(json)} messages={ko} plugins={[plugin]} />
+<LevitEditor defaultValue={doc} ref={editorRef} onReady={(editor) => {}} bubbleMenu={false} />
+const { ref, editor } = useLevitEditor({ placeholder: 'Write' });   // <div ref={ref} />
+```
+```vue
+<LevitEditor v-model="doc" :messages="ko" @ready="(editor) => {}" @error="(e) => {}" />
+<!-- const { element, editor } = useLevitEditor(options)  →  <div ref="element" /> -->
+```
+Both add the bubble and slash menus unless turned off, and a value that comes
+back from onChange / v-model does not reset the caret. The React package is
+marked 'use client'.

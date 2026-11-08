@@ -36,8 +36,8 @@ describe('CONTRIBUTING.md', () => {
       'npm run typecheck',
       'npm run build',
       'npm run check:package',
-      'npm version',
-      'npm publish',
+      'node scripts/set-version.mjs',
+      'npm publish --workspaces',
       'git push --follow-tags',
       'gh release create',
     ]) {
@@ -99,5 +99,34 @@ describe('editing features (phase 2) are documented', () => {
     ]) {
       expect(llms).toContain(text);
     }
+  });
+});
+
+describe('extensibility (phase 3) is documented', () => {
+  it('README covers plugins, events, messages, accessibility, theming and the wrappers', () => {
+    const readme = read('README.md');
+    for (const text of [
+      '플러그인', 'plugins:', "editor.on('update'", 'messages: ko', 'Alt+F10', '--levit-primary',
+      '@yonailab/levit-react', '@yonailab/levit-vue',
+    ]) {
+      expect(readme).toContain(text);
+    }
+  });
+
+  it('llms.txt documents the plugin API, events, messages, accessibility, theming and wrappers', () => {
+    const llms = read('llms.txt');
+    for (const text of [
+      'LevitPlugin', 'atom', 'render', 'toHTML', 'parseHTML', 'parseMarkdown', 'keymap', 'inputRules',
+      'slashItems', 'setup', 'editor.commands', "exec('", "editor.on('update'", 'selectionUpdate',
+      'messages', 'ko', 'isActive', 'getHTML', 'getMarkdown', 'Alt+F10', '--levit-',
+      '@yonailab/levit-react', '@yonailab/levit-vue', 'useLevitEditor',
+    ]) {
+      expect(llms).toContain(text);
+    }
+  });
+
+  it('CONTRIBUTING explains the workspace layout', () => {
+    const guide = read('CONTRIBUTING.md');
+    for (const text of ['packages/levit', 'packages/react', 'packages/vue']) expect(guide).toContain(text);
   });
 });
