@@ -72,7 +72,20 @@ jobs:
           name: tarballs
           path: tarballs
       # Publishing a tarball runs no package scripts. The "./" matters: npm
-      # reads "tarballs/x.tgz" as a GitHub repository (user/repo).
+      # reads "tarballs/x.tgz" as a GitHub repository (user/repo). Versions
+      # already on npm are skipped, so a release that stopped halfway can be
+      # run again.
       - env:
           DIST_TAG: ${{ needs.build.outputs.dist-tag }}
-        run: for tarball in ./tarballs/*.tgz; do npm publish "$tarball" --provenance --tag "$DIST_TAG"; done
+        run: |
+          shopt -s nullglob
+          tarballs=(./tarballs/*.tgz)
+          if [ ${#tarballs[@]} -eq 0 ]; then echo "No tarballs to publish"; exit 1; fi
+          for tarball in "${tarballs[@]}"; do
+            spec=$(tar -xOzf "$tarball" package/package.json | node -p 'const p = JSON.parse(require("fs").readFileSync(0, "utf8")); p.name + "@" + p.version')
+            if npm view "$spec" version > /dev/null 2>&1; then
+              echo "$spec is already on npm, skipping"
+              continue
+            fi
+            npm publish "$tarball" --provenance --tag "$DIST_TAG"
+          done

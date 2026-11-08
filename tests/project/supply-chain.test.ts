@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { resolve } from 'node:path';
 
 const root = resolve(__dirname, '../..');
@@ -98,8 +101,8 @@ describe('release workflow (npm Trusted Publishing)', () => {
     expect(publish).toContain('id-token: write');
     expect(publish).toMatch(/needs: build/);
     expect(publish).toContain('actions/download-artifact@');
-    // "./": npm reads "tarballs/x.tgz" as a GitHub repository (user/repo).
-    expect(publish).toMatch(/for tarball in \.\/\S+\/\*\.tgz; do npm publish "\$tarball" --provenance --tag "\$DIST_TAG"; done/);
+    expect(publish).toMatch(/path: tarballs\n/);
+    expect(publish).toContain('npm publish "$tarball" --provenance --tag "$DIST_TAG"');
     expect(publish).toContain('DIST_TAG: ${{ needs.build.outputs.dist-tag }}');
     expect(publish).not.toMatch(/npm (ci|install|run|test)|actions\/checkout/);
   });
@@ -155,5 +158,64 @@ describe('security guidance for users', () => {
     for (const text of ['## 11. Security', 'server', 'Content-Security-Policy', 'trusted']) {
       expect(llms).toContain(text);
     }
+  });
+});
+
+describe('release publish step (run with a fake npm)', () => {
+  /** The shell script of the publish job's last step. */
+  function publishScript(): string {
+    const text = workflow('release.yml');
+    const run = text.slice(text.lastIndexOf('run: |') + 'run: |'.length);
+    return run.split('\n').filter((l) => l.trim()).map((l) => l.replace(/^ {10}/, '')).join('\n');
+  }
+
+  /** Runs the step in a temp folder. `published` lists name@version already on npm. */
+  function runPublish(packages: string[], published: string[]) {
+    const dir = mkdtempSync(join(tmpdir(), 'levit-publish-'));
+    mkdirSync(join(dir, 'tarballs'));
+    for (const spec of packages) {
+      const [name, version] = [spec.slice(0, spec.lastIndexOf('@')), spec.slice(spec.lastIndexOf('@') + 1)];
+      const pkg = join(dir, 'src', 'package');
+      mkdirSync(pkg, { recursive: true });
+      writeFileSync(join(pkg, 'package.json'), JSON.stringify({ name, version }));
+      execFileSync('tar', ['-czf', join(dir, 'tarballs', `${name.replace('@', '').replace('/', '-')}-${version}.tgz`), '-C', join(dir, 'src'), 'package']);
+    }
+    // A fake npm: "view" succeeds only for published specs; every call is logged.
+    const bin = join(dir, 'bin');
+    mkdirSync(bin);
+    writeFileSync(
+      join(bin, 'npm'),
+      `#!/bin/sh\necho "$@" >> "${join(dir, 'calls')}"\nif [ "$1" = view ]; then case "$2" in ${published.map((p) => `"${p}"`).join('|') || '__none__'}) exit 0;; *) exit 1;; esac; fi\n`
+    );
+    chmodSync(join(bin, 'npm'), 0o755);
+    let failed = false;
+    try {
+      execFileSync('bash', ['-e', '-c', publishScript()], {
+        cwd: dir,
+        env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, DIST_TAG: 'latest' },
+        stdio: 'pipe',
+      });
+    } catch {
+      failed = true;
+    }
+    const calls = existsSync(join(dir, 'calls')) ? readFileSync(join(dir, 'calls'), 'utf8').trim().split('\n') : [];
+    return { failed, published: calls.filter((c) => c.startsWith('publish')) };
+  }
+
+  it('publishes every package as a local file ("./"), never as a repository name', () => {
+    const { failed, published } = runPublish(['@yonailab/levit@1.0.0', '@yonailab/levit-vue@1.0.0'], []);
+    expect(failed).toBe(false);
+    expect(published).toHaveLength(2);
+    for (const call of published) expect(call).toMatch(/^publish \.\/tarballs\/\S+\.tgz --provenance --tag latest$/);
+  });
+
+  it('skips versions already on npm, so a stopped release can be run again', () => {
+    const { failed, published } = runPublish(['@yonailab/levit@1.0.0', '@yonailab/levit-react@1.0.0'], ['@yonailab/levit@1.0.0']);
+    expect(failed).toBe(false);
+    expect(published).toEqual([expect.stringContaining('levit-react-1.0.0.tgz')]);
+  });
+
+  it('fails clearly when there is nothing to publish', () => {
+    expect(runPublish([], []).failed).toBe(true);
   });
 });
