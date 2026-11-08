@@ -46,3 +46,21 @@ describe('packages', () => {
     }
   });
 });
+
+describe('scripts/check-release-tag.mjs', () => {
+  const check = (dir: string, tag: string) =>
+    execFileSync('node', [join(root, 'scripts/check-release-tag.mjs'), tag], { cwd: dir, stdio: 'pipe' }).toString();
+
+  it('passes when the tag is v + the version of every package', () => {
+    const dir = copyOfRepo();
+    execFileSync('node', [join(root, 'scripts/set-version.mjs'), '2.0.0'], { cwd: dir });
+    expect(check(dir, 'v2.0.0')).toContain('2.0.0');
+  });
+
+  it('fails when the tag and the versions differ', () => {
+    const dir = copyOfRepo();
+    execFileSync('node', [join(root, 'scripts/set-version.mjs'), '2.0.0'], { cwd: dir });
+    expect(() => check(dir, 'v2.0.1')).toThrow();
+    expect(() => check(dir, '2.0.0')).toThrow();
+  });
+});
