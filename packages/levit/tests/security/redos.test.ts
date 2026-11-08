@@ -22,6 +22,9 @@ const inputs: [string, string][] = [
   ['many unclosed bold markers', '**a'.repeat(N / 3)],
   ['many unclosed code spans', 'a`'.repeat(N / 2)],
   ['many unclosed highlights', '==a'.repeat(N / 3)],
+  ['nested brackets that all close with "]("', '['.repeat(N / 3) + 'a' + ']('.repeat(N / 3)],
+  ['a list line with many spaces and a line separator', '- ' + ' '.repeat(N) + '\u2028x\u2028y'],
+  ['many unclosed link titles', '[a](x "'.repeat(N / 7)],
 ];
 
 describe('Markdown parsing time', () => {
@@ -29,5 +32,12 @@ describe('Markdown parsing time', () => {
     const start = performance.now();
     markdownToDocument(input);
     expect(performance.now() - start).toBeLessThan(1000);
+  });
+});
+
+describe('very long lines', () => {
+  it('a 400,000 character line full of marks does not crash', () => {
+    expect(() => markdownToDocument('`a`b'.repeat(100_000))).not.toThrow();
+    expect(() => markdownToDocument('*a*b'.repeat(100_000))).not.toThrow();
   });
 });

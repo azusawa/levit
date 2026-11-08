@@ -96,3 +96,38 @@ describe('review fixes: Markdown details', () => {
     ]);
   });
 });
+
+describe('review fixes: links and marks', () => {
+  const nodes = (md: string) => markdownToDocument(md).blocks[0].content.map((n) => [n.text, (n.marks ?? []).map((m) => m.type === 'link' ? `link:${m.attrs?.href}` : m.type)]);
+  const roundTrip = (content: ReturnType<typeof createTextNode>[]) =>
+    markdownToDocument(documentToMarkdown(createDocument([createBlock('paragraph', {}, content)]))).blocks[0].content;
+  const link = (href: string) => ({ type: 'link', attrs: { href } });
+
+  it('reads common link forms: a title, brackets in the URL, a URL with spaces', () => {
+    expect(nodes('[a](https://x "title")')).toEqual([['a', ['link:https://x']]]);
+    expect(nodes("[a](https://x 'title')")).toEqual([['a', ['link:https://x']]]);
+    expect(nodes('[a](https://x.test/?a[]=1)')).toEqual([['a', ['link:https://x.test/?a[]=1']]]);
+    expect(nodes('[a](my file.pdf)')).toEqual([['a', ['link:my file.pdf']]]);
+  });
+
+  it('keeps hrefs with <, > or ) through a round trip', () => {
+    for (const href of ['https://x.test/?q=a>b', 'https://x.test/?q=a<b', 'https://e.org/F_(b)', 'https://x.test/a b)c']) {
+      expect(roundTrip([createTextNode('a', [link(href)])])[0].marks, href).toEqual([link(href)]);
+    }
+  });
+
+  it('keeps a link that follows text ending in a backslash', () => {
+    const back = roundTrip([createTextNode('C:\\'), createTextNode('a', [link('https://x.test')])]);
+    expect(back.map((n) => [n.text, n.marks?.length ?? 0])).toEqual([['C:\\', 0], ['a', 1]]);
+  });
+
+  it('keeps marks inside link text', () => {
+    const back = roundTrip([createTextNode('a', [{ type: 'code' }, link('https://x.test')])]);
+    expect(back[0].text).toBe('a');
+    expect(back[0].marks?.map((m) => m.type).sort()).toEqual(['code', 'link']);
+  });
+
+  it('tries a single * where an unclosed ** starts, like before', () => {
+    expect(nodes('**a* b*')).toEqual([['a', []], [' b', ['italic']]]);
+  });
+});

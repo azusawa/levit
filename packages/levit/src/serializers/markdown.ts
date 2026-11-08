@@ -36,17 +36,16 @@ export function documentToMarkdown(doc: DocumentData, options: SerializerOptions
           else if (m.type === 'highlight') t = `==${t}==`;
           else if (m.type === 'link') {
             const href = sanitizeHref(m.attrs?.href);
-            // Brackets in link text are escaped, and a URL with spaces,
-            // brackets or parentheses goes in <...>, so the link reads back whole.
-            if (href) {
-              const url = /[\s()[\]<>]/.test(href) ? `<${href}>` : href;
-              t = `[${t.replace(/[[\]\\]/g, '\\$&')}](${url})`;
-            }
+            if (href) t = `[${escapeLabel(t)}](${formatDestination(href)})`;
           } else {
             const spec = schema.marks.get(m.type);
             if (spec?.toMarkdown) t = spec.toMarkdown(t, m);
           }
         }
+      }
+      // Backslashes right before a link would escape its "[": double them.
+      if (t.startsWith('[') && node.marks?.some((m) => m.type === 'link')) {
+        blockText += '\\'.repeat(trailingBackslashes(blockText));
       }
       blockText += t;
     }
@@ -73,8 +72,7 @@ export function documentToMarkdown(doc: DocumentData, options: SerializerOptions
       case 'image': {
         const src = sanitizeImageSrc(block.attrs?.src);
         if (!src) continue;
-        const alt = String(block.attrs?.alt ?? '').replace(/[[\]\\]/g, '\\$&');
-        line = `![${alt}](${/[\s()<>]/.test(src) ? `<${src}>` : src})`;
+        line = `![${escapeLabel(String(block.attrs?.alt ?? ''))}](${formatDestination(src)})`;
         break;
       }
       case 'bullet_list_item':
@@ -129,9 +127,18 @@ function parseInlineMarkdown(text: string): InlineNode[] {
   const nodes: InlineNode[] = [];
   text.split('\n').forEach((line, i) => {
     if (i > 0) nodes.push(createTextNode('\n'));
-    nodes.push(...parseInlineLine(line));
+    // A loop, not push(...nodes): a long line can give more nodes than a
+    // function call may take as arguments.
+    for (const node of parseInlineLine(line)) nodes.push(node);
   });
   return normalizeInlineNodes(nodes);
+}
+
+/** Turns Markdown hard breaks ("\\" or two spaces before a newline) into "\n". */
+function readHardBreaks(text: string): string {
+  // (?<! ) starts a run of spaces only at its first space, so a long run
+  // without a newline after it is not rescanned from every space.
+  return text.replace(/(?:\\|(?<! ) {2,})\r?\n/g, '\n').replace(/\r\n/g, '\n');
 }
 
 /** Simple marks: [opening and closing text, mark type, at least one character inside]. */
@@ -143,58 +150,90 @@ const DELIMITED: [string, string, boolean][] = [
   ['==', 'highlight', true],
 ];
 
+/** Escapes link text and image alt text: brackets and backslashes. */
+const escapeLabel = (text: string) => text.replace(/[[\]\\]/g, '\\$&');
+const unescapeLabel = (text: string) => text.replace(/\\([[\]\\])/g, '$1');
+
 /**
- * Reads one line in a single pass, without regular expressions: crafted
- * input made the earlier pattern-based parser take seconds. Searches for a
- * closing marker remember where they failed, and brackets are matched once
- * up front, so the work stays linear in the length of the line.
+ * A link or image destination. URLs with whitespace or parentheses (or that
+ * start with "<") go in <...>, where < and > are percent-encoded.
  */
-function parseInlineLine(line: string): InlineNode[] {
-  const nodes: InlineNode[] = [];
-  // Searching for `token` from any position at or after this one finds nothing.
-  const notFoundFrom = new Map<string, number>();
-  const find = (token: string, from: number): number => {
-    if (from >= (notFoundFrom.get(token) ?? Infinity)) return -1;
+function formatDestination(url: string): string {
+  if (!/[\s()]/.test(url) && !url.startsWith('<')) return url;
+  return `<${url.replace(/</g, '%3C').replace(/>/g, '%3E')}>`;
+}
+
+/** Number of backslashes at the end of a string. */
+function trailingBackslashes(text: string): number {
+  let n = 0;
+  while (n < text.length && text[text.length - 1 - n] === '\\') n++;
+  return n;
+}
+
+/**
+ * indexOf that remembers its last answer per token, so searches that start
+ * inside a range already searched cost nothing. This keeps a line with many
+ * unclosed markers linear instead of rescanning it from each one.
+ */
+function makeFinder(line: string) {
+  const last = new Map<string, { from: number; at: number }>();
+  return (token: string, from: number): number => {
+    const known = last.get(token);
+    if (known && from >= known.from && (known.at === -1 || from <= known.at)) return known.at;
     const at = line.indexOf(token, from);
-    if (at === -1) notFoundFrom.set(token, from);
+    last.set(token, { from, at });
     return at;
   };
-  const closingBracket = matchBrackets(line);
+}
 
+/**
+ * Reads one line in a single pass, without regular expressions: crafted
+ * input made the earlier pattern-based parser take seconds. Link text is read
+ * again with links turned off (links do not nest), so every character is read
+ * at most twice.
+ */
+function parseInlineLine(line: string, allowLinks = true): InlineNode[] {
+  const nodes: InlineNode[] = [];
+  const find = makeFinder(line);
+  const closingBracket = allowLinks ? matchBrackets(line) : new Map<number, number>();
   let plainStart = 0;
   let i = 0;
-  const emit = (end: number, node: InlineNode) => {
-    if (i > plainStart) nodes.push(createTextNode(line.slice(plainStart, i)));
-    nodes.push(node);
-    i = end;
-    plainStart = end;
+  const pushPlain = (end: number, beforeLink = false) => {
+    let text = line.slice(plainStart, end);
+    // The serializer doubles backslashes right before a link (see export).
+    if (beforeLink) text = text.slice(0, text.length - trailingBackslashes(text) / 2);
+    if (text) nodes.push(createTextNode(text));
   };
 
-  while (i < line.length) {
-    const delimited = DELIMITED.find(([marker]) => line.startsWith(marker, i));
-    if (delimited) {
-      const [marker, type, needsText] = delimited;
+  scan: while (i < line.length) {
+    for (const [marker, type, needsText] of DELIMITED) {
+      if (!line.startsWith(marker, i)) continue;
       const close = find(marker, i + marker.length + (needsText ? 1 : 0));
-      if (close !== -1) {
-        emit(close + marker.length, createTextNode(line.slice(i + marker.length, close), [{ type }]));
-        continue;
-      }
+      if (close === -1) continue;
+      pushPlain(i);
+      nodes.push(createTextNode(line.slice(i + marker.length, close), [{ type }]));
+      i = plainStart = close + marker.length;
+      continue scan;
     }
-    if (line[i] === '[') {
-      const link = readLink(line, i, closingBracket);
+    if (line[i] === '[' && allowLinks) {
+      const link = readLink(line, i, closingBracket, find);
       if (link) {
+        pushPlain(i, true);
         const href = sanitizeHref(link.href);
-        emit(link.end, createTextNode(link.text, href ? [{ type: 'link', attrs: { href } }] : []));
+        for (const node of parseInlineLine(link.text, false)) {
+          nodes.push(href ? { text: node.text, marks: [...(node.marks ?? []), { type: 'link', attrs: { href } }] } : node);
+        }
+        i = plainStart = link.end;
         continue;
       }
     }
     i += 1;
   }
-  if (plainStart < line.length) nodes.push(createTextNode(line.slice(plainStart)));
+  pushPlain(line.length);
   return nodes;
 }
 
-/** For each "[", the index of its matching "]". Backslash escapes a bracket. */
+/** For each "[", the index of its matching "]". Backslash escapes the next character. */
 function matchBrackets(line: string): Map<number, number> {
   const pairs = new Map<number, number>();
   const open: number[] = [];
@@ -208,36 +247,63 @@ function matchBrackets(line: string): Map<number, number> {
 }
 
 /**
- * Reads [text](url) or [text](<url>) starting at a "[". The URL scan stops at
- * brackets, so scans from different links never cover the same characters.
+ * Reads [text](url), [text](url "title") or [text](<url>) at a "[". The
+ * destination runs to the first ")" (or ">)" in the <...> form); searches go
+ * through `find`, so they never rescan the line.
  */
 function readLink(
   line: string,
   start: number,
-  closingBracket: Map<number, number>
+  closingBracket: Map<number, number>,
+  find: (token: string, from: number) => number
 ): { text: string; href: string; end: number } | null {
   const close = closingBracket.get(start);
   if (close === undefined || line[close + 1] !== '(') return null;
-  const text = line.slice(start + 1, close).replace(/\\([[\]\\])/g, '$1');
+  const text = () => unescapeLabel(line.slice(start + 1, close));
+  const from = close + 2;
 
-  let k = close + 2;
-  if (line[k] === '<') {
-    // <url>: may hold spaces and brackets, ends at ">)".
-    k += 1;
-    while (k < line.length && line[k] !== '>' && line[k] !== '<') k++;
-    if (line[k] !== '>' || line[k + 1] !== ')') return null;
-    return { text, href: line.slice(close + 3, k), end: k + 2 };
+  if (line[from] === '<') {
+    const end = find('>', from + 1);
+    if (end === -1 || line[end + 1] !== ')') return null;
+    return { text: text(), href: line.slice(from + 1, end), end: end + 2 };
   }
-  while (k < line.length && !/[)\s[\]<]/.test(line[k])) k++;
-  if (line[k] !== ')') return null;
-  return { text, href: line.slice(close + 2, k), end: k + 1 };
+  const end = find(')', from);
+  if (end === -1) return null;
+  const destination = line.slice(from, end).trim();
+  // A title after the URL ("title" or 'title') is not part of the href.
+  const titled = /^(\S+)\s+(?:"[^"]*"|'[^']*')$/.exec(destination);
+  return { text: text(), href: titled ? titled[1] : destination, end: end + 1 };
 }
 
-/** Turns Markdown hard breaks ("\\" or two spaces before a newline) into "\n". */
-function readHardBreaks(text: string): string {
-  // (?<! ) starts a run of spaces only at its first space, so a long run
-  // without a newline after it is not rescanned from every space.
-  return text.replace(/(?:\\|(?<! ) {2,})\r?\n/g, '\n').replace(/\r\n/g, '\n');
+const isSpace = (c: string | undefined) => c !== undefined && c.trim() === '';
+
+/**
+ * Reads a list line: indent, then "-", "*", "+" or "1.", then whitespace and
+ * the text. Done by hand: the regular expression it replaces backtracked on
+ * long runs of spaces.
+ */
+function readListLine(line: string): { indent: string; bullet?: string; text: string } | null {
+  let k = 0;
+  while (isSpace(line[k])) k++;
+  const indent = line.slice(0, k);
+  let bullet: string | undefined;
+  if (line[k] === '-' || line[k] === '*' || line[k] === '+') {
+    bullet = line[k];
+    k += 1;
+  } else {
+    const digits = k;
+    while (line[k] >= '0' && line[k] <= '9') k++;
+    if (k === digits || line[k] !== '.') return null;
+    k += 1;
+  }
+  if (!isSpace(line[k])) return null;
+  return { indent, bullet, text: line.slice(k).trimStart() };
+}
+
+/** "[ ] text" or "[x] text" at the start of a list item's text. */
+function readTaskBox(text: string): { checked: boolean; text: string } | null {
+  if (text[0] !== '[' || text[2] !== ']' || !' xX'.includes(text[1]) || !isSpace(text[3])) return null;
+  return { checked: text[1] !== ' ', text: text.slice(3).trimStart() };
 }
 
 /**
@@ -291,7 +357,7 @@ export function markdownToDocument(markdown: string, options: SerializerOptions 
     const imageMatch = trimmed.match(/^!\[((?:\\.|[^\]\\])*)\]\((?:<([^>]*)>|(\S*))\)$/);
     const imageSrc = imageMatch && sanitizeImageSrc(imageMatch[2] ?? imageMatch[3]);
     if (imageMatch && imageSrc) {
-      const alt = imageMatch[1].replace(/\\(.)/g, '$1');
+      const alt = unescapeLabel(imageMatch[1]);
       blocks.push(createBlock('image', { src: imageSrc, alt }));
       continue;
     }
@@ -308,27 +374,26 @@ export function markdownToDocument(markdown: string, options: SerializerOptions 
 
     // List items: lines start with "-", "*", "+" or "1."; indented lines continue an item.
     const lines = raw.replace(/^\n+/, '').trimEnd().split(/\r?\n/);
-    const listLine = /^(\s*)(?:([-*+])|\d+\.)\s+(.*)$/;
-    const continues = (l: string) => /^\s+\S/.test(l) && !listLine.test(l);
-    if (listLine.test(lines[0]) && lines.every((l) => listLine.test(l) || continues(l))) {
+    const continues = (l: string) => /^\s+\S/.test(l) && !readListLine(l);
+    if (readListLine(lines[0]) && lines.every((l) => readListLine(l) || continues(l))) {
       const items: { type: string; text: string; indent: number; checked?: boolean }[] = [];
       // Columns of the markers of the open parent items. An item indented past
       // its parent's marker is nested under it.
       const parents: number[] = [];
       for (const l of lines) {
-        const m = l.match(listLine);
+        const m = readListLine(l);
         if (!m) {
           items[items.length - 1].text += `\n${l.trim()}`;
           continue;
         }
-        const column = m[1].replace(/\t/g, '    ').length;
+        const column = m.indent.replace(/\t/g, '    ').length;
         while (parents.length > 0 && column <= parents[parents.length - 1]) parents.pop();
-        const task = m[2] ? /^\[([ xX])\]\s+(.*)$/.exec(m[3]) : null;
+        const task = m.bullet ? readTaskBox(m.text) : null;
         items.push({
-          type: task ? 'task_list_item' : m[2] ? 'bullet_list_item' : 'ordered_list_item',
-          text: task ? task[2] : m[3],
+          type: task ? 'task_list_item' : m.bullet ? 'bullet_list_item' : 'ordered_list_item',
+          text: task ? task.text : m.text,
           indent: parents.length,
-          checked: task ? task[1] !== ' ' : undefined,
+          checked: task ? task.checked : undefined,
         });
         parents.push(column);
       }
