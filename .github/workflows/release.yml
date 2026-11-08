@@ -71,7 +71,8 @@ jobs:
         with:
           name: tarballs
           path: tarballs
-      # Publishing a tarball runs no package scripts.
+      # Publishing a tarball runs no package scripts. The "./" matters: npm
+      # reads "tarballs/x.tgz" as a GitHub repository (user/repo).
       - env:
           DIST_TAG: ${{ needs.build.outputs.dist-tag }}
-        run: for tarball in tarballs/*.tgz; do npm publish "$tarball" --provenance --tag "$DIST_TAG"; done
+        run: for tarball in ./tarballs/*.tgz; do npm publish "$tarball" --provenance --tag "$DIST_TAG"; done

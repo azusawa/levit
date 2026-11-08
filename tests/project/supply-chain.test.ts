@@ -98,7 +98,8 @@ describe('release workflow (npm Trusted Publishing)', () => {
     expect(publish).toContain('id-token: write');
     expect(publish).toMatch(/needs: build/);
     expect(publish).toContain('actions/download-artifact@');
-    expect(publish).toMatch(/for tarball in \S+\/\*\.tgz; do npm publish "\$tarball" --provenance --tag "\$DIST_TAG"; done/);
+    // "./": npm reads "tarballs/x.tgz" as a GitHub repository (user/repo).
+    expect(publish).toMatch(/for tarball in \.\/\S+\/\*\.tgz; do npm publish "\$tarball" --provenance --tag "\$DIST_TAG"; done/);
     expect(publish).toContain('DIST_TAG: ${{ needs.build.outputs.dist-tag }}');
     expect(publish).not.toMatch(/npm (ci|install|run|test)|actions\/checkout/);
   });
