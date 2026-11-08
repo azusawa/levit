@@ -1,63 +1,19 @@
 {
-  "name": "@yonailab/levit",
-  "version": "0.3.0",
-  "description": "A modern, zero-dependency, AI-ready hybrid web editor designed for seamless embedding and extensibility.",
+  "name": "levit-monorepo",
+  "private": true,
+  "description": "Levit editor and its React and Vue wrappers",
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
-    },
-    "./levit.css": "./dist/levit.css",
-    "./style.css": "./dist/levit.css"
-  },
-  "sideEffects": [
-    "**/*.css",
-    "./dist/index.js"
+  "workspaces": [
+    "packages/levit"
   ],
-  "files": [
-    "dist",
-    "README.md",
-    "LICENSE",
-    "llms.txt"
-  ],
-  "engines": {
-    "node": ">=18"
-  },
   "scripts": {
     "dev": "vite",
-    "build": "vite build && tsc --emitDeclarationOnly && node scripts/strip-css-imports.mjs dist",
+    "build": "npm run build --workspaces",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "typecheck": "tsc --noEmit",
-    "check:package": "node scripts/check-package.mjs",
-    "prepublishOnly": "npm run typecheck && npm test && npm run build && npm run check:package"
-  },
-  "keywords": [
-    "editor",
-    "wysiwyg",
-    "rich-text",
-    "block-editor",
-    "web-component",
-    "zero-dependency",
-    "ai-ready",
-    "levit"
-  ],
-  "author": "yonailab",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/azusawa/levit.git"
-  },
-  "homepage": "https://github.com/azusawa/levit#readme",
-  "bugs": {
-    "url": "https://github.com/azusawa/levit/issues"
-  },
-  "license": "MIT",
-  "publishConfig": {
-    "access": "public"
+    "typecheck": "npm run typecheck --workspaces",
+    "check:package": "npm run check:package --workspaces --if-present"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.5",
@@ -67,5 +23,6 @@
     "typescript": "^5.8.0",
     "vite": "^6.2.0",
     "vitest": "^3.0.0"
-  }
+  },
+  "license": "MIT"
 }

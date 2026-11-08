@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <title>Levit E2E fixture</title>
   <link rel="icon" type="image/svg+xml" href="/logo.svg">
-  <link rel="stylesheet" href="/src/ui/theme.css">
+  <link rel="stylesheet" href="/packages/levit/src/ui/theme.css">
   <style>
     body { margin: 0; padding: 40px; background: var(--levit-bg); }
     #editor { max-width: 720px; }
@@ -13,7 +13,7 @@
 <body>
   <div id="editor"></div>
   <script type="module">
-    import { createLevitEditor, createBubbleMenu, createSlashMenu } from '/src/index.ts';
+    import { createLevitEditor, createBubbleMenu, createSlashMenu } from '/packages/levit/src/index.ts';
 
     const editor = createLevitEditor(document.getElementById('editor'), {
       placeholder: 'Type here',

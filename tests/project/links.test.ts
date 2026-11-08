@@ -5,9 +5,10 @@ import { resolve } from 'node:path';
 const root = resolve(__dirname, '../..');
 const read = (file: string) => readFileSync(resolve(root, file), 'utf8');
 const REPO = 'https://github.com/azusawa/levit';
+const corePackage = () => JSON.parse(read('packages/levit/package.json'));
 
 describe('project links', () => {
-  it.each(['index.html', 'README.md', 'llms.txt', 'package.json'])(
+  it.each(['index.html', 'README.md', 'llms.txt', 'packages/levit/package.json'])(
     '%s does not point at the old repository owner',
     (file) => {
       expect(read(file)).not.toMatch(/github(usercontent)?\.com\/yon\//);
@@ -19,18 +20,18 @@ describe('project links', () => {
   });
 
   it('package.json declares the repository', () => {
-    const pkg = JSON.parse(read('package.json'));
+    const pkg = corePackage();
     expect(pkg.repository?.url).toBe(`git+${REPO}.git`);
     expect(pkg.homepage).toBe(`${REPO}#readme`);
     expect(pkg.bugs?.url).toBe(`${REPO}/issues`);
   });
 
   it('package.json names the author', () => {
-    expect(JSON.parse(read('package.json')).author).toBe('yonailab');
+    expect(corePackage().author).toBe('yonailab');
   });
 
   it('package is published as the public scoped name @yonailab/levit', () => {
-    const pkg = JSON.parse(read('package.json'));
+    const pkg = corePackage();
     expect(pkg.name).toBe('@yonailab/levit');
     expect(pkg.publishConfig?.access).toBe('public');
   });
@@ -55,7 +56,7 @@ describe('project links', () => {
     expect(read('README.md')).toContain('[MIT License](LICENSE)');
   });
 
-  it.each(['LICENSE', 'src/index.ts'])('%s names yonailab as the copyright holder', (file) => {
+  it.each(['LICENSE', 'packages/levit/src/index.ts'])('%s names yonailab as the copyright holder', (file) => {
     expect(read(file)).toMatch(/Copyright \(c\) 2026 yonailab\b/);
     expect(read(file)).not.toContain('Levit Authors');
   });

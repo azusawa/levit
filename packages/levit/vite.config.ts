@@ -22,6 +22,7 @@ export default defineConfig({
     },
   },
   test: {
+    name: 'levit',
     environment: 'happy-dom',
     globals: true,
     exclude: ['e2e/**', 'node_modules/**'],

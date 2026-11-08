@@ -5,3 +5,7 @@ dist
 .playwright-mcp
 test-results
 playwright-report
+# Copied from the repository root when the package is packed.
+packages/levit/README.md
+packages/levit/LICENSE
+packages/levit/llms.txt

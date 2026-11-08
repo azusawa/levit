@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Levit - Modern Zero-Dependency Web Editor</title>
   <link rel="icon" type="image/svg+xml" href="./logo.svg">
-  <link rel="stylesheet" href="./src/ui/theme.css">
+  <link rel="stylesheet" href="./packages/levit/src/ui/theme.css">
   <style>
     * {
       box-sizing: border-box;
@@ -200,7 +200,7 @@
       streamAIResponse,
       documentToMarkdown,
       documentToHTML,
-    } from './src/index.ts';
+    } from './packages/levit/src/index.ts';
 
     const container = document.getElementById('editor-container');
     const statsBadge = document.getElementById('stats-badge');
