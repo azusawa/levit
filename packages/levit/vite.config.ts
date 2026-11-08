@@ -4,9 +4,13 @@ import { resolve } from 'path';
 export default defineConfig({
   build: {
     lib: {
-      entry: resolve(__dirname, 'src/index.ts'),
+      // Two entry points; code they share goes into a common chunk.
+      entry: {
+        index: resolve(__dirname, 'src/index.ts'),
+        ai: resolve(__dirname, 'src/ai/index.ts'),
+      },
       name: 'Levit',
-      fileName: () => 'index.js',
+      fileName: (_format, name) => `${name}.js`,
       formats: ['es'],
     },
     rollupOptions: {

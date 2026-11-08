@@ -29,6 +29,8 @@ export interface BlockSpec {
    * Markdown: return its text (read as Markdown) and attrs, or null.
    */
   parseMarkdown?: (raw: string) => { text?: string; attrs?: Record<string, any> } | null;
+  /** JSON Schema of the block's attrs, used by getDocumentSchema() (for AI output). */
+  attrsSchema?: Record<string, unknown>;
 }
 
 /** An inline mark added by a plugin. */
@@ -45,6 +47,8 @@ export interface MarkSpec {
   toMarkdown?: (text: string, mark: InlineMark) => string;
   /** Claims an element when reading HTML: return the mark's attrs, or null. */
   parseHTML?: (el: Element) => Record<string, any> | null;
+  /** JSON Schema of the mark's attrs, used by getDocumentSchema() (for AI output). */
+  attrsSchema?: Record<string, unknown>;
 }
 
 /** A command factory: takes arguments, returns a change to a transaction. */

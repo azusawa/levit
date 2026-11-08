@@ -10,6 +10,11 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./ai": {
+      "types": "./dist/ai/index.d.ts",
+      "default": "./dist/ai.js"
+    },
+    "./document.schema.json": "./schema/levit-document.schema.json",
     "./levit.css": "./dist/levit.css",
     "./style.css": "./dist/levit.css"
   },
@@ -19,6 +24,7 @@
   ],
   "files": [
     "dist",
+    "schema",
     "README.md",
     "LICENSE",
     "llms.txt"
@@ -32,7 +38,8 @@
     "typecheck": "tsc --noEmit",
     "check:package": "node scripts/check-package.mjs",
     "prepack": "node scripts/copy-docs.mjs",
-    "prepublishOnly": "npm run typecheck && npm test && npm run build && npm run check:package"
+    "prepublishOnly": "npm run typecheck && npm test && npm run build && npm run check:package",
+    "schema": "npm run build && node scripts/write-schema.mjs"
   },
   "keywords": [
     "editor",
