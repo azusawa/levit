@@ -15,6 +15,8 @@
   --levit-border: #e2e8f0;
   --levit-primary: #3b82f6;
   --levit-primary-hover: #2563eb;
+  --levit-on-primary: #ffffff;
+  --levit-danger: #ef4444;
   --levit-selection: rgba(59, 130, 246, 0.18);
   --levit-code-bg: #f1f5f9;
   --levit-code-text: #0f172a;
@@ -33,6 +35,8 @@
   --levit-border: #1e293b;
   --levit-primary: #3b82f6;
   --levit-primary-hover: #60a5fa;
+  --levit-on-primary: #ffffff;
+  --levit-danger: #f87171;
   --levit-selection: rgba(59, 130, 246, 0.35);
   --levit-code-bg: #1e293b;
   --levit-code-text: #e2e8f0;
@@ -51,6 +55,8 @@
     --levit-border: #1e293b;
     --levit-primary: #3b82f6;
     --levit-primary-hover: #60a5fa;
+    --levit-on-primary: #ffffff;
+    --levit-danger: #f87171;
     --levit-selection: rgba(59, 130, 246, 0.35);
     --levit-code-bg: #1e293b;
     --levit-code-text: #e2e8f0;
@@ -242,7 +248,7 @@ h3.levit-block-heading {
   top: 0.1em;
   width: 0.25em;
   height: 0.5em;
-  border: solid #fff;
+  border: solid var(--levit-on-primary);
   border-width: 0 2px 2px 0;
   transform: rotate(45deg);
 }
@@ -431,7 +437,7 @@ a:hover {
 }
 
 .levit-bubble-link-input[aria-invalid="true"] {
-  border-color: #ef4444;
+  border-color: var(--levit-danger);
 }
 
 /* Slash Command Menu */
