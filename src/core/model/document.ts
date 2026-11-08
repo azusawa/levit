@@ -1,4 +1,4 @@
-import { BlockNode, DocumentData, InlineMark, InlineNode } from './types.js';
+import { BlockNode, DocumentData, EditorSelection, InlineMark, InlineNode } from './types.js';
 
 let idCounter = 0;
 export function generateBlockId(prefix = 'b'): string {
@@ -150,4 +150,33 @@ export function sliceBlockContent(block: BlockNode, start: number, end: number):
   const [, fromStart] = splitBlockContent(block, start);
   const [middle] = splitBlockContent({ ...block, content: fromStart }, end - start);
   return middle;
+}
+
+/**
+ * Copies the blocks covered by a selection, cut to the selected text.
+ * Returns an empty array for a collapsed selection.
+ */
+export function sliceDocument(doc: DocumentData, selection: EditorSelection): BlockNode[] {
+  if (selection.isCollapsed) return [];
+  let { anchor: from, head: to } = selection;
+  let fromIdx = findBlockIndex(doc, from.blockId);
+  let toIdx = findBlockIndex(doc, to.blockId);
+  if (fromIdx === -1 || toIdx === -1) return [];
+  if (fromIdx > toIdx || (fromIdx === toIdx && from.offset > to.offset)) {
+    [from, to, fromIdx, toIdx] = [to, from, toIdx, fromIdx];
+  }
+
+  const out: BlockNode[] = [];
+  for (let i = fromIdx; i <= toIdx; i++) {
+    const block = doc.blocks[i];
+    const start = i === fromIdx ? from.offset : 0;
+    const end = i === toIdx ? to.offset : getBlockText(block).length;
+    out.push({
+      id: block.id,
+      type: block.type,
+      attrs: { ...block.attrs },
+      content: sliceBlockContent(block, start, end),
+    });
+  }
+  return out;
 }

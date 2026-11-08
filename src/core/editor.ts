@@ -1,4 +1,4 @@
-import { DocumentData, EditorSelection, InlineMark } from './model/types.js';
+import { BlockNode, DocumentData, EditorSelection, InlineMark } from './model/types.js';
 import { EditorState } from './state/state.js';
 import { Transaction } from './state/transaction.js';
 import { DOMReconciler } from './view/reconciler.js';
@@ -31,8 +31,54 @@ export class ChainedCommands {
     return this;
   }
 
+  /** Inserts text as it is, without Markdown shortcuts (used for pasting). */
+  insertPlainText(text: string): this {
+    this.tr.insertText(text);
+    return this;
+  }
+
+  insertLineBreak(): this {
+    this.tr.insertLineBreak();
+    return this;
+  }
+
+  insertFragment(blocks: BlockNode[]): this {
+    this.tr.insertFragment(blocks);
+    return this;
+  }
+
+  deleteSelection(): this {
+    this.tr.deleteRange();
+    return this;
+  }
+
   deleteBackward(): this {
     this.tr.deleteBackward();
+    return this;
+  }
+
+  deleteForward(): this {
+    this.tr.deleteForward();
+    return this;
+  }
+
+  deleteWordBackward(): this {
+    this.tr.deleteWordBackward();
+    return this;
+  }
+
+  deleteWordForward(): this {
+    this.tr.deleteWordForward();
+    return this;
+  }
+
+  deleteLineBackward(): this {
+    this.tr.deleteLineBackward();
+    return this;
+  }
+
+  deleteLineForward(): this {
+    this.tr.deleteLineForward();
     return this;
   }
 
@@ -71,6 +117,10 @@ export class ChainedCommands {
 
   toggleUnderline(): this {
     return this.toggleMark({ type: 'underline' });
+  }
+
+  toggleStrike(): this {
+    return this.toggleMark({ type: 'strike' });
   }
 
   setHeading(level = 1): this {
@@ -138,6 +188,13 @@ export class LevitEditor {
       restoreDOMSelection(this.container, this.state.selection);
       this.options.onSelectionChange?.(this.state.selection);
     }
+  }
+
+  /** Rebuilds the DOM from the document model, undoing any outside change. */
+  repairDOM(): void {
+    this.reconciler.invalidate();
+    this.reconciler.render(this.state);
+    restoreDOMSelection(this.container, this.state.selection);
   }
 
   setSelectionQuietly(selection: EditorSelection): void {

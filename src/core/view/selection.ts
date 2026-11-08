@@ -1,4 +1,4 @@
-import { EditorSelection } from '../model/types.js';
+import { EditorPosition, EditorSelection } from '../model/types.js';
 
 /**
  * Finds the closest ancestor element that has data-block-id inside the editor container.
@@ -25,6 +25,50 @@ function getOffsetInBlock(blockEl: HTMLElement, targetNode: Node, targetOffset: 
   return before.toString().length;
 }
 
+/** Maps a DOM boundary point to an editor position, or null if it is outside the blocks. */
+export function domPointToPosition(
+  container: HTMLElement,
+  node: Node,
+  offset: number
+): EditorPosition | null {
+  if (!container.contains(node)) return null;
+  const block = findAncestorBlock(node, container);
+  if (!block) return null;
+  return { blockId: block.getAttribute('data-block-id')!, offset: getOffsetInBlock(block, node, offset) };
+}
+
+/** Maps a DOM range (e.g. a beforeinput target range) to an editor selection. */
+export function domRangeToEditorSelection(
+  container: HTMLElement,
+  range: { startContainer: Node; startOffset: number; endContainer: Node; endOffset: number }
+): EditorSelection | null {
+  const anchor = domPointToPosition(container, range.startContainer, range.startOffset);
+  const head = domPointToPosition(container, range.endContainer, range.endOffset);
+  if (!anchor || !head) return null;
+  return {
+    anchor,
+    head,
+    isCollapsed: anchor.blockId === head.blockId && anchor.offset === head.offset,
+  };
+}
+
+/** The editor position under a screen point, used for drops. */
+export function positionFromPoint(container: HTMLElement, x: number, y: number): EditorPosition | null {
+  const doc = document as Document & {
+    caretPositionFromPoint?: (x: number, y: number) => { offsetNode: Node; offset: number } | null;
+    caretRangeFromPoint?: (x: number, y: number) => Range | null;
+  };
+  if (doc.caretPositionFromPoint) {
+    const pos = doc.caretPositionFromPoint(x, y);
+    return pos ? domPointToPosition(container, pos.offsetNode, pos.offset) : null;
+  }
+  if (doc.caretRangeFromPoint) {
+    const range = doc.caretRangeFromPoint(x, y);
+    return range ? domPointToPosition(container, range.startContainer, range.startOffset) : null;
+  }
+  return null;
+}
+
 export function domSelectionToEditorSelection(container: HTMLElement): EditorSelection | null {
   const sel = window.getSelection();
   if (!sel || sel.rangeCount === 0) return null;
@@ -37,28 +81,13 @@ export function domSelectionToEditorSelection(container: HTMLElement): EditorSel
     sel.anchorNode === range.endContainer &&
     sel.anchorOffset === range.endOffset;
 
-  const anchorNode = isBackward ? range.endContainer : range.startContainer;
-  const anchorOffset = isBackward ? range.endOffset : range.startOffset;
-  const focusNode = isBackward ? range.startContainer : range.endContainer;
-  const focusOffset = isBackward ? range.startOffset : range.endOffset;
-
-  if (!anchorNode || !focusNode) return null;
-  if (!container.contains(anchorNode) || !container.contains(focusNode)) return null;
-
-  const anchorBlock = findAncestorBlock(anchorNode, container);
-  const focusBlock = findAncestorBlock(focusNode, container);
-
-  if (!anchorBlock || !focusBlock) return null;
-
-  const anchorBlockId = anchorBlock.getAttribute('data-block-id')!;
-  const focusBlockId = focusBlock.getAttribute('data-block-id')!;
-
-  const anchorCharOffset = getOffsetInBlock(anchorBlock, anchorNode, anchorOffset);
-  const focusCharOffset = getOffsetInBlock(focusBlock, focusNode, focusOffset);
+  const start = domPointToPosition(container, range.startContainer, range.startOffset);
+  const end = domPointToPosition(container, range.endContainer, range.endOffset);
+  if (!start || !end) return null;
 
   return {
-    anchor: { blockId: anchorBlockId, offset: anchorCharOffset },
-    head: { blockId: focusBlockId, offset: focusCharOffset },
+    anchor: isBackward ? end : start,
+    head: isBackward ? start : end,
     isCollapsed: sel.isCollapsed,
   };
 }
