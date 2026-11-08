@@ -11,7 +11,8 @@ describe('project links', () => {
   it.each(['index.html', 'README.md', 'llms.txt', 'packages/levit/package.json'])(
     '%s does not point at the old repository owner',
     (file) => {
-      expect(read(file)).not.toMatch(/github(usercontent)?\.com\/yon\//);
+      expect(read(file)).not.toContain('github.com/yon/');
+      expect(read(file)).not.toContain('githubusercontent.com/yon/');
     }
   );
 

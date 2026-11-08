@@ -122,7 +122,10 @@ function parseInlineMarkdown(text: string): InlineNode[] {
   const nodes: InlineNode[] = [];
   // Tokens: bold (**...**), italic (*...*), code (`...`), link ([text](url)),
   // strikethrough (~~...~~) and highlight (==...==).
-  const tokenRegex = /(\*\*(.*?)\*\*|\*(.*?)\*|`(.*?)`|\[(.*?)\]\((.*?)\)|~~(.+?)~~|==(.+?)==)/g;
+  // Link text and URLs cannot contain brackets or spaces, so a run of "["
+  // with no match fails at the next bracket instead of scanning the whole
+  // line again from every "[" (which made crafted text take seconds).
+  const tokenRegex = /(\*\*(.*?)\*\*|\*(.*?)\*|`(.*?)`|\[([^[\]\n]*)\]\(([^)\s]*)\)|~~(.+?)~~|==(.+?)==)/g;
   let lastIndex = 0;
   let match: RegExpExecArray | null;
 
@@ -163,6 +166,19 @@ function parseInlineMarkdown(text: string): InlineNode[] {
 /** Turns Markdown hard breaks ("\\" or two spaces before a newline) into "\n". */
 function readHardBreaks(text: string): string {
   return text.replace(/(?:\\| {2,})\r?\n/g, '\n').replace(/\r\n/g, '\n');
+}
+
+/**
+ * Reads a fenced code block (```lang ... ```). Done with string methods: the
+ * regular expression this replaces took minutes on a long first line.
+ */
+function readCodeFence(block: string): { language: string; text: string } | null {
+  if (block.length < 6 || !block.startsWith('```') || !block.endsWith('```')) return null;
+  const newline = block.indexOf('\n');
+  const infoEnd = newline === -1 ? block.length - 3 : newline;
+  const language = block.slice(3, infoEnd).trim().split(/[ \t]/)[0];
+  const text = newline === -1 ? '' : block.slice(newline + 1, -3).trim();
+  return { language, text };
 }
 
 export function markdownToDocument(markdown: string, options: SerializerOptions = {}): DocumentData {
@@ -206,15 +222,15 @@ export function markdownToDocument(markdown: string, options: SerializerOptions 
     }
 
     // Heading (# ... ######)
-    const headingMatch = trimmed.match(/^(#{1,6})\s+(.*)$/);
-    if (headingMatch) {
-      const level = headingMatch[1].length;
-      blocks.push(createBlock('heading', { level }, parseInlineMarkdown(headingMatch[2])));
+    const heading = /^#{1,6}(?=[ \t])/.exec(trimmed);
+    if (heading && !trimmed.includes('\n')) {
+      const level = heading[0].length;
+      blocks.push(createBlock('heading', { level }, parseInlineMarkdown(trimmed.slice(level).trim())));
       continue;
     }
 
     // List items: lines start with "-", "*", "+" or "1."; indented lines continue an item.
-    const lines = raw.replace(/^\n+|\s+$/g, '').split(/\r?\n/);
+    const lines = raw.replace(/^\n+/, '').trimEnd().split(/\r?\n/);
     const listLine = /^(\s*)(?:([-*+])|\d+\.)\s+(.*)$/;
     const continues = (l: string) => /^\s+\S/.test(l) && !listLine.test(l);
     if (listLine.test(lines[0]) && lines.every((l) => listLine.test(l) || continues(l))) {
@@ -255,10 +271,10 @@ export function markdownToDocument(markdown: string, options: SerializerOptions 
     }
 
     // Code block (``` ... ```)
-    const codeMatch = trimmed.match(/^```([^\s`]*)[^\n]*\n?([\s\S]*?)```$/);
-    if (codeMatch) {
-      const language = normalizeCodeLanguage(codeMatch[1]);
-      blocks.push(createBlock('code_block', language ? { language } : {}, [createTextNode(codeMatch[2].trim())]));
+    const code = readCodeFence(trimmed);
+    if (code) {
+      const language = normalizeCodeLanguage(code.language);
+      blocks.push(createBlock('code_block', language ? { language } : {}, [createTextNode(code.text)]));
       continue;
     }
 
