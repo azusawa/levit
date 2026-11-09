@@ -115,6 +115,12 @@ describe('repository security files', () => {
     expect(config).toContain('package-ecosystem: github-actions');
   });
 
+  it('Dependabot does not propose TypeScript major versions', () => {
+    // TypeScript 7 (the Go compiler) breaks the build tools; we move to it by hand.
+    const npm = read('.github/dependabot.yml').split('package-ecosystem: github-actions')[0];
+    expect(npm).toMatch(/ignore:\s*\n\s*- dependency-name: typescript\s*\n\s*update-types: \['version-update:semver-major'\]/);
+  });
+
   it('CodeQL scans the JavaScript and TypeScript code', () => {
     expect(workflow('codeql.yml')).toContain('javascript-typescript');
   });
