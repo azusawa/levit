@@ -96,6 +96,37 @@ export class Transaction {
     return copy;
   }
 
+  private meta = new Map<string, unknown>();
+
+  /**
+   * Attaches a value for listeners of the 'transaction' event, like where a
+   * change came from. `addToHistory: false` keeps the change out of undo.
+   */
+  setMeta(key: string, value: unknown): this {
+    this.meta.set(key, value);
+    return this;
+  }
+
+  getMeta(key: string): unknown {
+    return this.meta.get(key);
+  }
+
+  /**
+   * Replaces all blocks, for example with a document that changed elsewhere.
+   * Pass unchanged blocks as they are, so they are not redrawn. An empty list
+   * leaves one empty paragraph; a caret in a block that is gone moves to the
+   * start of the first block.
+   */
+  setBlocks(blocks: BlockNode[]): this {
+    this.doc.blocks = blocks.length > 0 ? blocks.slice() : [createBlock('paragraph')];
+    const ids = new Set(this.doc.blocks.map((b) => b.id));
+    if (!ids.has(this.selection.anchor.blockId) || !ids.has(this.selection.head.blockId)) {
+      this.setCaret(this.doc.blocks[0].id, 0);
+    }
+    this.docChanged = true;
+    return this;
+  }
+
   /** editBlock for an index that is known to exist. */
   private edit(index: number): BlockNode {
     return this.editBlock(index)!;

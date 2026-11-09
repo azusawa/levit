@@ -66,7 +66,7 @@ export class EditorState {
     let newHistory = this.history;
 
     // Documents are frozen, so history keeps them as they are, without copies.
-    if (tr.docChanged) {
+    if (tr.docChanged && tr.getMeta('addToHistory') !== false) {
       newHistory = this.history.push({
         doc: this.doc,
         selection: cloneSelection(this.selection),

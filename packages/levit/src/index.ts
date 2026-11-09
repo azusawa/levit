@@ -14,6 +14,7 @@ export {
   createLevitEditor,
   ChainedCommands,
   type EditorOptions,
+  type EditorHistory,
 } from './core/editor.js';
 export type { EditorEvents, EditorEventName, EditorEventHandler } from './core/events.js';
 

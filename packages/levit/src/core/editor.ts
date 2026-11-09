@@ -222,6 +222,13 @@ export class ChainedCommands {
   }
 }
 
+/** Another undo history for the editor (see setHistory). */
+export interface EditorHistory {
+  /** Returns false when there was nothing to undo. */
+  undo(): boolean;
+  redo(): boolean;
+}
+
 export class LevitEditor {
   public state: EditorState;
   public readonly container: HTMLElement;
@@ -358,12 +365,17 @@ export class LevitEditor {
   }
 
   dispatch(tr: Transaction): void {
+    // With another history (setHistory), the built-in one records nothing.
+    if (this.history) tr.setMeta('addToHistory', false);
     this.state = this.state.apply(tr);
 
     if (tr.docChanged) {
       this.render();
     }
-    if (tr.selectionChanged || tr.docChanged) {
+    // A change from elsewhere (meta remote) must not take the page selection
+    // or focus from where the user is, like a comment box.
+    const remote = tr.getMeta('remote') === true;
+    if ((tr.selectionChanged || tr.docChanged) && (!remote || this.hasFocus())) {
       restoreDOMSelection(this.container, this.state.selection);
     }
 
@@ -433,7 +445,30 @@ export class LevitEditor {
     this.notifySelection();
   }
 
+  /** True when the editor (or something in it) has the keyboard focus. */
+  hasFocus(): boolean {
+    const active = this.container.ownerDocument.activeElement;
+    return !!active && this.container.contains(active);
+  }
+
+  /** True while an IME is composing text (Korean, Japanese, Chinese input). */
+  get isComposing(): boolean {
+    return this.controller.composing;
+  }
+
+  private history: EditorHistory | null = null;
+
+  /**
+   * Sends undo and redo (also the keys) to another history, like the shared
+   * one of a collaboration binding that undoes only this user's changes. The
+   * built-in history then records nothing. null goes back to it.
+   */
+  setHistory(history: EditorHistory | null): void {
+    this.history = history;
+  }
+
   undo(): boolean {
+    if (this.history) return this.history.undo();
     if (!this.state.history.canUndo()) return false;
     this.state = this.state.undo();
     this.render();
@@ -444,6 +479,7 @@ export class LevitEditor {
   }
 
   redo(): boolean {
+    if (this.history) return this.history.redo();
     if (!this.state.history.canRedo()) return false;
     this.state = this.state.redo();
     this.render();
