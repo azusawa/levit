@@ -6,7 +6,7 @@ import { appendFileSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const tag = process.argv[2] ?? '';
-const packages = ['levit', 'react', 'vue'].map((name) =>
+const packages = ['levit', 'react', 'vue', 'yjs'].map((name) =>
   JSON.parse(readFileSync(join(process.cwd(), 'packages', name, 'package.json'), 'utf8'))
 );
 const list = packages.map((pkg) => `${pkg.name}@${pkg.version}`).join(', ');

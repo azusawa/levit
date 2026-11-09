@@ -1,0 +1,56 @@
+{
+  "name": "@yonailab/levit-yjs",
+  "version": "0.5.0",
+  "description": "Real-time collaboration for the Levit editor with Yjs: shared editing, cursors and undo.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "check:package": "node ../levit/scripts/check-package.mjs --wrapper",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build && npm run check:package"
+  },
+  "peerDependencies": {
+    "@yonailab/levit": "^0.5.0",
+    "yjs": "^13.6.0"
+  },
+  "keywords": [
+    "editor",
+    "wysiwyg",
+    "rich-text",
+    "levit",
+    "yjs",
+    "collaboration",
+    "crdt"
+  ],
+  "author": "yonailab",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/azusawa/levit.git",
+    "directory": "packages/yjs"
+  },
+  "homepage": "https://github.com/azusawa/levit/tree/main/packages/yjs#readme",
+  "bugs": {
+    "url": "https://github.com/azusawa/levit/issues"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "yjs": "13.6.33"
+  }
+}

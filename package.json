@@ -6,7 +6,8 @@
   "workspaces": [
     "packages/levit",
     "packages/react",
-    "packages/vue"
+    "packages/vue",
+    "packages/yjs"
   ],
   "scripts": {
     "dev": "vite",

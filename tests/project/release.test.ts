@@ -5,7 +5,9 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
 const root = resolve(__dirname, '../..');
-const PACKAGES = ['levit', 'react', 'vue'];
+const PACKAGES = ['levit', 'react', 'vue', 'yjs'];
+// Packages built on the core: they ask for the same core version.
+const ADDONS = ['react', 'vue', 'yjs'];
 
 /** A copy of the package manifests, so the test does not touch the real ones. */
 function copyOfRepo(): string {
@@ -25,7 +27,7 @@ describe('scripts/set-version.mjs', () => {
     const dir = copyOfRepo();
     execFileSync('node', [join(root, 'scripts/set-version.mjs'), '1.2.3'], { cwd: dir });
     for (const name of PACKAGES) expect(manifest(dir, name).version).toBe('1.2.3');
-    for (const name of ['react', 'vue']) {
+    for (const name of ADDONS) {
       expect(manifest(dir, name).peerDependencies['@yonailab/levit']).toBe('^1.2.3');
     }
   });
@@ -41,7 +43,7 @@ describe('packages', () => {
   it('all have the same version, and the wrappers ask for that core', () => {
     const versions = PACKAGES.map((name) => manifest(root, name).version);
     expect(new Set(versions).size).toBe(1);
-    for (const name of ['react', 'vue']) {
+    for (const name of ADDONS) {
       expect(manifest(root, name).peerDependencies['@yonailab/levit']).toBe(`^${versions[0]}`);
     }
   });

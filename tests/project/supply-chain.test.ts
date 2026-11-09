@@ -143,7 +143,7 @@ describe('dependency install scripts', () => {
 });
 
 describe('packages', () => {
-  it.each(['levit', 'react', 'vue'])('%s runs nothing when someone installs it', (name) => {
+  it.each(['levit', 'react', 'vue', 'yjs'])('%s runs nothing when someone installs it', (name) => {
     const pkg = JSON.parse(read(`packages/${name}/package.json`));
     for (const hook of ['preinstall', 'install', 'postinstall', 'prepare']) {
       expect(pkg.scripts?.[hook], hook).toBeUndefined();

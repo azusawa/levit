@@ -1,0 +1,12 @@
+{
+  // Builds against the core's published types (packages/levit/dist).
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": true,
+    "outDir": "dist",
+    "rootDir": "src",
+    "paths": {}
+  },
+  "include": ["src"]
+}

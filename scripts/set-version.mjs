@@ -1,5 +1,6 @@
-// Sets the same version on all packages and points the wrappers at that
-// core version. Run from the repository root: node scripts/set-version.mjs 0.4.0
+// Sets the same version on all packages and points the packages built on the
+// core (React, Vue, Yjs) at that core version.
+// Run from the repository root: node scripts/set-version.mjs 0.4.0
 // (npm version cannot do this: it skips git and peer ranges for workspaces.)
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -18,7 +19,7 @@ const update = (name, change) => {
 };
 
 update('levit', (pkg) => (pkg.version = version));
-for (const name of ['react', 'vue']) {
+for (const name of ['react', 'vue', 'yjs']) {
   update(name, (pkg) => {
     pkg.version = version;
     pkg.peerDependencies['@yonailab/levit'] = `^${version}`;
