@@ -187,6 +187,28 @@ describe('AI features (phase 4) are documented', () => {
 });
 
 describe('collaboration and long documents (phase 5) are documented', () => {
+  it('README covers collaboration, cursors and comments', () => {
+    const readme = read('README.md');
+    for (const text of ['@yonailab/levit-yjs', 'bindYjs', 'awareness', 'createRemoteCursors', 'commentsPlugin', 'getComments']) {
+      expect(readme, text).toContain(text);
+    }
+  });
+
+  it('llms.txt documents the collaboration API', () => {
+    const llms = read('llms.txt');
+    for (const text of [
+      '@yonailab/levit-yjs', 'bindYjs(', 'AwarenessLike', 'remoteCursors()', 'createRemoteCursors(', 'commentsPlugin(',
+      'getComments(', 'addComment', 'removeComment', 'selectComment', 'onSelect', 'setHistory(', "setMeta('addToHistory', false)",
+      'setBlocks(', 'isComposing',
+    ]) {
+      expect(llms, text).toContain(text);
+    }
+  });
+
+  it('CONTRIBUTING lists the Yjs package', () => {
+    expect(read('CONTRIBUTING.md')).toContain('packages/yjs');
+  });
+
   it('plugin docs say blocks are frozen and changed through tr.editBlock', () => {
     for (const file of ['README.md', 'llms.txt']) {
       const text = read(file);

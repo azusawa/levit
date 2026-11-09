@@ -25,6 +25,7 @@ npm 워크스페이스로 패키지 세 개를 함께 관리합니다. 버전은
 | `packages/levit` | `@yonailab/levit` | 에디터 본체 (런타임 의존성 0개) |
 | `packages/react` | `@yonailab/levit-react` | React 컴포넌트와 훅 |
 | `packages/vue` | `@yonailab/levit-vue` | Vue 3 컴포넌트와 컴포저블 |
+| `packages/yjs` | `@yonailab/levit-yjs` | Yjs 실시간 공동 편집 (`yjs`는 peer 의존성) |
 
 - 루트에는 데모(`index.html`), E2E 테스트(`e2e/`), 문서, 저장소 검사(`tests/project/`)가 있습니다.
 - `README.md`, `LICENSE`, `llms.txt`는 루트에서 관리하고, 배포할 때 `packages/levit`으로 복사됩니다.

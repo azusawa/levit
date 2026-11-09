@@ -52,7 +52,11 @@
    - 복사·잘라내기는 목록과 서식을 그대로 유지하고, 밖에서 끌어다 놓은 글은 놓은 위치에 들어갑니다.
    - 확장 프로그램이나 스크립트가 편집 영역을 직접 바꾸면 감지해서 되돌립니다.
    - Chrome 87, Edge 88, Firefox 78, Safari 14 이상에서 동작하며, Chrome, Firefox, Safari(WebKit)에서 자동 테스트로 확인합니다.
-6. **다국어와 접근성**
+6. **공동 편집과 댓글**
+   - `@yonailab/levit-yjs`로 여러 사람이 같은 문서를 실시간으로 고칩니다. 다른 사람의 커서와 이름이 보이고, 실행 취소는 내 변경만 되돌립니다.
+   - 글에 **댓글**을 달고(`commentsPlugin`), 댓글 내용은 앱이 원하는 곳에 저장합니다.
+   - 수만 개 블록의 긴 문서에서도 바뀐 블록만 다시 그려, 입력 속도가 같은 내용의 일반 편집 영역(contenteditable)과 비슷합니다.
+7. **다국어와 접근성**
    - 메뉴와 안내 문구는 영어가 기본이고, `messages: ko`로 한국어를 쓰거나 원하는 문구로 바꿉니다.
    - 스크린 리더가 편집 영역, 슬래시 메뉴, 서식 도구 모음을 읽어 줍니다. `Alt+F10`으로 도구 모음에 들어가 키보드만으로 서식을 바꿀 수 있습니다.
 
@@ -227,6 +231,57 @@ else console.warn(result.errors); // [{ path: '$.blocks[2].attrs.level', message
 
 ---
 
+## 👥 공동 편집과 댓글
+
+### 실시간 공동 편집 (Yjs)
+
+```bash
+npm install @yonailab/levit @yonailab/levit-yjs yjs
+```
+
+```ts
+import * as Y from 'yjs';
+import { WebsocketProvider } from 'y-websocket';
+import { bindYjs } from '@yonailab/levit-yjs';
+
+const ydoc = new Y.Doc();
+const provider = new WebsocketProvider('wss://example.com', 'room-1', ydoc);
+provider.once('sync', () => {
+  bindYjs(editor, ydoc.getArray('blocks'), {
+    awareness: provider.awareness,           // 다른 사람의 커서 보이기
+    user: { name: '민지', color: '#e11d48' },
+  });
+});
+```
+
+- 동시에 같은 문단을 고쳐도 모두 같은 결과로 합쳐집니다. 다른 사람이 앞에 글을 넣어도 내 커서는 같은 글자 옆에 남습니다.
+- 실행 취소는 내가 한 변경만 되돌립니다. 한글 조합 중에 들어온 변경은 조합이 끝난 뒤 반영합니다.
+- 코어는 Yjs에 의존하지 않습니다. 다른 방법으로 위치를 주고받는다면 `createRemoteCursors(editor)`로 커서만 그릴 수 있습니다.
+- 자세한 내용은 [`@yonailab/levit-yjs` README](packages/yjs/README.md)를 보세요.
+
+### 댓글
+
+```ts
+import { commentsPlugin, getComments } from '@yonailab/levit';
+
+const editor = createLevitEditor(el, {
+  plugins: [commentsPlugin({
+    onAdd: ({ id, text }) => threads.create(id, text),   // 댓글 내용은 앱이 저장
+    onSelect: (ids) => sidebar.highlight(ids),            // 커서가 들어간 댓글
+  })],
+});
+
+editor.commands.addComment();          // 선택한 글에 댓글 (버블 메뉴의 💬 버튼과 같음)
+editor.commands.removeComment(id);
+editor.commands.selectComment(id);     // 사이드바에서 누른 댓글의 글 선택
+getComments(editor);                   // [{ id, text, from, to }] 문서 순서대로
+```
+
+- 에디터는 댓글이 달린 위치만 기억하고, 내용·작성자·답글은 앱이 id로 관리합니다. Yjs를 쓰면 위치도 함께 공유됩니다.
+- 댓글이 겹쳐도 됩니다. 댓글 끝에 이어 쓴 글은 댓글에 들어가지 않고, HTML·Markdown으로 내보낼 때는 빠집니다.
+
+---
+
 ## 🔄 포맷 변환 (Serializers)
 
 ```ts
@@ -365,6 +420,8 @@ Levit은 화면에 그리고, 붙여넣기를 읽고, HTML로 내보내는 모�
 1. **서버에서 다시 검사하세요.** 브라우저의 검사는 우회할 수 있습니다. 공격자는 에디터를 거치지 않고 문서 JSON이나 HTML을 서버로 바로 보낼 수 있으므로, 저장하거나 다른 사람에게 보여 줄 때 서버에서 `documentFromJSON` → `documentToHTML`로 다시 만들거나 HTML 정화 도구를 거치세요.
 2. **Content-Security-Policy를 쓰세요.** 에디터는 인라인 스크립트나 `eval`이 필요 없습니다. 예: `Content-Security-Policy: script-src 'self'; object-src 'none'; base-uri 'none'`
 3. **플러그인과 옵션은 믿을 수 있는 코드만 넣으세요.** 플러그인, `highlightCode`, `uploadImage`는 앱의 코드로 실행됩니다. 플러그인의 `toHTML`, `render`, `attributes`에 문서 데이터(블록·서식 attrs)를 넣을 때는 직접 이스케이프하고, `style`, `srcdoc`, `srcset`에는 넣지 마세요.
+
+공동 편집에서는 다른 사람이 보낸 문서와 이름도 남이 쓴 데이터입니다. 이름은 글자로만 보이고 커서 색은 CSS 색만 받지만, 누가 어떤 문서에 들어올 수 있는지는 Yjs 서버에서 정하고, 저장할 때는 위의 1번처럼 서버에서 검사하세요.
 
 Trusted Publishing으로 바꾼 뒤 배포하는 버전에는 GitHub Actions에서 빌드됐다는 provenance 서명이 붙습니다(`npm audit signatures`로 확인).
 취약점은 [SECURITY.md](SECURITY.md)의 방법으로 비공개 신고해 주세요.

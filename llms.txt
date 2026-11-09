@@ -372,7 +372,66 @@ Both add the bubble and slash menus unless turned off, and a value that comes
 back from onChange / v-model does not reset the caret. The React package is
 marked 'use client'.
 
-## 11. Security
+## 11. Collaboration (Yjs) and comments
+```bash
+npm install @yonailab/levit @yonailab/levit-yjs yjs   # yjs is a peer; the core has no dependencies
+```
+```ts
+import * as Y from 'yjs';
+import { bindYjs, type AwarenessLike } from '@yonailab/levit-yjs';
+
+// Bind after the provider has loaded the shared doc: an empty array gets the
+// editor's document, otherwise the editor shows the shared one.
+const binding = bindYjs(editor, ydoc.getArray('blocks'), {
+  awareness: provider.awareness,                 // optional: shares carets (AwarenessLike)
+  user: { name: 'Mina', color: '#e11d48' },      // how others see this user
+  captureTimeout: 500,                           // undo groups changes within this time
+});
+binding.remoteCursors();       // [{ id, name, color, anchor, head }] of the others
+binding.undoManager;           // Y.UndoManager: undo/redo (and the keys) undo only this user's changes
+binding.destroy();             // stop syncing; undo goes back to the editor's history
+```
+Shared structure: Y.Array of Y.Map blocks { id, type, attrs (object), text (Y.Text) };
+marks are Y.Text formatting ({ bold: true }, { link: { href } }, { comment: { ids } }).
+Changes from others keep the caret on the same character (Yjs relative
+positions) and wait while an IME composes text.
+
+Without Yjs, draw carets you share some other way:
+```ts
+const cursors = createRemoteCursors(editor);   // layer after the editor, aria-hidden
+cursors.set([{ id: 'u1', name: 'Mina', color: '#e11d48', anchor: pos, head: pos }]);
+cursors.destroy();                             // also removed with the editor
+```
+Names are shown as text; colors that are not plain CSS colors become gray.
+
+Core hooks for other bindings:
+```ts
+tr.setMeta('addToHistory', false);   // keep a change out of undo
+tr.setMeta('remote', true);          // a change from elsewhere: does not take focus/selection when unfocused
+tr.getMeta(key);                     // read meta in editor.on('transaction', ...)
+tr.setBlocks(blocks);                // replace all blocks; pass unchanged ones as they are
+editor.setHistory({ undo: () => boolean, redo: () => boolean });   // or null for the built-in history
+editor.isComposing;                  // true during IME composition: wait with remote changes
+editor.hasFocus();
+```
+
+Comments: the editor keeps where they are, the app keeps the threads by id.
+```ts
+import { commentsPlugin, getComments } from '@yonailab/levit';
+createLevitEditor(el, { plugins: [commentsPlugin({
+  onAdd: ({ id, text }, editor) => {},     // a comment was added: store its thread
+  onSelect: (ids, editor) => {},           // comments at the caret ([] when none); they are highlighted
+  createId: () => crypto.randomUUID(),     // optional; ids must match /^[\w-]{1,64}$/
+})] });
+editor.commands.addComment();              // on the selection (also the 💬 bubble button)
+editor.commands.removeComment(id);
+editor.commands.selectComment(id);         // select the comment's text
+getComments(editor);                       // [{ id, text, from, to }] in document order
+```
+Mark: { type: 'comment', attrs: { ids: 'c1 c2' } } (overlapping comments share
+it). Not inclusive; left out of HTML and Markdown exports.
+
+## 12. Security
 Levit filters unsafe content when it renders, reads pasted HTML/Markdown and
 exports HTML: unsafe link and image URLs are dropped (no `javascript:`, no SVG
 data URLs), pasted `script`/`iframe`/event attributes are removed, exported
@@ -386,6 +445,9 @@ The app must still:
 - Treat plugins, `highlightCode` and `uploadImage` as trusted app code. Escape
   document data (block/mark attrs) you put into plugin `toHTML`, `render` or
   `attributes`, and never put it into `style`, `srcdoc` or `srcset`.
+- With collaboration, shared documents and user names come from other users:
+  decide who may join a document on the Yjs server, and validate on save.
+  Remote names are shown as text and cursor colors must be plain CSS colors.
 Releases after the move to Trusted Publishing are published from GitHub Actions
 with npm provenance (`npm audit signatures`); 0.4.0 and earlier have none.
 Report vulnerabilities privately: https://github.com/azusawa/levit/security/advisories/new

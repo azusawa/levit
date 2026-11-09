@@ -161,7 +161,8 @@ describe('security guidance for users', () => {
 
   it('llms.txt has the same guidance for AI tools', () => {
     const llms = read('llms.txt');
-    for (const text of ['## 11. Security', 'server', 'Content-Security-Policy', 'trusted']) {
+    expect(llms).toMatch(/^## \d+\. Security$/m);
+    for (const text of ['server', 'Content-Security-Policy', 'trusted']) {
       expect(llms).toContain(text);
     }
   });
