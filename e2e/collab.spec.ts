@@ -65,3 +65,21 @@ test('undo takes back only my own change', async ({ page }) => {
   await expect.poll(() => textOf(page, 'a')).toBe('BHello world, this is shared.');
   await expect.poll(() => textOf(page, 'b')).toBe('BHello world, this is shared.');
 });
+
+test('a comment added with the bubble menu shows up for the other user', async ({ page }) => {
+  await page.locator('#a').click();
+  await page.evaluate(() => {
+    const a = (window as any).a;
+    a.dispatch(a.state.tr.setSelection({ anchor: { blockId: 'p', offset: 0 }, head: { blockId: 'p', offset: 5 }, isCollapsed: false }));
+  });
+  await page.getByRole('button', { name: 'Comment' }).click();
+  await expect(page.locator('#b .levit-comment')).toHaveText('Hello');
+  expect(await page.evaluate(() => (window as any).added.map((c: { text: string }) => c.text))).toEqual(['Hello']);
+
+  // The comment at the caret is highlighted.
+  await page.evaluate(() => {
+    const a = (window as any).a;
+    a.dispatch(a.state.tr.setSelection({ anchor: { blockId: 'p', offset: 2 }, head: { blockId: 'p', offset: 2 }, isCollapsed: true }));
+  });
+  await expect(page.locator('#a .levit-comment')).toHaveClass(/is-active/);
+});

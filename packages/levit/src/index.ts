@@ -69,6 +69,7 @@ export { documentToHTML, htmlToDocument } from './serializers/html.js';
 export { createBubbleMenu, type BubbleMenuInstance } from './plugins/bubble-menu.js';
 export { createSlashMenu, type SlashMenuInstance, type SlashMenuItem } from './plugins/slash-menu.js';
 export { createRemoteCursors, type RemoteCursor, type RemoteCursorsInstance } from './plugins/remote-cursors.js';
+export { commentsPlugin, getComments, type CommentsOptions, type CommentRange } from './plugins/comments.js';
 
 // AI Integration Helpers
 export { getAIContext, streamAIResponse, type AIContext } from './ai/stream.js';

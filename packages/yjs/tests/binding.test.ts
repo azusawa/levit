@@ -213,3 +213,28 @@ describe('bindYjs', () => {
     }
   });
 });
+
+describe('comments with Yjs', () => {
+  it('are shared, overlapping ones too', async () => {
+    const { commentsPlugin } = await import('@yonailab/levit');
+    const docA = new Y.Doc();
+    const docB = new Y.Doc();
+    const make = () => {
+      const el = document.createElement('div');
+      document.body.appendChild(el);
+      return el;
+    };
+    let n = 0;
+    const a = new LevitEditor({ element: make(), plugins: [commentsPlugin({ createId: () => `c${++n}` })], initialContent: createDocument([para('p', 'The quick brown fox')]) });
+    made.push({ editor: a, binding: bindYjs(a, docA.getArray('blocks')) });
+    connect(docA, docB);
+    const b = new LevitEditor({ element: make(), plugins: [commentsPlugin()] });
+    made.push({ editor: b, binding: bindYjs(b, docB.getArray('blocks')) });
+    a.dispatch(a.state.tr.setSelection(range('p', 4, 'p', 15)));
+    a.commands.addComment();
+    a.dispatch(a.state.tr.setSelection(range('p', 10, 'p', 19)));
+    a.commands.addComment();
+    expect(json(b)).toEqual(json(a));
+    expect(b.container.querySelectorAll('.levit-comment')).toHaveLength(3);
+  });
+});

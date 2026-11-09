@@ -63,6 +63,7 @@ export const en = {
   suggestionToolbar: 'AI suggestion',
   suggestionAccept: 'Accept',
   suggestionReject: 'Reject',
+  comment: 'Comment',
 };
 
 export type LevitMessages = typeof en;
@@ -123,6 +124,7 @@ export const ko: LevitMessages = {
   suggestionToolbar: 'AI 제안',
   suggestionAccept: '받아들이기',
   suggestionReject: '거절하기',
+  comment: '댓글',
 };
 
 /** Built-in message sets, by language code. */

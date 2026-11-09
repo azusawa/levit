@@ -23,6 +23,10 @@
   /* Other users' cursors: the color comes with each cursor. */
   --levit-remote-color: #64748b;
   --levit-remote-name-text: #ffffff;
+  /* Text with a comment (commentsPlugin), and the one at the caret. */
+  --levit-comment-bg: rgba(234, 179, 8, 0.18);
+  --levit-comment-active-bg: rgba(234, 179, 8, 0.45);
+  --levit-comment-border: #ca8a04;
   --levit-selection: rgba(59, 130, 246, 0.18);
   --levit-code-bg: #f1f5f9;
   --levit-code-text: #0f172a;
@@ -49,6 +53,10 @@
   /* Other users' cursors: the color comes with each cursor. */
   --levit-remote-color: #64748b;
   --levit-remote-name-text: #ffffff;
+  /* Text with a comment (commentsPlugin), and the one at the caret. */
+  --levit-comment-bg: rgba(234, 179, 8, 0.16);
+  --levit-comment-active-bg: rgba(234, 179, 8, 0.38);
+  --levit-comment-border: #eab308;
   --levit-selection: rgba(59, 130, 246, 0.35);
   --levit-code-bg: #1e293b;
   --levit-code-text: #e2e8f0;
@@ -75,6 +83,10 @@
     /* Other users' cursors: the color comes with each cursor. */
     --levit-remote-color: #64748b;
     --levit-remote-name-text: #ffffff;
+    /* Text with a comment (commentsPlugin), and the one at the caret. */
+    --levit-comment-bg: rgba(234, 179, 8, 0.16);
+    --levit-comment-active-bg: rgba(234, 179, 8, 0.38);
+    --levit-comment-border: #eab308;
     --levit-selection: rgba(59, 130, 246, 0.35);
     --levit-code-bg: #1e293b;
     --levit-code-text: #e2e8f0;
@@ -614,4 +626,14 @@ a:hover {
   position: absolute;
   background: var(--levit-remote-color);
   opacity: 0.2;
+}
+
+/* Comments (commentsPlugin) */
+.levit-comment {
+  background: var(--levit-comment-bg);
+  border-bottom: 2px solid var(--levit-comment-border);
+}
+
+.levit-comment.is-active {
+  background: var(--levit-comment-active-bg);
 }

@@ -14,7 +14,7 @@
   <div id="b"></div>
   <script type="module">
     import * as Y from 'yjs';
-    import { createLevitEditor } from '/packages/levit/src/index.ts';
+    import { createLevitEditor, createBubbleMenu, commentsPlugin } from '/packages/levit/src/index.ts';
     import { bindYjs } from '/packages/yjs/src/index.ts';
 
     // Two people on one page: two docs that send each other every update.
@@ -37,11 +37,14 @@
       off(_e, h) { this.handlers.delete(h); }
     }
 
+    window.added = [];
     const a = createLevitEditor(document.getElementById('a'), {
+      plugins: [commentsPlugin({ onAdd: (c) => window.added.push(c) })],
       initialContent: { version: 1, blocks: [{ id: 'p', type: 'paragraph', content: [{ text: 'Hello world, this is shared.' }] }] },
     });
     window.bindingA = bindYjs(a, docA.getArray('blocks'), { awareness: new Awareness(1), user: { name: 'Ana', color: '#e11d48' } });
-    const b = createLevitEditor(document.getElementById('b'));
+    createBubbleMenu(a);
+    const b = createLevitEditor(document.getElementById('b'), { plugins: [commentsPlugin()] });
     window.bindingB = bindYjs(b, docB.getArray('blocks'), { awareness: new Awareness(2), user: { name: 'Ben', color: '#2563eb' } });
 
     window.a = a;
