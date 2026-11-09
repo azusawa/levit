@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Levit collaboration E2E fixture</title>
+  <link rel="icon" type="image/svg+xml" href="/logo.svg">
+  <link rel="stylesheet" href="/packages/levit/src/ui/theme.css">
+  <style>
+    body { margin: 0; padding: 40px; background: var(--levit-bg); display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+  </style>
+</head>
+<body>
+  <div id="a"></div>
+  <div id="b"></div>
+  <script type="module">
+    import * as Y from 'yjs';
+    import { createLevitEditor } from '/packages/levit/src/index.ts';
+    import { bindYjs } from '/packages/yjs/src/index.ts';
+
+    // Two people on one page: two docs that send each other every update.
+    const docA = new Y.Doc();
+    const docB = new Y.Doc();
+    docA.on('update', (u, o) => o !== 'net' && Y.applyUpdate(docB, u, 'net'));
+    docB.on('update', (u, o) => o !== 'net' && Y.applyUpdate(docA, u, 'net'));
+
+    // A stand-in for y-protocols' Awareness, shared by both.
+    const peers = [];
+    class Awareness {
+      constructor(clientID) { this.clientID = clientID; this.states = new Map(); this.handlers = new Set(); peers.push(this); }
+      getStates() { return this.states; }
+      setLocalStateField(field, value) {
+        const state = { ...(this.states.get(this.clientID) ?? {}), [field]: value };
+        for (const p of peers) p.states.set(this.clientID, state);
+        for (const p of peers) p.handlers.forEach((h) => h());
+      }
+      on(_e, h) { this.handlers.add(h); }
+      off(_e, h) { this.handlers.delete(h); }
+    }
+
+    const a = createLevitEditor(document.getElementById('a'), {
+      initialContent: { version: 1, blocks: [{ id: 'p', type: 'paragraph', content: [{ text: 'Hello world, this is shared.' }] }] },
+    });
+    window.bindingA = bindYjs(a, docA.getArray('blocks'), { awareness: new Awareness(1), user: { name: 'Ana', color: '#e11d48' } });
+    const b = createLevitEditor(document.getElementById('b'));
+    window.bindingB = bindYjs(b, docB.getArray('blocks'), { awareness: new Awareness(2), user: { name: 'Ben', color: '#2563eb' } });
+
+    window.a = a;
+    window.b = b;
+    window.ready = true;
+  </script>
+</body>
+</html>

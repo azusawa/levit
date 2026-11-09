@@ -1,5 +1,6 @@
 import * as Y from 'yjs';
-import type { BlockNode, EditorPosition, EditorSelection, InlineMark, InlineNode, LevitEditor } from '@yonailab/levit';
+import { createRemoteCursors } from '@yonailab/levit';
+import type { BlockNode, EditorPosition, EditorSelection, InlineMark, InlineNode, LevitEditor, RemoteCursor } from '@yonailab/levit';
 
 /**
  * How a Levit document is kept in Yjs: a Y.Array of blocks, each a Y.Map with
@@ -8,11 +9,27 @@ import type { BlockNode, EditorPosition, EditorSelection, InlineMark, InlineNode
  */
 export type YBlocks = Y.Array<Y.Map<unknown>>;
 
+/**
+ * The part of y-protocols' Awareness the binding uses. Providers like
+ * y-websocket create one: `provider.awareness`.
+ */
+export interface AwarenessLike {
+  clientID: number;
+  getStates(): Map<number, Record<string, any>>;
+  setLocalStateField(field: string, value: unknown): void;
+  on(event: 'change', handler: () => void): void;
+  off(event: 'change', handler: () => void): void;
+}
+
 export interface YjsBindingOptions {
   /**
    * Undo groups changes made within this many milliseconds. Default 500.
    */
   captureTimeout?: number;
+  /** Shares this user's caret and shows the others' (see `user`). */
+  awareness?: AwarenessLike;
+  /** How this user is shown to the others. */
+  user?: { name: string; color: string };
 }
 
 export interface YjsBinding {
@@ -22,6 +39,8 @@ export interface YjsBinding {
   relativePosition(position: EditorPosition): Y.RelativePosition | null;
   /** The editor position of a Yjs position, or null when its block is gone. */
   editorPosition(position: Y.RelativePosition): EditorPosition | null;
+  /** The other users' cursors, as they are shown (with `awareness`). */
+  remoteCursors(): RemoteCursor[];
   /** Stops syncing and gives undo back to the editor. */
   destroy(): void;
 }
@@ -217,10 +236,65 @@ export function bindYjs(editor: LevitEditor, yblocks: YBlocks, options: YjsBindi
     redo: () => undoManager.redo() !== null,
   });
 
+  // --- Cursors of other users --------------------------------------------------
+
+  const awareness = options.awareness;
+  const cursorLayer = awareness ? createRemoteCursors(editor) : null;
+  const remoteCursors = (): RemoteCursor[] => {
+    if (!awareness) return [];
+    const out: RemoteCursor[] = [];
+    awareness.getStates().forEach((state, clientID) => {
+      if (clientID === awareness.clientID || !state?.cursor) return;
+      try {
+        const anchor = editorPosition(Y.createRelativePositionFromJSON(state.cursor.anchor));
+        const head = editorPosition(Y.createRelativePositionFromJSON(state.cursor.head));
+        if (!anchor || !head) return;
+        const user = state.user ?? {};
+        out.push({
+          id: String(clientID),
+          name: typeof user.name === 'string' ? user.name : '',
+          color: typeof user.color === 'string' ? user.color : '',
+          anchor,
+          head,
+        });
+      } catch {
+        // A malformed state from another client is left out.
+      }
+    });
+    return out;
+  };
+  const showCursors = () => cursorLayer?.set(remoteCursors());
+  const shareCursor = () => {
+    if (!awareness || destroyed) return;
+    const rel = relativeSelection(editor.state.selection);
+    awareness.setLocalStateField(
+      'cursor',
+      rel ? { anchor: Y.relativePositionToJSON(rel.anchor), head: Y.relativePositionToJSON(rel.head) } : null
+    );
+  };
+  let stopCursorSharing = () => {};
+  if (awareness) {
+    if (options.user) awareness.setLocalStateField('user', { name: options.user.name, color: options.user.color });
+    awareness.on('change', showCursors);
+    // Others' cursors move when the text changes; mine is shared when it moves.
+    const stopUpdate = editor.on('update', showCursors);
+    const stopShare = editor.on('selectionUpdate', shareCursor);
+    stopCursorSharing = () => {
+      awareness.off('change', showCursors);
+      stopUpdate();
+      stopShare();
+      awareness.setLocalStateField('cursor', null);
+      cursorLayer?.destroy();
+    };
+    shareCursor();
+    showCursors();
+  }
+
   return {
     undoManager,
     relativePosition,
     editorPosition,
+    remoteCursors,
     destroy() {
       if (destroyed) return;
       destroyed = true;
@@ -229,6 +303,7 @@ export function bindYjs(editor: LevitEditor, yblocks: YBlocks, options: YjsBindi
       editor.container.removeEventListener('compositionend', onCompositionEnd);
       stopUpdates();
       stopSelection();
+      stopCursorSharing();
       undoManager.destroy();
       editor.setHistory(null);
     },

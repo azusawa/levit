@@ -68,6 +68,7 @@ export { documentToHTML, htmlToDocument } from './serializers/html.js';
 // Floating Menus
 export { createBubbleMenu, type BubbleMenuInstance } from './plugins/bubble-menu.js';
 export { createSlashMenu, type SlashMenuInstance, type SlashMenuItem } from './plugins/slash-menu.js';
+export { createRemoteCursors, type RemoteCursor, type RemoteCursorsInstance } from './plugins/remote-cursors.js';
 
 // AI Integration Helpers
 export { getAIContext, streamAIResponse, type AIContext } from './ai/stream.js';

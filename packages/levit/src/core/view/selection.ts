@@ -136,7 +136,7 @@ function findDOMPoint(blockEl: HTMLElement, targetOffset: number): { node: Node;
  * dividers) have no point inside them, so the point goes before the block
  * when it starts a selection and after it otherwise.
  */
-function positionToDOMPoint(
+export function positionToDOMPoint(
   container: HTMLElement,
   blockEl: HTMLElement,
   offset: number,

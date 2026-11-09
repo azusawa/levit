@@ -36,6 +36,22 @@ provider.once('sync', () => {
   `binding.undoManager`로 직접 쓸 수도 있습니다.
 - 어떤 Yjs 연결(`y-websocket`, `y-webrtc`, `y-indexeddb` 등)과도 함께 쓸 수 있습니다.
 
+## 다른 사람의 커서
+
+Yjs 연결의 `awareness`와 내 이름·색을 넘기면, 다른 사람의 커서와 선택 영역이 이름과 함께 보입니다.
+
+```ts
+bindYjs(editor, ydoc.getArray('blocks'), {
+  awareness: provider.awareness,
+  user: { name: '민지', color: '#e11d48' },
+});
+```
+
+- 커서는 글을 따라 움직입니다. 누가 앞에 글을 넣으면 그만큼 밀립니다.
+- 커서 층은 편집 영역 바로 뒤에 놓이고, 스크린 리더에는 보이지 않습니다.
+- 이름은 글자로만 보여 주고, 색은 CSS 색이 아니면 회색으로 바꿉니다. 다른 사람이 보낸 값이기 때문입니다.
+- Yjs 없이 다른 방법으로 위치를 주고받는다면 코어의 `createRemoteCursors(editor)`를 직접 쓰면 됩니다.
+
 ## 문서 구조
 
 `Y.Array` 하나에 블록이 순서대로 들어 있고, 블록마다 `Y.Map`입니다.

@@ -20,6 +20,9 @@
   --levit-suggestion-insert-bg: rgba(34, 197, 94, 0.18);
   --levit-suggestion-insert-text: #166534;
   --levit-suggestion-delete-text: #b91c1c;
+  /* Other users' cursors: the color comes with each cursor. */
+  --levit-remote-color: #64748b;
+  --levit-remote-name-text: #ffffff;
   --levit-selection: rgba(59, 130, 246, 0.18);
   --levit-code-bg: #f1f5f9;
   --levit-code-text: #0f172a;
@@ -43,6 +46,9 @@
   --levit-suggestion-insert-bg: rgba(34, 197, 94, 0.22);
   --levit-suggestion-insert-text: #86efac;
   --levit-suggestion-delete-text: #fca5a5;
+  /* Other users' cursors: the color comes with each cursor. */
+  --levit-remote-color: #64748b;
+  --levit-remote-name-text: #ffffff;
   --levit-selection: rgba(59, 130, 246, 0.35);
   --levit-code-bg: #1e293b;
   --levit-code-text: #e2e8f0;
@@ -66,6 +72,9 @@
     --levit-suggestion-insert-bg: rgba(34, 197, 94, 0.22);
     --levit-suggestion-insert-text: #86efac;
     --levit-suggestion-delete-text: #fca5a5;
+    /* Other users' cursors: the color comes with each cursor. */
+    --levit-remote-color: #64748b;
+    --levit-remote-name-text: #ffffff;
     --levit-selection: rgba(59, 130, 246, 0.35);
     --levit-code-bg: #1e293b;
     --levit-code-text: #e2e8f0;
@@ -566,3 +575,43 @@ a:hover {
   }
 }
 
+
+/* Other users' carets and selections (createRemoteCursors). The layer sits
+   right after the editor and moves with it; it takes no space. */
+.levit-remote-cursors {
+  position: absolute;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.levit-remote-caret {
+  position: absolute;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--levit-remote-color);
+}
+
+.levit-remote-name {
+  position: absolute;
+  bottom: 100%;
+  left: -1px;
+  padding: 0 4px;
+  border-radius: 3px 3px 3px 0;
+  font: 600 11px/1.5 var(--levit-font-sans);
+  color: var(--levit-remote-name-text);
+  background: var(--levit-remote-color);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.levit-remote-name:empty {
+  display: none;
+}
+
+.levit-remote-selection {
+  position: absolute;
+  background: var(--levit-remote-color);
+  opacity: 0.2;
+}
