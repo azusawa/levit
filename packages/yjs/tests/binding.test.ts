@@ -238,3 +238,95 @@ describe('comments with Yjs', () => {
     expect(b.container.querySelectorAll('.levit-comment')).toHaveLength(3);
   });
 });
+
+describe('review fixes: binding', () => {
+  it('updates blocks between two separate block changes in place, keeping others’ edits to them', () => {
+    const blocks = ['A', 'B', 'C', 'D', 'E'].map((id) => para(id, `text ${id}`));
+    const { a, docA } = pair(blocks);
+    const yblocks = docA.getArray('blocks') as Y.Array<Y.Map<unknown>>;
+    const before = yblocks.toArray();
+    const [A, , C, D, E] = a.state.doc.blocks;
+    const C2 = { ...C, content: [{ text: 'text C changed', marks: [] }] };
+    a.dispatch(a.state.tr.setBlocks([A, C2, D, para('X', 'new'), E]));
+    const after = yblocks.toArray();
+    expect(after.map((m) => m.get('id'))).toEqual(['A', 'C', 'D', 'X', 'E']);
+    expect(after[1]).toBe(before[2]);
+    expect(after[2]).toBe(before[3]);
+  });
+
+  it('sends changes that a listener makes while a remote change is applied', () => {
+    const { a, b } = pair();
+    let done = false;
+    b.on('update', () => {
+      if (done || !texts(b)[1].includes('ping')) return;
+      done = true;
+      b.dispatch(b.state.tr.setSelection(caret('b', getBlockText(b.state.doc.blocks[1]).length)).insertText(' pong'));
+    });
+    a.dispatch(a.state.tr.setSelection(caret('b', 11)).insertText(' ping'));
+    expect(texts(b)[1]).toBe('Second line ping pong');
+    expect(texts(a)[1]).toBe('Second line ping pong');
+    expect(json(a)).toEqual(json(b));
+  });
+
+  it('puts a block added while changes wait after the closest block that still exists', () => {
+    const { a, b } = pair([para('a', 'one'), para('b', 'two'), para('c', 'three')]);
+    b.dispatch(b.state.tr.setSelection(caret('b', 3)));
+    b.container.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }));
+    a.dispatch(a.state.tr.setSelection({ anchor: { blockId: 'a', offset: 3 }, head: { blockId: 'b', offset: 3 }, isCollapsed: false }).deleteRange());
+    b.dispatch(b.state.tr.setSelection(caret('b', 3)).splitBlock());
+    expect(texts(a)).toEqual(['one', '', 'three']);
+    expect(a.state.doc.blocks[0].id).toBe('a');
+  });
+
+  it('stops when the editor is destroyed', () => {
+    const { a, b } = pair();
+    const before = b.state;
+    b.destroy();
+    a.dispatch(a.state.tr.setSelection(caret('a', 0)).insertText('x'));
+    expect(b.state).toBe(before);
+  });
+
+  it('after destroy, undo does not bring back what was there before binding', () => {
+    const docA = new Y.Doc();
+    const docB = new Y.Doc();
+    const a = makeEditor([para('a', 'shared')]);
+    bind(a, docA);
+    connect(docA, docB);
+    const b = makeEditor([para('x', 'mine')]);
+    b.dispatch(b.state.tr.setSelection(caret('x', 4)).insertText(' before'));
+    const binding = bind(b, docB);
+    expect(texts(b)).toEqual(['shared']);
+    binding.destroy();
+    expect(b.undo()).toBe(false);
+    expect(texts(b)).toEqual(['shared']);
+  });
+
+  it('does not redraw the block I am typing in when others change another block', () => {
+    const { a, b } = pair();
+    a.dispatch(a.state.tr.setSelection(caret('a', 11)).insertText('!'));
+    const typed = a.state.doc.blocks[0];
+    b.dispatch(b.state.tr.setSelection(caret('b', 0)).insertText('x'));
+    expect(texts(a)[1]).toBe('xSecond line');
+    expect(a.state.doc.blocks[0]).toBe(typed);
+  });
+
+  it('keeps comments that two people add at the same time on overlapping text', async () => {
+    const { commentsPlugin, getComments } = await import('@yonailab/levit');
+    const docA = new Y.Doc();
+    const docB = new Y.Doc();
+    const el = () => document.body.appendChild(document.createElement('div'));
+    const a = new LevitEditor({ element: el(), plugins: [commentsPlugin({ createId: () => 'c1' })], initialContent: createDocument([para('p', 'hello world')]) });
+    made.push({ editor: a, binding: bindYjs(a, docA.getArray('blocks')) });
+    const disconnect = connect(docA, docB);
+    const b = new LevitEditor({ element: el(), plugins: [commentsPlugin({ createId: () => 'c2' })] });
+    made.push({ editor: b, binding: bindYjs(b, docB.getArray('blocks')) });
+    disconnect();
+    a.dispatch(a.state.tr.setSelection(range('p', 0, 'p', 11)));
+    a.commands.addComment();
+    b.dispatch(b.state.tr.setSelection(range('p', 6, 'p', 11)));
+    b.commands.addComment();
+    connect(docA, docB);
+    expect(getComments(a).map((c) => [c.id, c.text])).toEqual([['c1', 'hello world'], ['c2', 'world']]);
+    expect(json(b)).toEqual(json(a));
+  });
+});

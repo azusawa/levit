@@ -82,6 +82,24 @@ describe('editor.setHistory', () => {
   });
 });
 
+describe('review fixes: history', () => {
+  it('handing undo to another history and back starts the built-in one empty', () => {
+    editor.dispatch(editor.state.tr.setSelection(caret('a', 3)).insertText('1'));
+    editor.setHistory({ undo: () => true, redo: () => true });
+    editor.setHistory(null);
+    expect(editor.undo()).toBe(false);
+    expect(texts()).toEqual(['one1', 'two']);
+  });
+
+  it('replaceState adds nothing to the built-in history while another history is used', () => {
+    editor.setHistory({ undo: () => true, redo: () => true });
+    const state = editor.state.tr.setSelection(caret('a', 3)).insertText('!').apply();
+    editor.replaceState(state);
+    expect(editor.state.history.canUndo()).toBe(false);
+    expect(texts()).toEqual(['one!', 'two']);
+  });
+});
+
 describe('changes from others', () => {
   it('do not move the page selection or focus when the editor is not focused', () => {
     const input = document.createElement('input');

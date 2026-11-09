@@ -17,8 +17,15 @@ export interface AwarenessLike {
   clientID: number;
   getStates(): Map<number, Record<string, any>>;
   setLocalStateField(field: string, value: unknown): void;
-  on(event: 'change', handler: () => void): void;
-  off(event: 'change', handler: () => void): void;
+  on(event: 'change', handler: (changes?: AwarenessChanges) => void): void;
+  off(event: 'change', handler: (changes?: AwarenessChanges) => void): void;
+}
+
+/** Which clients' states changed, as y-protocols reports it. */
+export interface AwarenessChanges {
+  added: number[];
+  updated: number[];
+  removed: number[];
 }
 
 export interface YjsBindingOptions {
@@ -46,6 +53,12 @@ export interface YjsBinding {
 }
 
 type RelativeSelection = { anchor: Y.RelativePosition; head: Y.RelativePosition } | null;
+
+/** Origin of the transaction that puts the first document into Yjs (not undoable). */
+const INIT = 'levit-init';
+
+/** Y.Maps written from editor blocks, with the block each now holds. */
+type Written = [Y.Map<unknown>, BlockNode][];
 
 /**
  * Keeps the editor and a shared Y.Array in sync, so several people can edit
@@ -117,7 +130,21 @@ export function bindYjs(editor: LevitEditor, yblocks: YBlocks, options: YjsBindi
     const previous = synced;
     synced = blocks;
     const mapIndex = waitingFrom ? indexMapper(waitingFrom) : undefined;
-    ydoc.transact(() => writeBlocks(yblocks, previous, blocks, mapIndex && { mapIndex, byId: yblockById }), origin);
+    let written: Written = [];
+    ydoc.transact(() => {
+      written = writeBlocks(yblocks, previous, blocks, mapIndex && { mapIndex, byId: yblockById });
+    }, origin);
+    // While others' changes wait, the shared blocks hold more than the
+    // editor's, so they are read again instead.
+    if (!mapIndex) remember(written);
+  };
+
+  /**
+   * The editor's own blocks stand for the Y.Maps it just wrote, so a change
+   * from elsewhere does not rebuild (and redraw) them.
+   */
+  const remember = (written: Written) => {
+    for (const [ymap, block] of written) fromY.set(ymap, block);
   };
 
   /**
@@ -163,7 +190,10 @@ export function bindYjs(editor: LevitEditor, yblocks: YBlocks, options: YjsBindi
     } finally {
       applying = false;
     }
-    synced = editor.state.doc.blocks;
+    // What the shared document holds now. Anything listeners changed while
+    // it was applied is a local change, and goes out now.
+    synced = blocks;
+    writeLocal();
   };
 
   // Before a change from elsewhere, remember the selection as Yjs positions:
@@ -173,6 +203,7 @@ export function bindYjs(editor: LevitEditor, yblocks: YBlocks, options: YjsBindi
   };
 
   const onDeepChange = (events: Y.YEvent<any>[], txn: Y.Transaction) => {
+    const local = txn.origin === origin || txn.origin === INIT;
     for (const event of events) {
       if (event.target === yblocks) {
         idIndexStale = true;
@@ -183,7 +214,7 @@ export function bindYjs(editor: LevitEditor, yblocks: YBlocks, options: YjsBindi
       while (type && type.parent !== yblocks) type = type.parent as Y.AbstractType<any> | null;
       if (type instanceof Y.Map) fromY.delete(type);
     }
-    if (txn.origin !== origin) readRemote();
+    if (!local) readRemote();
   };
 
   const onCompositionEnd = () => {
@@ -201,7 +232,11 @@ export function bindYjs(editor: LevitEditor, yblocks: YBlocks, options: YjsBindi
   if (yblocks.length === 0) {
     synced = editor.state.doc.blocks;
     // Not tracked by undo: the starting document cannot be undone.
-    ydoc.transact(() => writeBlocks(yblocks, [], synced), 'levit-init');
+    let written: Written = [];
+    ydoc.transact(() => {
+      written = writeBlocks(yblocks, [], synced);
+    }, INIT);
+    remember(written);
   } else {
     selectionBefore = null;
     readRemote();
@@ -263,7 +298,24 @@ export function bindYjs(editor: LevitEditor, yblocks: YBlocks, options: YjsBindi
     });
     return out;
   };
-  const showCursors = () => cursorLayer?.set(remoteCursors());
+  // Drawn once after a change: an edit brings an update and a caret move.
+  let drawQueued = false;
+  const showCursors = () => {
+    if (drawQueued || !cursorLayer) return;
+    drawQueued = true;
+    queueMicrotask(() => {
+      drawQueued = false;
+      if (!destroyed) cursorLayer.set(remoteCursors());
+    });
+  };
+  // My own cursor moving changes nothing that is drawn.
+  const onAwarenessChange = (changes?: AwarenessChanges) => {
+    if (changes && awareness) {
+      const ids = [...changes.added, ...changes.updated, ...changes.removed];
+      if (ids.length > 0 && ids.every((id) => id === awareness.clientID)) return;
+    }
+    showCursors();
+  };
   const shareCursor = () => {
     if (!awareness || destroyed) return;
     const rel = relativeSelection(editor.state.selection);
@@ -275,12 +327,12 @@ export function bindYjs(editor: LevitEditor, yblocks: YBlocks, options: YjsBindi
   let stopCursorSharing = () => {};
   if (awareness) {
     if (options.user) awareness.setLocalStateField('user', { name: options.user.name, color: options.user.color });
-    awareness.on('change', showCursors);
+    awareness.on('change', onAwarenessChange);
     // Others' cursors move when the text changes; mine is shared when it moves.
     const stopUpdate = editor.on('update', showCursors);
     const stopShare = editor.on('selectionUpdate', shareCursor);
     stopCursorSharing = () => {
-      awareness.off('change', showCursors);
+      awareness.off('change', onAwarenessChange);
       stopUpdate();
       stopShare();
       awareness.setLocalStateField('cursor', null);
@@ -290,43 +342,59 @@ export function bindYjs(editor: LevitEditor, yblocks: YBlocks, options: YjsBindi
     showCursors();
   }
 
-  return {
-    undoManager,
-    relativePosition,
-    editorPosition,
-    remoteCursors,
-    destroy() {
-      if (destroyed) return;
-      destroyed = true;
-      ydoc.off('beforeTransaction', onBeforeTransaction);
-      yblocks.unobserveDeep(onDeepChange);
-      editor.container.removeEventListener('compositionend', onCompositionEnd);
-      stopUpdates();
-      stopSelection();
-      stopCursorSharing();
-      undoManager.destroy();
-      editor.setHistory(null);
-    },
+  const destroy = () => {
+    if (destroyed) return;
+    destroyed = true;
+    ydoc.off('beforeTransaction', onBeforeTransaction);
+    yblocks.unobserveDeep(onDeepChange);
+    editor.container.removeEventListener('compositionend', onCompositionEnd);
+    stopUpdates();
+    stopSelection();
+    stopCursorSharing();
+    undoManager.destroy();
+    editor.setHistory(null);
+    stopEditorDestroy();
   };
+  // An editor that is destroyed without destroying the binding stops it too.
+  const stopEditorDestroy = editor.on('destroy', destroy);
+
+  return { undoManager, relativePosition, editorPosition, remoteCursors, destroy };
 }
 
 // --- Converting --------------------------------------------------------------
 
 type Attributes = Record<string, unknown>;
 
+/**
+ * Comments (commentsPlugin) keep all ids of a piece of text in one mark. Yjs
+ * keeps one value per format, so two comments added at the same time would
+ * overwrite each other: each id gets its own format, `comment:<id>`.
+ */
+const COMMENT = 'comment';
+const COMMENT_PREFIX = 'comment:';
+
 /** Y.Text formatting for a list of marks. */
 function markAttributes(marks: readonly InlineMark[] | undefined): Attributes {
   const out: Attributes = {};
-  for (const mark of marks ?? []) out[mark.type] = mark.attrs ? { ...mark.attrs } : true;
+  for (const mark of marks ?? []) {
+    if (mark.type === COMMENT) {
+      for (const id of String(mark.attrs?.ids ?? '').split(/\s+/)) if (id) out[COMMENT_PREFIX + id] = true;
+    } else {
+      out[mark.type] = mark.attrs ? { ...mark.attrs } : true;
+    }
+  }
   return out;
 }
 
 function marksFrom(attributes: Attributes | undefined): InlineMark[] {
   const marks: InlineMark[] = [];
+  const comments: string[] = [];
   for (const [type, value] of Object.entries(attributes ?? {})) {
     if (value === null || value === undefined || value === false) continue;
-    marks.push(value === true ? { type } : { type, attrs: { ...(value as Record<string, string | number | boolean>) } });
+    if (type.startsWith(COMMENT_PREFIX)) comments.push(type.slice(COMMENT_PREFIX.length));
+    else marks.push(value === true ? { type } : { type, attrs: { ...(value as Record<string, string | number | boolean>) } });
   }
+  if (comments.length > 0) marks.push({ type: COMMENT, attrs: { ids: comments.sort().join(' ') } });
   return marks;
 }
 
@@ -367,12 +435,93 @@ interface Rebase {
 }
 
 /**
- * Writes the difference between two block lists. Unchanged blocks are the same
- * objects. With `rebase`, the shared list may already hold others' changes
- * the editor has not shown yet, so blocks are found by id.
+ * Pairs of indexes (old, new) of the blocks kept in both lists, in order: the
+ * longest run of ids they share. Blocks keep their ids, so this tells blocks
+ * that moved or stayed from ones that were removed or added.
  */
-function writeBlocks(yblocks: YBlocks, before: readonly BlockNode[], after: readonly BlockNode[], rebase?: Rebase): void {
-  // Blocks keep their ids, so the lists line up by id at both ends.
+function keptPairs(before: readonly BlockNode[], after: readonly BlockNode[]): [number, number][] {
+  const n = before.length;
+  const m = after.length;
+  if (n === 0 || m === 0 || n * m > 1_000_000) return [];
+  const width = m + 1;
+  const lcs = new Uint32Array((n + 1) * width);
+  for (let i = n - 1; i >= 0; i--) {
+    for (let j = m - 1; j >= 0; j--) {
+      lcs[i * width + j] = before[i].id === after[j].id ? lcs[(i + 1) * width + j + 1] + 1 : Math.max(lcs[(i + 1) * width + j], lcs[i * width + j + 1]);
+    }
+  }
+  const pairs: [number, number][] = [];
+  let i = 0;
+  let j = 0;
+  while (i < n && j < m) {
+    if (before[i].id === after[j].id) pairs.push([i++, j++]);
+    else if (lcs[(i + 1) * width + j] >= lcs[i * width + j + 1]) i++;
+    else j++;
+  }
+  return pairs;
+}
+
+interface Rebase {
+  /** Maps a text offset of the editor's older document to the shared text. */
+  mapIndex: (blockId: string, index: number) => number;
+  byId: (id: string) => Y.Map<unknown> | undefined;
+}
+
+/**
+ * Writes the difference between two block lists and returns the Y.Maps it
+ * wrote. Unchanged blocks are the same objects; blocks with the same id are
+ * changed in place, so others' edits to them are kept. With `rebase`, the
+ * shared list may already hold others' changes the editor has not shown
+ * yet, so blocks are found by id.
+ */
+function writeBlocks(yblocks: YBlocks, before: readonly BlockNode[], after: readonly BlockNode[], rebase?: Rebase): Written {
+  const written: Written = [];
+  const add = (blocks: readonly BlockNode[]) => {
+    const maps = blocks.map((block) => {
+      const ymap = newYBlock(block);
+      written.push([ymap, block]);
+      return ymap;
+    });
+    return maps;
+  };
+  const update = (ymap: Y.Map<unknown> | undefined, old: BlockNode, block: BlockNode, mapIndex?: (index: number) => number) => {
+    if (!ymap || old === block) return; // removed by someone else meanwhile, or unchanged
+    writeBlock(ymap, old, block, mapIndex);
+    written.push([ymap, block]);
+  };
+
+  if (rebase) {
+    // Blocks are found by id: the shared list may differ from `before`.
+    const indexOf = (id: string) => yblocks.toArray().findIndex((ymap) => ymap.get('id') === id);
+    const afterIds = new Set(after.map((b) => b.id));
+    for (const old of before) {
+      if (afterIds.has(old.id)) continue;
+      const at = indexOf(old.id);
+      if (at !== -1) yblocks.delete(at, 1);
+    }
+    const beforeById = new Map(before.map((b) => [b.id, b]));
+    after.forEach((block, j) => {
+      const old = beforeById.get(block.id);
+      if (old) {
+        update(rebase.byId(block.id), old, block, (index) => rebase.mapIndex(block.id, index));
+        return;
+      }
+      // After the closest earlier block that is still there.
+      let at = 0;
+      for (let k = j - 1; k >= 0; k--) {
+        const found = indexOf(after[k].id);
+        if (found !== -1) {
+          at = found + 1;
+          break;
+        }
+      }
+      yblocks.insert(at, add([block]));
+    });
+    return written;
+  }
+
+  // Line the lists up by id: the same block at both ends, and the longest
+  // run of shared ids in between.
   let start = 0;
   while (start < before.length && start < after.length && before[start].id === after[start].id) start++;
   let endBefore = before.length;
@@ -381,32 +530,29 @@ function writeBlocks(yblocks: YBlocks, before: readonly BlockNode[], after: read
     endBefore--;
     endAfter--;
   }
-  // In the middle, blocks were removed and added.
-  if (rebase) {
-    const indexOf = (id: string) => yblocks.toArray().findIndex((ymap) => ymap.get('id') === id);
-    for (let i = start; i < endBefore; i++) {
-      const at = indexOf(before[i].id);
-      if (at !== -1) yblocks.delete(at, 1);
+  for (let i = 0; i < start; i++) update(yblocks.get(i), before[i], after[i]);
+
+  const oldMiddle = before.slice(start, endBefore);
+  const newMiddle = after.slice(start, endAfter);
+  let y = start;
+  let i = 0;
+  let j = 0;
+  for (const [pi, pj] of [...keptPairs(oldMiddle, newMiddle), [oldMiddle.length, newMiddle.length] as [number, number]]) {
+    if (pi > i) yblocks.delete(y, pi - i);
+    if (pj > j) {
+      yblocks.insert(y, add(newMiddle.slice(j, pj)));
+      y += pj - j;
     }
-    if (endAfter > start) {
-      const at = start > 0 ? indexOf(after[start - 1].id) + 1 : 0;
-      yblocks.insert(at, after.slice(start, endAfter).map(newYBlock));
+    if (pi < oldMiddle.length) {
+      update(yblocks.get(y), oldMiddle[pi], newMiddle[pj]);
+      y++;
     }
-  } else {
-    if (endBefore > start) yblocks.delete(start, endBefore - start);
-    if (endAfter > start) yblocks.insert(start, after.slice(start, endAfter).map(newYBlock));
+    i = pi + 1;
+    j = pj + 1;
   }
 
-  // Blocks at both ends with the same id may have changed.
-  const update = (i: number, j: number) => {
-    if (before[i] === after[j]) return;
-    const ymap = rebase ? rebase.byId(after[j].id) : yblocks.get(j);
-    if (!ymap) return; // removed by someone else meanwhile
-    const map = rebase ? (index: number) => rebase.mapIndex(after[j].id, index) : undefined;
-    writeBlock(ymap, before[i], after[j], map);
-  };
-  for (let i = 0; i < start; i++) update(i, i);
-  for (let k = 0; k < before.length - endBefore; k++) update(endBefore + k, endAfter + k);
+  for (let k = 0; k < before.length - endBefore; k++) update(yblocks.get(y + k), before[endBefore + k], after[endAfter + k]);
+  return written;
 }
 
 const sameJSON = (a: unknown, b: unknown) => JSON.stringify(a ?? {}) === JSON.stringify(b ?? {});

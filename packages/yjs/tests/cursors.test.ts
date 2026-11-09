@@ -7,7 +7,7 @@ import { bindYjs, type AwarenessLike } from '../src/index';
 class FakeAwareness implements AwarenessLike {
   static all: FakeAwareness[] = [];
   states = new Map<number, Record<string, unknown>>();
-  private handlers = new Set<() => void>();
+  private handlers = new Set<(changes: { added: number[]; updated: number[]; removed: number[] }) => void>();
   constructor(public clientID: number) {
     // Like a provider on connect: get the states the others already have.
     for (const peer of FakeAwareness.all) peer.states.forEach((state, id) => this.states.set(id, state));
@@ -19,15 +19,15 @@ class FakeAwareness implements AwarenessLike {
   setLocalStateField(field: string, value: unknown) {
     const state = { ...(this.getLocalState() ?? {}), [field]: value };
     for (const peer of FakeAwareness.all) peer.states.set(this.clientID, state);
-    for (const peer of FakeAwareness.all) peer.handlers.forEach((h) => h());
+    for (const peer of FakeAwareness.all) peer.handlers.forEach((h) => h({ added: [], updated: [this.clientID], removed: [] }));
   }
   getStates() {
     return this.states;
   }
-  on(_event: 'change', handler: () => void) {
+  on(_event: 'change', handler: (changes: { added: number[]; updated: number[]; removed: number[] }) => void) {
     this.handlers.add(handler);
   }
-  off(_event: 'change', handler: () => void) {
+  off(_event: 'change', handler: (changes: { added: number[]; updated: number[]; removed: number[] }) => void) {
     this.handlers.delete(handler);
   }
 }
@@ -84,5 +84,24 @@ describe('cursors of other users', () => {
     expect(bindingB.remoteCursors().map((c) => c.id)).toEqual(['1']);
     bindingB.destroy();
     expect(bindingA.remoteCursors()).toEqual([]);
+  });
+});
+
+describe('review fixes: cursors', () => {
+  it('are drawn once per change, not again for my own cursor moving', async () => {
+    const { a, b } = setup();
+    b.dispatch(b.state.tr.setSelection(caret('p', 6)));
+    await new Promise((r) => setTimeout(r, 30));
+    const layer = a.container.nextElementSibling as HTMLElement;
+    let draws = 0;
+    const measure = layer.getBoundingClientRect.bind(layer);
+    layer.getBoundingClientRect = () => {
+      draws++;
+      return measure();
+    };
+    a.dispatch(a.state.tr.setSelection(caret('p', 0)).insertText('x'));
+    await new Promise((r) => setTimeout(r, 30));
+    expect(draws).toBeLessThanOrEqual(2);
+    expect(draws).toBeGreaterThanOrEqual(1);
   });
 });

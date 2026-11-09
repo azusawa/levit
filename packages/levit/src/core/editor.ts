@@ -1,5 +1,6 @@
 import { BlockNode, DocumentData, EditorSelection, InlineMark } from './model/types.js';
 import { EditorState } from './state/state.js';
+import { HistoryManager } from './state/history.js';
 import { Transaction } from './state/transaction.js';
 import { DOMReconciler } from './view/reconciler.js';
 import { restoreDOMSelection } from './view/selection.js';
@@ -423,6 +424,8 @@ export class LevitEditor {
    * earlier state so a series of changes is undone in one step.
    */
   replaceState(state: EditorState, transaction?: Transaction): void {
+    // With another history, the built-in one records nothing (see dispatch).
+    if (this.history) state = this.withoutHistory(state);
     const docChanged = state.doc !== this.state.doc;
     this.state = state;
     if (docChanged) this.render();
@@ -465,6 +468,14 @@ export class LevitEditor {
    */
   setHistory(history: EditorHistory | null): void {
     this.history = history;
+    // What the built-in history holds would undo across the other one.
+    this.state = this.withoutHistory(this.state);
+  }
+
+  /** The state with an empty built-in history. */
+  private withoutHistory(state: EditorState): EditorState {
+    if (!state.history.canUndo() && !state.history.canRedo()) return state;
+    return new EditorState(state.doc, state.selection, new HistoryManager(), state.storedMarks, state.schema);
   }
 
   undo(): boolean {

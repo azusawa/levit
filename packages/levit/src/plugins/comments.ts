@@ -38,7 +38,8 @@ function withIds(nodes: InlineNode[], change: (ids: string[]) => string[]): Inli
   return nodes.map((node) => {
     const ids = change(idsOf(commentOf(node)));
     const marks = (node.marks ?? []).filter((m) => m.type !== COMMENT_MARK);
-    if (ids.length > 0) marks.push({ type: COMMENT_MARK, attrs: { ids: [...new Set(ids)].join(' ') } });
+    // Sorted, so the same comments always give the same mark (also on other peers).
+    if (ids.length > 0) marks.push({ type: COMMENT_MARK, attrs: { ids: [...new Set(ids)].sort().join(' ') } });
     return { text: node.text, marks };
   });
 }

@@ -189,3 +189,22 @@ describe('rendering a long document', () => {
     expect(container.querySelector('[data-block-id="c"]')!.getAttribute('data-number')).toBe('1');
   });
 });
+
+describe('review fixes: rendering', () => {
+  it('a block that something outside replaced is drawn again at the next change', () => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const blocks = ['a', 'b', 'c'].map((id) => createBlock('paragraph', {}, [createTextNode(id)], id));
+    const state1 = EditorState.create({ doc: createDocument(blocks) });
+    const reconciler = new DOMReconciler(container);
+    reconciler.render(state1);
+    // An extension swaps block b for a text node: the child count stays the same.
+    container.replaceChild(document.createTextNode('junk'), container.children[1]);
+    const tr = state1.tr;
+    tr.editBlock(2)!.content = [createTextNode('C')];
+    tr.docChanged = true;
+    reconciler.render(tr.apply());
+    expect(container.textContent).toBe('abC');
+    expect(container.querySelector('[data-block-id="b"]')).not.toBeNull();
+  });
+});

@@ -50,7 +50,10 @@ export class DOMReconciler {
    */
   private renderChanged(blocks: readonly BlockNode[]): boolean {
     const last = this.lastBlocks;
-    if (!last || last.length !== blocks.length || this.container.childNodes.length !== blocks.length) return false;
+    // Anything else in the container (a node an extension put in place of a
+    // block) changes one of these counts, and the full render cleans it up.
+    const { childNodes, children } = this.container;
+    if (!last || last.length !== blocks.length || childNodes.length !== blocks.length || children.length !== blocks.length) return false;
     const changed: number[] = [];
     for (let i = 0; i < blocks.length; i++) {
       if (blocks[i] === last[i]) continue;
