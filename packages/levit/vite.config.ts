@@ -6,8 +6,8 @@ export default defineConfig({
     lib: {
       // Two entry points; code they share goes into a common chunk.
       entry: {
-        index: resolve(__dirname, 'src/index.ts'),
-        ai: resolve(__dirname, 'src/ai/index.ts'),
+        index: resolve(import.meta.dirname, 'src/index.ts'),
+        ai: resolve(import.meta.dirname, 'src/ai/index.ts'),
       },
       name: 'Levit',
       fileName: (_format, name) => `${name}.js`,
@@ -19,10 +19,13 @@ export default defineConfig({
       },
     },
     sourcemap: true,
+    // Set here, not left to Vite: its default changes between major versions.
+    // Also used for the CSS.
+    target: ['es2020', 'edge88', 'firefox78', 'chrome87', 'safari14'],
   },
   resolve: {
     alias: {
-      '@': resolve(__dirname, 'src'),
+      '@': resolve(import.meta.dirname, 'src'),
     },
   },
   test: {
