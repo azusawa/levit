@@ -62,11 +62,43 @@ export class Transaction {
   public docChanged = false;
   public selectionChanged = false;
 
+  /** Blocks this transaction copied, so it may change them. */
+  private owned = new WeakSet<BlockNode>();
+
   constructor(state: EditorState) {
     this.state = state;
-    this.doc = cloneDocument(state.doc);
+    // Committed blocks are frozen and shared: a block is copied only when this
+    // transaction changes it (editBlock), so unchanged blocks keep their
+    // identity. The list itself is this transaction's own.
+    this.doc = { version: state.doc.version, blocks: state.doc.blocks.slice() };
     this.selection = cloneSelection(state.selection);
     this.storedMarks = state.storedMarks ? [...state.storedMarks] : null;
+  }
+
+  /**
+   * The block (by index or id) as a copy that this transaction may change.
+   * Change blocks only through this: the document's blocks are frozen and
+   * shared with the previous state and undo history.
+   */
+  editBlock(at: number | string): BlockNode | undefined {
+    const index = typeof at === 'number' ? at : findBlockIndex(this.doc, at);
+    const block = this.doc.blocks[index];
+    if (!block) return undefined;
+    if (this.owned.has(block) || !Object.isFrozen(block)) return block;
+    const copy: BlockNode = {
+      id: block.id,
+      type: block.type,
+      attrs: { ...block.attrs },
+      content: block.content.map((n) => ({ text: n.text, marks: n.marks ? [...n.marks] : [] })),
+    };
+    this.doc.blocks[index] = copy;
+    this.owned.add(copy);
+    return copy;
+  }
+
+  /** editBlock for an index that is known to exist. */
+  private edit(index: number): BlockNode {
+    return this.editBlock(index)!;
   }
 
   /** True for blocks without text (dividers, images, atom plugin blocks). */
@@ -94,12 +126,12 @@ export class Transaction {
     if (fromIdx === -1 || toIdx === -1) return this;
 
     if (fromIdx === toIdx) {
-      const block = this.doc.blocks[fromIdx];
+      const block = this.edit(fromIdx);
       const [left] = splitBlockContent(block, from.offset);
       const [, right] = splitBlockContent(block, to.offset);
       block.content = mergeBlockContent(left, right);
     } else {
-      const startBlock = this.doc.blocks[fromIdx];
+      const startBlock = this.edit(fromIdx);
       const endBlock = this.doc.blocks[toIdx];
 
       const [startLeft] = splitBlockContent(startBlock, from.offset);
@@ -136,7 +168,7 @@ export class Transaction {
     const blockIdx = findBlockIndex(this.doc, this.selection.anchor.blockId);
     if (blockIdx === -1) return this;
 
-    const block = this.doc.blocks[blockIdx];
+    const block = this.edit(blockIdx);
     const offset = this.selection.anchor.offset;
 
     const [left, right] = splitBlockContent(block, offset);
@@ -167,8 +199,8 @@ export class Transaction {
 
   /** Removes text between two offsets of one block and puts the caret at `start`. */
   private deleteInBlock(blockIdx: number, start: number, end: number): this {
-    const block = this.doc.blocks[blockIdx];
     if (start >= end) return this;
+    const block = this.edit(blockIdx);
     const [left] = splitBlockContent(block, start);
     const [, right] = splitBlockContent(block, end);
     block.content = mergeBlockContent(left, right);
@@ -210,8 +242,9 @@ export class Transaction {
 
     // Offset is 0 in a list item: leave the list, keep the text
     if (isListItem(block.type)) {
-      block.type = 'paragraph';
-      block.attrs = {};
+      const edited = this.edit(blockIdx);
+      edited.type = 'paragraph';
+      edited.attrs = {};
       this.docChanged = true;
       return this;
     }
@@ -225,7 +258,7 @@ export class Transaction {
 
     // Offset is 0: merge with previous block if exists
     if (blockIdx > 0) {
-      const prevBlock = this.doc.blocks[blockIdx - 1];
+      const prevBlock = this.edit(blockIdx - 1);
       const prevTextLen = getBlockText(prevBlock).length;
 
       prevBlock.content = mergeBlockContent(prevBlock.content, block.content);
@@ -244,8 +277,9 @@ export class Transaction {
 
     // Offset is 0 and it's the first block: if not paragraph, reset to paragraph
     if (block.type !== 'paragraph') {
-      block.type = 'paragraph';
-      block.attrs = {};
+      const edited = this.edit(blockIdx);
+      edited.type = 'paragraph';
+      edited.attrs = {};
       this.docChanged = true;
     }
 
@@ -281,7 +315,7 @@ export class Transaction {
       this.docChanged = true;
       return this;
     }
-    block.content = mergeBlockContent(block.content, next.content);
+    this.edit(blockIdx).content = mergeBlockContent(block.content, next.content);
     this.doc.blocks.splice(blockIdx + 1, 1);
     this.selection = {
       anchor: { blockId: block.id, offset },
@@ -346,7 +380,7 @@ export class Transaction {
     const blockIdx = findBlockIndex(this.doc, this.selection.anchor.blockId);
     if (blockIdx === -1) return this;
 
-    const block = this.doc.blocks[blockIdx];
+    const block = this.edit(blockIdx);
     const offset = this.selection.anchor.offset;
     const [left, right] = splitBlockContent(block, offset);
     // Pasted blocks get new ids, unless the caller keeps them (streaming
@@ -472,7 +506,7 @@ export class Transaction {
     let idx = findBlockIndex(this.doc, this.selection.anchor.blockId);
     if (idx === -1) return this;
 
-    const block = this.doc.blocks[idx];
+    const block = this.edit(idx);
     const offset = this.selection.anchor.offset;
     const text = getBlockText(block);
     let atom: BlockNode;
@@ -508,26 +542,31 @@ export class Transaction {
    */
   setCodeLanguage(language: string, blockId?: string): this {
     const name = normalizeCodeLanguage(language);
-    const blocks = blockId
-      ? this.doc.blocks.filter((b) => b.id === blockId)
-      : this.selectedBlocks();
-    for (const block of blocks) {
-      if (block.type !== 'code_block') continue;
+    for (const index of blockId ? [findBlockIndex(this.doc, blockId)] : this.selectedIndexes()) {
+      const block = this.doc.blocks[index];
+      if (block?.type !== 'code_block') continue;
       const attrs = { ...block.attrs };
       if (name) attrs.language = name;
       else delete attrs.language;
-      block.attrs = attrs;
+      this.edit(index).attrs = attrs;
       this.docChanged = true;
     }
     return this;
   }
 
-  private selectedBlocks(): BlockNode[] {
+  private selectedIndexes(): number[] {
     const { from, to } = this.normalizeSelectionOrder();
     const fromIdx = findBlockIndex(this.doc, from.blockId);
     const toIdx = findBlockIndex(this.doc, to.blockId);
     if (fromIdx === -1 || toIdx === -1) return [];
-    return this.doc.blocks.slice(fromIdx, toIdx + 1);
+    return Array.from({ length: toIdx - fromIdx + 1 }, (_, k) => fromIdx + k);
+  }
+
+  /** Indexes of the list items between two indexes. */
+  private listItemIndexes(fromIdx: number, toIdx: number): number[] {
+    const out: number[] = [];
+    for (let i = fromIdx; i <= toIdx; i++) if (isListItem(this.doc.blocks[i].type)) out.push(i);
+    return out;
   }
 
   /** Selects the whole document. */
@@ -566,7 +605,7 @@ export class Transaction {
     const blockIdx = findBlockIndex(this.doc, this.selection.anchor.blockId);
     if (blockIdx === -1) return this;
 
-    const block = this.doc.blocks[blockIdx];
+    const block = this.edit(blockIdx);
     const offset = this.selection.anchor.offset;
 
     if (type === undefined && isListItem(block.type)) {
@@ -643,7 +682,7 @@ export class Transaction {
 
     // Apply or remove mark across the range
     for (let i = fromIdx; i <= toIdx; i++) {
-      const b = this.doc.blocks[i];
+      const b = this.edit(i);
       const start = i === fromIdx ? from.offset : 0;
       const end = i === toIdx ? to.offset : getBlockText(b).length;
 
@@ -688,7 +727,7 @@ export class Transaction {
     if (fromIdx === -1 || toIdx === -1) return this;
 
     for (let i = fromIdx; i <= toIdx; i++) {
-      const b = this.doc.blocks[i];
+      const b = this.edit(i);
       const start = i === fromIdx ? from.offset : 0;
       const end = i === toIdx ? to.offset : getBlockText(b).length;
 
@@ -730,9 +769,10 @@ export class Transaction {
 
   /** Checks or unchecks a task item: the one with blockId, or the one at the caret. */
   toggleTaskChecked(blockId = this.selection.anchor.blockId): this {
-    const block = this.doc.blocks[findBlockIndex(this.doc, blockId)];
+    const index = findBlockIndex(this.doc, blockId);
+    const block = this.doc.blocks[index];
     if (!block || block.type !== 'task_list_item') return this;
-    block.attrs = { ...block.attrs, checked: block.attrs?.checked !== true };
+    this.edit(index).attrs = { ...block.attrs, checked: block.attrs?.checked !== true };
     this.docChanged = true;
     return this;
   }
@@ -742,16 +782,16 @@ export class Transaction {
     const range = this.listItemRange();
     if (!range) return this;
     const [fromIdx, toIdx] = range;
-    const items = this.doc.blocks.slice(fromIdx, toIdx + 1).filter((b) => isListItem(b.type));
+    const items = this.listItemIndexes(fromIdx, toIdx);
+    const blocks = this.doc.blocks;
 
     // The first item can only go one level below the item above it.
-    const first = items[0];
-    const firstIdx = this.doc.blocks.indexOf(first);
-    const above = this.doc.blocks[firstIdx - 1];
+    const first = blocks[items[0]];
+    const above = blocks[items[0] - 1];
     if (!above || !isListItem(above.type) || listIndent(above) < listIndent(first)) return this;
-    if (items.some((b) => listIndent(b) >= MAX_LIST_INDENT)) return this;
+    if (items.some((i) => listIndent(blocks[i]) >= MAX_LIST_INDENT)) return this;
 
-    for (const b of items) setListIndent(b, listIndent(b) + 1);
+    for (const i of items) setListIndent(this.edit(i), listIndent(blocks[i]) + 1);
     this.docChanged = true;
     return this;
   }
@@ -761,11 +801,12 @@ export class Transaction {
     const range = this.listItemRange();
     if (!range) return this;
     const [fromIdx, toIdx] = range;
-    const items = this.doc.blocks.slice(fromIdx, toIdx + 1).filter((b) => isListItem(b.type));
-    if (listIndent(items[0]) === 0) return this;
+    const items = this.listItemIndexes(fromIdx, toIdx);
+    if (listIndent(this.doc.blocks[items[0]]) === 0) return this;
 
-    for (const b of items) {
-      if (listIndent(b) > 0) setListIndent(b, listIndent(b) - 1);
+    for (const i of items) {
+      const indent = listIndent(this.doc.blocks[i]);
+      if (indent > 0) setListIndent(this.edit(i), indent - 1);
     }
     this.docChanged = true;
     return this;
@@ -779,8 +820,9 @@ export class Transaction {
     if (fromIdx === -1 || toIdx === -1) return this;
 
     for (let i = fromIdx; i <= toIdx; i++) {
-      this.doc.blocks[i].type = type;
-      this.doc.blocks[i].attrs = { ...attrs };
+      const block = this.edit(i);
+      block.type = type;
+      block.attrs = { ...attrs };
     }
 
     this.docChanged = true;

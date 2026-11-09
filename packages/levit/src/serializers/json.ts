@@ -10,7 +10,8 @@ export function documentToJSON(doc: DocumentData): DocumentData {
       attrs: { ...block.attrs },
       content: block.content.map((c) => ({
         text: c.text,
-        marks: c.marks ? [...c.marks] : [],
+        // The editor's blocks are frozen: copy down to the mark attrs.
+        marks: (c.marks ?? []).map((m) => (m.attrs ? { type: m.type, attrs: { ...m.attrs } } : { type: m.type })),
       })),
     })),
   };

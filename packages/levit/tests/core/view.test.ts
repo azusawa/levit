@@ -62,7 +62,7 @@ describe('DOM Reconciler & Selection Mapping', () => {
 
     // Change only block 2
     const tr = state1.tr;
-    tr.doc.blocks[1].content = [createTextNode('Block 2 Modified')];
+    tr.editBlock(1)!.content = [createTextNode('Block 2 Modified')];
     tr.docChanged = true;
     const state2 = state1.apply(tr);
 
@@ -136,3 +136,56 @@ describe('DOM Reconciler & Selection Mapping', () => {
   });
 });
 
+
+describe('rendering a long document', () => {
+  it('looks only at the blocks that changed, not at every block', async () => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const blocks = Array.from({ length: 300 }, (_, i) =>
+      createBlock(i % 3 ? 'paragraph' : 'ordered_list_item', {}, [createTextNode(`block ${i}`)], `b${i}`)
+    );
+    const state1 = EditorState.create({ doc: createDocument(blocks) });
+    const reconciler = new DOMReconciler(container);
+    reconciler.render(state1);
+
+    const tr = state1.tr;
+    tr.editBlock(150)!.content = [createTextNode('changed')];
+    tr.docChanged = true;
+    const state2 = tr.apply();
+
+    // Count reads of block ids from the DOM and snapshot work.
+    const proto = Element.prototype;
+    const getAttribute = proto.getAttribute;
+    let reads = 0;
+    proto.getAttribute = function (this: Element, name: string) {
+      reads++;
+      return getAttribute.call(this, name);
+    };
+    const snapshots = (reconciler as any).computeBlockSnapshot;
+    let snapshotCalls = 0;
+    (reconciler as any).computeBlockSnapshot = (b: unknown) => {
+      snapshotCalls++;
+      return snapshots.call(reconciler, b);
+    };
+    try {
+      reconciler.render(state2);
+    } finally {
+      proto.getAttribute = getAttribute;
+    }
+    expect(container.querySelector('[data-block-id="b150"]')!.textContent).toBe('changed');
+    expect(snapshotCalls).toBeLessThanOrEqual(1);
+    expect(reads).toBeLessThan(20);
+  });
+
+  it('still numbers ordered lists when a block changes type', () => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const blocks = ['a', 'b', 'c'].map((id) => createBlock('ordered_list_item', {}, [createTextNode(id)], id));
+    const state1 = EditorState.create({ doc: createDocument(blocks) });
+    const reconciler = new DOMReconciler(container);
+    reconciler.render(state1);
+    const state2 = state1.tr.setSelection({ anchor: { blockId: 'b', offset: 0 }, head: { blockId: 'b', offset: 0 }, isCollapsed: true }).setBlockType('paragraph').apply();
+    reconciler.render(state2);
+    expect(container.querySelector('[data-block-id="c"]')!.getAttribute('data-number')).toBe('1');
+  });
+});

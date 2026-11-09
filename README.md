@@ -287,6 +287,19 @@ editor.isActive('bold'); // 선택한 글이 굵은지
 
 이미지처럼 글이 없는 블록은 `atom: true`와 `render(block, el)`로 직접 그립니다.
 
+명령에서 블록을 직접 바꿀 때는 `tr.editBlock(id)`로 그 블록의 사본을 받아 바꿉니다. 문서의 블록은 얼려(freeze) 있어서
+`tr.doc.blocks[i]`를 바로 바꾸면 오류가 납니다. 바뀌지 않은 블록은 이전 상태와 같은 객체로 남아, 긴 문서에서도 바뀐 블록만 다시 그립니다.
+
+```ts
+commands: {
+  setColor: (color: string) => (tr) => {
+    const block = tr.editBlock(tr.selection.head.blockId);
+    if (!block) return false;
+    block.attrs = { ...block.attrs, color };
+  },
+},
+```
+
 ---
 
 ## 🌐 다국어와 ♿ 접근성

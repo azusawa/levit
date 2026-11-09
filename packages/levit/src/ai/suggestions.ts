@@ -63,7 +63,7 @@ function eachRangePart(tr: Transaction, from: EditorPosition, to: EditorPosition
   const fromIdx = findBlockIndex(tr.doc, from.blockId);
   const toIdx = findBlockIndex(tr.doc, to.blockId);
   for (let i = fromIdx; i <= toIdx; i++) {
-    const block = tr.doc.blocks[i];
+    const block = tr.editBlock(i)!;
     const start = i === fromIdx ? from.offset : 0;
     const end = i === toIdx ? to.offset : getBlockText(block).length;
     const [left, rest] = splitBlockContent(block, start);
@@ -80,9 +80,10 @@ function eachRangePart(tr: Transaction, from: EditorPosition, to: EditorPosition
  * are undone or made real.
  */
 function markJoin(block: BlockNode, type: string): void {
-  const first = block.content.find((n) => n.text);
-  if (!first) return;
-  first.marks = (first.marks ?? []).map((m) => (m.type === type ? { ...m, attrs: { ...m.attrs, join: true } } : m));
+  const k = block.content.findIndex((n) => n.text);
+  if (k === -1) return;
+  const first = block.content[k];
+  block.content[k] = { text: first.text, marks: (first.marks ?? []).map((m) => (m.type === type ? { ...m, attrs: { ...m.attrs, join: true } } : m)) };
 }
 
 /**
@@ -106,7 +107,7 @@ export function proposeReplacement(tr: Transaction, blocks: BlockNode[], id: str
     // The breaks between the selected blocks go away when the deletion is accepted.
     const fromIdx = findBlockIndex(tr.doc, from.blockId);
     const toIdx = findBlockIndex(tr.doc, to.blockId);
-    for (let i = fromIdx + 1; i <= toIdx; i++) markJoin(tr.doc.blocks[i], SUGGEST_DELETE);
+    for (let i = fromIdx + 1; i <= toIdx; i++) markJoin(tr.editBlock(i)!, SUGGEST_DELETE);
   }
   tr.setSelection({ anchor: to, head: to, isCollapsed: true });
   // Each block of the answer after the first adds a break, which goes away
@@ -227,13 +228,15 @@ export function resolveSuggestions(tr: Transaction, accept: boolean, id?: string
     if (kept.length === 0) {
       // Only removed text: the whole block goes.
     } else if (joins && lastKeptInProposal) {
+      // Blocks are frozen: put a changed copy in place of the previous one.
       const previous = result[result.length - 1];
-      previous.content = mergeBlockContent(previous.content, kept);
-      caretBlock = previous;
+      const merged = { ...previous, content: mergeBlockContent(previous.content, kept) };
+      result[result.length - 1] = merged;
+      caretBlock = merged;
     } else {
-      block.content = normalizeInlineNodes(kept);
-      result.push(block);
-      caretBlock = block;
+      const changed = { ...block, content: normalizeInlineNodes(kept) };
+      result.push(changed);
+      caretBlock = changed;
       lastKeptInProposal = true;
     }
   }

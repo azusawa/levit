@@ -1,4 +1,4 @@
-import { DocumentData, EditorSelection, InlineMark } from '../model/types.js';
+import { BlockNode, DocumentData, EditorSelection, InlineMark } from '../model/types.js';
 import { createDocument } from '../model/document.js';
 import { cloneDocument, cloneSelection, Transaction } from './transaction.js';
 import { HistoryItem, HistoryManager } from './history.js';
@@ -27,7 +27,7 @@ export class EditorState {
     storedMarks: InlineMark[] | null = null,
     schema: Schema = defaultSchema
   ) {
-    this.doc = doc;
+    this.doc = freezeDocument(doc);
     this.selection = selection;
     this.history = history;
     this.storedMarks = storedMarks;
@@ -65,9 +65,10 @@ export class EditorState {
   apply(tr: Transaction): EditorState {
     let newHistory = this.history;
 
+    // Documents are frozen, so history keeps them as they are, without copies.
     if (tr.docChanged) {
       newHistory = this.history.push({
-        doc: cloneDocument(this.doc),
+        doc: this.doc,
         selection: cloneSelection(this.selection),
         timestamp: Date.now(),
       });
@@ -84,7 +85,7 @@ export class EditorState {
 
   undo(): EditorState {
     const currentState: HistoryItem = {
-      doc: cloneDocument(this.doc),
+      doc: this.doc,
       selection: cloneSelection(this.selection),
       timestamp: Date.now(),
     };
@@ -103,7 +104,7 @@ export class EditorState {
 
   redo(): EditorState {
     const currentState: HistoryItem = {
-      doc: cloneDocument(this.doc),
+      doc: this.doc,
       selection: cloneSelection(this.selection),
       timestamp: Date.now(),
     };
@@ -121,3 +122,30 @@ export class EditorState {
   }
 }
 
+
+/**
+ * Freezes a document's list and its blocks, so blocks can be shared between
+ * states and history: a change has to copy the block (Transaction.editBlock).
+ * Blocks that are already frozen are skipped, so this is quick after an edit.
+ */
+function freezeDocument(doc: DocumentData): DocumentData {
+  for (const block of doc.blocks) {
+    if (!Object.isFrozen(block)) freezeBlock(block);
+  }
+  Object.freeze(doc.blocks);
+  return Object.freeze(doc);
+}
+
+function freezeBlock(block: BlockNode): void {
+  for (const node of block.content) {
+    for (const mark of node.marks ?? []) {
+      if (mark.attrs) Object.freeze(mark.attrs);
+      Object.freeze(mark);
+    }
+    if (node.marks) Object.freeze(node.marks);
+    Object.freeze(node);
+  }
+  Object.freeze(block.content);
+  if (block.attrs) Object.freeze(block.attrs);
+  Object.freeze(block);
+}

@@ -30,9 +30,52 @@ export class DOMReconciler {
   /** Forgets what was rendered, so the next render rebuilds every block. */
   invalidate(): void {
     this.renderedSnapshots.clear();
+    this.lastBlocks = null;
   }
 
+  /** The blocks of the last render and their elements, for the fast path. */
+  private lastBlocks: readonly BlockNode[] | null = null;
+  private elements = new Map<string, HTMLElement>();
+
   render(state: EditorState): void {
+    if (!this.renderChanged(state.doc.blocks)) this.renderAll(state.doc.blocks);
+    this.lastBlocks = state.doc.blocks;
+  }
+
+  /**
+   * The fast path for the usual edit: same blocks in the same order, a few of
+   * them changed. Blocks are immutable, so an unchanged block is the same
+   * object, and only changed ones are looked at. Returns false when the full
+   * render is needed.
+   */
+  private renderChanged(blocks: readonly BlockNode[]): boolean {
+    const last = this.lastBlocks;
+    if (!last || last.length !== blocks.length || this.container.childNodes.length !== blocks.length) return false;
+    const changed: number[] = [];
+    for (let i = 0; i < blocks.length; i++) {
+      if (blocks[i] === last[i]) continue;
+      if (blocks[i].id !== last[i].id) return false;
+      changed.push(i);
+    }
+    let renumber = false;
+    for (const i of changed) {
+      const block = blocks[i];
+      const el = this.elements.get(block.id);
+      if (!el || el.parentNode !== this.container || el.tagName.toLowerCase() !== this.getBlockTagName(block)) return false;
+      const snapshot = this.computeBlockSnapshot(block);
+      if (this.renderedSnapshots.get(block.id) !== snapshot) {
+        this.applyBlockClasses(el, block);
+        this.updateBlockContent(el, block);
+        this.renderedSnapshots.set(block.id, snapshot);
+      }
+      if (last[i].type !== block.type || listIndent(last[i]) !== listIndent(block)) renumber = true;
+    }
+    if (renumber) this.updateListNumbers(blocks.map((b) => [b, this.elements.get(b.id)!]));
+    return true;
+  }
+
+  private renderAll(blocks: readonly BlockNode[]): void {
+    const state = { doc: { blocks } };
     // Drop anything the browser put directly into the container.
     for (const node of Array.from(this.container.childNodes)) {
       if (!(node instanceof HTMLElement) || !node.hasAttribute('data-block-id')) {
@@ -97,6 +140,7 @@ export class DOMReconciler {
 
       previousSibling = blockEl;
       rendered.push([block, blockEl]);
+      this.elements.set(block.id, blockEl);
     }
 
     // Remove orphaned DOM elements
@@ -104,6 +148,7 @@ export class DOMReconciler {
       if (!activeBlockIds.has(id)) {
         element.remove();
         this.renderedSnapshots.delete(id);
+        this.elements.delete(id);
       }
     }
 

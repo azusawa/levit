@@ -185,3 +185,13 @@ describe('AI features (phase 4) are documented', () => {
     expect(read('CONTRIBUTING.md')).toContain('npm run schema');
   });
 });
+
+describe('collaboration and long documents (phase 5) are documented', () => {
+  it('plugin docs say blocks are frozen and changed through tr.editBlock', () => {
+    for (const file of ['README.md', 'llms.txt']) {
+      const text = read(file);
+      expect(text, file).toContain('tr.editBlock(');
+      expect(text, file).toMatch(/frozen|얼려/);
+    }
+  });
+});

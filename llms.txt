@@ -311,6 +311,15 @@ documentToMarkdown(doc, { plugins }); markdownToDocument(md, { plugins });
 ```
 Without the plugin, unknown blocks export as plain paragraphs of their text (or nothing if empty).
 
+Blocks in the document are frozen and shared between states and undo history, so a
+block that a change does not touch stays the same object. To change a block in a
+command or input rule, get a copy the transaction owns:
+```ts
+const block = tr.editBlock(blockId);   // or an index; undefined if missing
+if (block) block.attrs = { ...block.attrs, color: 'red' };
+// tr.doc.blocks[i].attrs = ...  throws: the block is frozen
+```
+
 ## 7. Events
 ```ts
 const stop = editor.on('update', ({ editor, transaction }) => {});   // document changed (also undo/redo/setJSON)

@@ -8,10 +8,9 @@ export interface InputRule {
 
 /** Clears the block, changes its type and puts the caret at its start. */
 function convertBlock(tr: Transaction, blockId: string, type: string, attrs: Record<string, any> = {}): boolean {
-  const idx = findBlockIndex(tr.doc, blockId);
-  if (idx === -1) return false;
+  const block = tr.editBlock(blockId);
+  if (!block) return false;
 
-  const block = tr.doc.blocks[idx];
   block.type = type;
   block.attrs = attrs;
   block.content = [{ text: '', marks: [] }];
@@ -62,9 +61,8 @@ export const defaultInputRules: InputRule[] = [
   {
     match: /^---$/,
     handler: (tr, _match, blockId) => {
-      const block = tr.doc.blocks[findBlockIndex(tr.doc, blockId)];
-      if (block?.type !== 'paragraph') return false;
-      block.content = [{ text: '', marks: [] }];
+      if (tr.doc.blocks[findBlockIndex(tr.doc, blockId)]?.type !== 'paragraph') return false;
+      tr.editBlock(blockId)!.content = [{ text: '', marks: [] }];
       tr.selection = { anchor: { blockId, offset: 0 }, head: { blockId, offset: 0 }, isCollapsed: true };
       tr.insertHorizontalRule();
       return true;
