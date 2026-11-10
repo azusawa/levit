@@ -225,6 +225,17 @@ describe('menus', () => {
     slash.destroy();
   });
 
+  it('Mod+Shift+Enter with no suggestion to accept does nothing, not even toggle a task', () => {
+    const { provider } = fakeProvider();
+    const editor = editorWith([createBlock('task_list_item', { checked: false }, [createTextNode('one')], 't')], provider);
+    select(editor, 't', 1, 1);
+    const e = new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true, metaKey: true, shiftKey: true, bubbles: true, cancelable: true });
+    editor.container.dispatchEvent(e);
+    expect(e.defaultPrevented).toBe(true);
+    expect(editor.state.doc.blocks).toHaveLength(1);
+    expect(editor.state.doc.blocks[0].attrs?.checked).toBe(false);
+  });
+
   it('errors from menu runs go to onError', async () => {
     const onError = vi.fn();
     const provider = vi.fn(() => (async function* () { throw new Error('offline'); })());

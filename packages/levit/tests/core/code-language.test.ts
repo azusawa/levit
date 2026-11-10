@@ -116,6 +116,65 @@ describe('rendering the language', () => {
     expect(document.activeElement).not.toBe(again);
   });
 
+  describe('review fixes: the language label', () => {
+    const altF10 = (editor: LevitEditor) =>
+      editor.container.dispatchEvent(new KeyboardEvent('keydown', { key: 'F10', altKey: true, bubbles: true, cancelable: true }));
+    const label = (editor: LevitEditor) => editor.container.querySelector('.levit-code-language') as HTMLElement;
+
+    it('keeps the focus on the label when the code block is drawn again', () => {
+      const editor = editorWith([code('c', 'x', 'js')]);
+      editor.dispatch(editor.state.tr.setSelection(caret('c', 1)));
+      altF10(editor);
+      // Someone else edits the block meanwhile.
+      const tr = editor.state.tr.setBlocks([code('c', 'y', 'js')]);
+      editor.dispatch(tr.setMeta('remote', true).setMeta('addToHistory', false));
+      expect(editor.container.textContent).toContain('y');
+      expect(document.activeElement).toBe(label(editor));
+    });
+
+    it('moving to the label and back is not a blur or focus of the editor', () => {
+      const editor = editorWith([code('c', 'x', 'js')]);
+      editor.dispatch(editor.state.tr.setSelection(caret('c', 1)));
+      const seen: string[] = [];
+      editor.on('blur', () => seen.push('blur'));
+      editor.on('focus', () => seen.push('focus'));
+      altF10(editor);
+      label(editor).dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+      expect(seen).toEqual([]);
+    });
+
+    it('shortcuts with Mod still work on the label, such as undo', () => {
+      const editor = editorWith([code('c', 'x', 'js')]);
+      editor.dispatch(editor.state.tr.setSelection(caret('c', 1)).insertText('!'));
+      altF10(editor);
+      label(editor).dispatchEvent(new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, metaKey: true, bubbles: true, cancelable: true }));
+      expect(editor.getText()).toBe('x');
+    });
+
+    it('a click while the editor is not focused does not pull the focus in when cancelled', () => {
+      const editor = editorWith([code('c', 'x', 'js')]);
+      const input = document.createElement('input');
+      document.body.appendChild(input);
+      input.focus();
+      vi.stubGlobal('prompt', vi.fn(() => null));
+      label(editor).dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+      expect(document.activeElement).toBe(input);
+    });
+
+    it('does nothing while the editor is locked (an AI answer streaming in)', () => {
+      const editor = editorWith([code('c', 'x', 'js')]);
+      editor.setEditable(false);
+      const prompt = vi.fn(() => 'go');
+      vi.stubGlobal('prompt', prompt);
+      label(editor).dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+      const esc = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+      label(editor).dispatchEvent(esc);
+      expect(prompt).not.toHaveBeenCalled();
+      expect(esc.defaultPrevented).toBe(false);
+      expect(editor.state.doc.blocks[0].attrs).toEqual({ language: 'js' });
+    });
+  });
+
   it('Alt+F10 outside a code block leaves the focus alone', () => {
     const editor = editorWith([createBlock('paragraph', {}, [createTextNode('p')], 'p'), code('c', 'x', 'js')]);
     editor.dispatch(editor.state.tr.setSelection(caret('p', 1)));

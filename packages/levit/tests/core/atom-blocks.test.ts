@@ -404,4 +404,15 @@ describe('changing the type of selected blocks', () => {
       ['heading', { level: 1 }],
     ]);
   });
+
+  it('changes nothing, and adds no undo step, when only images are selected', () => {
+    const state = stateWith([para('a', 'one'), img('i')], {
+      anchor: { blockId: 'i', offset: 0 },
+      head: { blockId: 'i', offset: 0 },
+      isCollapsed: true,
+    });
+    const tr = state.tr.setBlockType('blockquote');
+    expect(tr.docChanged).toBe(false);
+    expect(tr.apply().history.canUndo()).toBe(false);
+  });
 });

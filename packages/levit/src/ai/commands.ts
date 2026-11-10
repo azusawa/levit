@@ -130,9 +130,14 @@ export function aiPlugin(options: AIPluginOptions): LevitPlugin {
       /** Rejects the open AI suggestions (or the one with this id). */
       rejectSuggestions: (id?: string) => (tr, editor) => !running.has(editor) && resolveSuggestions(tr, false, id),
     },
-    // Only act while there is a suggestion; otherwise the key passes on.
+    // Reject acts only while there is a suggestion; otherwise the key passes on.
+    // Accept always takes its key, so it never falls through to Mod+Enter
+    // (which toggles a task).
     keymap: {
-      'Mod-Shift-Enter': (editor) => editor.commands.acceptSuggestions(),
+      'Mod-Shift-Enter': (editor) => {
+        editor.commands.acceptSuggestions();
+        return true;
+      },
       'Mod-Shift-Backspace': (editor) => editor.commands.rejectSuggestions(),
     },
     setup: (editor) => createSuggestionBar(editor),

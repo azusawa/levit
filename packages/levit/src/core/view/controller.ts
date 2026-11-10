@@ -232,8 +232,7 @@ export class InputController {
 
     if (e.key === 'Enter' && isMod && !e.defaultPrevented) {
       e.preventDefault();
-      // Mod+Shift+Enter accepts AI suggestions; with none, it does nothing.
-      if (!e.shiftKey) this.editor.chain().toggleTaskChecked().run();
+      this.editor.chain().toggleTaskChecked().run();
       return;
     }
 
@@ -261,8 +260,8 @@ export class InputController {
   }
 
   /**
-   * A click on a task checkbox toggles it, and a click on a code block's
-   * language label asks for a new language. Neither moves the caret.
+   * A click on a task checkbox toggles it. Pressing a code block's language
+   * label does not move the caret either; the click on it asks (handleClick).
    */
   private handleMouseDown(e: MouseEvent): void {
     // Pressing the language label must not move the caret; the click asks.
@@ -281,7 +280,7 @@ export class InputController {
   /** A click on a code block's language label (also the one a screen reader sends). */
   private handleClick(e: MouseEvent): void {
     const label = this.languageLabel(e.target);
-    if (!label) return;
+    if (!label || !this.editor.isEditable) return;
     e.preventDefault();
     this.askLanguage(label);
   }
@@ -292,11 +291,13 @@ export class InputController {
   }
 
   private askLanguage(label: HTMLElement): void {
+    // The prompt takes the focus; it comes back only if the editor had it.
+    const hadFocus = this.editor.hasFocus();
     const pre = label.closest('[data-block-id]');
     const blockId = pre?.getAttribute('data-block-id');
     const language = window.prompt(this.editor.messages.codeLanguagePrompt, pre?.getAttribute('data-language') ?? '');
     if (blockId && language !== null) this.editor.chain().setCodeLanguage(language, blockId).run();
-    this.editor.focus();
+    if (hadFocus) this.editor.focus();
   }
 
   /**
@@ -307,17 +308,24 @@ export class InputController {
   private languageLabelKey(e: KeyboardEvent): boolean {
     const label = this.languageLabel(e.target);
     if (label) {
+      // Locked (an AI answer streaming in): Escape must reach the AI to stop it.
+      if (!this.editor.isEditable) return true;
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
         this.askLanguage(label);
       } else if (e.key === 'Escape') {
         e.preventDefault();
         this.editor.focus();
+      } else if (e.metaKey || e.ctrlKey) {
+        // Shortcuts (undo, plugin keys) work as in the text.
+        return false;
       }
       // Other keys on the label do not edit the code.
       return true;
     }
     if (e.key !== 'F10' || !e.altKey) return false;
+    // The caret may have moved without a selectionchange yet.
+    this.syncSelectionFromDOM();
     const { doc, selection } = this.editor.state;
     if (!selection.isCollapsed) return false;
     const pre = this.container.querySelector(`[data-block-id="${CSS.escape(selection.head.blockId)}"]`);

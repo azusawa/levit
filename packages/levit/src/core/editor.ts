@@ -306,7 +306,13 @@ export class LevitEditor {
     this.guard = new DOMGuard(this.container, () => this.controller.composing, () => this.repairDOM());
 
     for (const name of ['focus', 'blur'] as const) {
-      const listener = (event: Event) => this.events.emit(name, { editor: this, event: event as FocusEvent });
+      const listener = (event: Event) => {
+        // Focus moving to or from a control inside the editor (the code
+        // language label) is not the editor gaining or losing focus.
+        const other = (event as FocusEvent).relatedTarget as Node | null;
+        if (other && this.container.contains(other)) return;
+        this.events.emit(name, { editor: this, event: event as FocusEvent });
+      };
       this.container.addEventListener(name, listener);
       this.domListeners.push([name, listener]);
     }

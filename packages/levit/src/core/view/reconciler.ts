@@ -38,8 +38,19 @@ export class DOMReconciler {
   private elements = new Map<string, HTMLElement>();
 
   render(state: EditorState): void {
+    // A code language label with the keyboard focus is drawn anew with its
+    // block; the focus moves to the new one instead of falling out of the editor.
+    const active = this.container.ownerDocument.activeElement;
+    const labelOf =
+      active?.classList.contains('levit-code-language') && this.container.contains(active)
+        ? active.closest('[data-block-id]')?.getAttribute('data-block-id')
+        : null;
     if (!this.renderChanged(state.doc.blocks)) this.renderAll(state.doc.blocks);
     this.lastBlocks = state.doc.blocks;
+    if (labelOf && !active!.isConnected) {
+      const label = this.container.querySelector<HTMLElement>(`[data-block-id="${CSS.escape(labelOf)}"] .levit-code-language`);
+      label?.focus({ preventScroll: true });
+    }
   }
 
   /**

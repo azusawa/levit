@@ -157,20 +157,6 @@ describe('clicking a checkbox', () => {
   });
 });
 
-describe('Mod+Shift+Enter (accept AI suggestions)', () => {
-  it('does not toggle the task or change the text when there is nothing to accept', () => {
-    const el = document.createElement('div');
-    document.body.appendChild(el);
-    const editor = new LevitEditor({ element: el, initialContent: createDocument([task('t', 'one')]) });
-    editor.focus();
-    editor.dispatch(editor.state.tr.setSelection(caret('t', 1)));
-    el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true, shiftKey: true, bubbles: true, cancelable: true }));
-    expect(editor.state.doc.blocks).toHaveLength(1);
-    expect(editor.state.doc.blocks[0].attrs?.checked).toBe(false);
-    expect(editor.getText()).toBe('one');
-  });
-});
-
 describe('task lists in Markdown and HTML', () => {
   const doc = () => createDocument([task('a', 'todo'), task('b', 'done', true), task('c', 'sub', false, { indent: 1 })]);
 

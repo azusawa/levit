@@ -856,9 +856,8 @@ export class Transaction {
       const block = this.edit(i);
       block.type = type;
       block.attrs = { ...attrs };
+      this.docChanged = true;
     }
-
-    this.docChanged = true;
     return this;
   }
 
