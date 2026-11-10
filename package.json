@@ -15,8 +15,11 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "typecheck": "npm run typecheck --workspaces",
-    "check:package": "npm run check:package --workspaces --if-present"
+    "typecheck": "npm run typecheck --workspaces && tsc -p site",
+    "check:package": "npm run check:package --workspaces --if-present",
+    "site:dev": "vite --config site/vite.config.ts",
+    "site:build": "vite build --config site/vite.config.ts",
+    "site:preview": "vite preview --config site/vite.config.ts --port 5192"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.5",

@@ -10,3 +10,5 @@ packages/levit/README.md
 packages/levit/LICENSE
 packages/levit/llms.txt
 tarballs
+dist-site
+.taste-skill

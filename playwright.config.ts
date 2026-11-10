@@ -18,9 +18,17 @@ export default defineConfig({
     { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
     { name: 'webkit', use: { ...devices['Desktop Safari'] } },
   ],
-  webServer: {
-    command: `npx vite --port ${PORT} --strictPort`,
-    url: `http://localhost:${PORT}/e2e/fixture.html`,
-    reuseExistingServer: !process.env.CI,
-  },
+  webServer: [
+    {
+      command: `npx vite --port ${PORT} --strictPort`,
+      url: `http://localhost:${PORT}/e2e/fixture.html`,
+      reuseExistingServer: !process.env.CI,
+    },
+    // The website (site/), for e2e/site.spec.ts.
+    {
+      command: `npx vite --config site/vite.config.ts --port ${PORT + 3} --strictPort`,
+      url: `http://localhost:${PORT + 3}/levit/`,
+      reuseExistingServer: !process.env.CI,
+    },
+  ],
 });
