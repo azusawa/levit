@@ -343,7 +343,9 @@ with `aria-multiline` and an `aria-label` (unless the page names it). The slash
 menu is a `listbox` the editor points at with `aria-activedescendant`. The
 bubble menu is a `toolbar`: `Alt+F10` moves focus to it from selected text,
 arrows/Home/End move between buttons, Enter or Space presses one, Escape
-returns to the text, and `aria-pressed` says which formats are on.
+returns to the text, and `aria-pressed` says which formats are on. In a code
+block (collapsed caret) `Alt+F10` focuses the language label instead: Enter or
+Space asks for a language, Escape returns to the code.
 
 ## 9. Theming
 Every color is a CSS variable (`--levit-bg`, `--levit-surface`, `--levit-border`,

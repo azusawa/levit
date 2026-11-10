@@ -189,6 +189,20 @@ test.describe('code block languages', () => {
     await expect(pre).toHaveAttribute('data-language', 'python');
   });
 
+  test('the keyboard reaches the label: Alt+F10, then Enter to set the language', async ({ page }) => {
+    await codeBlock(page, 'print(1)');
+    await editorRoot(page).locator('code').click();
+    await page.keyboard.press('Alt+F10');
+    const label = editorRoot(page).locator('.levit-code-language');
+    await expect(label).toBeFocused();
+    page.once('dialog', (d) => d.accept('python'));
+    await page.keyboard.press('Enter');
+    expect((await blocks(page))[0]).toMatchObject({ attrs: { language: 'python' } });
+    expect(text((await blocks(page))[0])).toBe('print(1)');
+    await page.keyboard.type('x');
+    expect(text((await blocks(page))[0])).toContain('x');
+  });
+
   test('typing inside highlighted code keeps text and caret right', async ({ page }) => {
     await codeBlock(page, 'let a = 1', 'js');
     await expect(editorRoot(page).locator('code .kw')).toHaveText('let');

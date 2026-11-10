@@ -310,6 +310,8 @@ export class DOMReconciler {
     label.className = 'levit-code-language';
     label.contentEditable = 'false';
     label.setAttribute('role', 'button');
+    // Focusable from code (Alt+F10 in the code block), not in the Tab order.
+    label.tabIndex = -1;
     const m = this.messages;
     label.setAttribute('aria-label', language ? format(m.codeLanguageLabel, { language }) : m.setCodeLanguage);
     label.setAttribute('data-label', language ?? m.plainText);

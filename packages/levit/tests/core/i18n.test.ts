@@ -63,7 +63,7 @@ describe('messages', () => {
 
     const prompt = vi.fn(() => null);
     vi.stubGlobal('prompt', prompt);
-    container.querySelector('.levit-code-language')!.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+    container.querySelector('.levit-code-language')!.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
     expect(prompt).toHaveBeenCalledWith(ko.codeLanguagePrompt, '');
   });
 

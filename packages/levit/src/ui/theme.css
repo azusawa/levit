@@ -332,12 +332,20 @@ pre.levit-block-code_block:not([data-language]) .levit-code-language {
   opacity: 0;
 }
 
-pre.levit-block-code_block:hover .levit-code-language {
+pre.levit-block-code_block:hover .levit-code-language,
+pre.levit-block-code_block .levit-code-language:focus-visible {
   opacity: 1;
 }
 
-.levit-code-language:hover {
+.levit-code-language:hover,
+.levit-code-language:focus-visible {
   color: var(--levit-text);
+}
+
+.levit-code-language:focus-visible {
+  outline: 2px solid var(--levit-primary);
+  outline-offset: 2px;
+  border-radius: 3px;
 }
 
 pre.levit-block-code_block code {

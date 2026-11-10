@@ -85,7 +85,7 @@ In a to-do list, click the box to check or uncheck a task, or press **Mod+Enter*
 
 Make a code block with **Code Block** in the slash menu, or with three backticks at the start of an empty line. Use Shift+Enter for a new line inside the code; Enter leaves the block. When you paste into a code block, the text goes in as plain text, exactly as copied.
 
-To set the language, click the label in the top-right corner of the block (it reads **Plain text** until a language is set and shows when you point at the block). Type a name such as `js` or `python`. If the app supports it, the code is then colored for that language. Leave the field empty to clear the language.
+To set the language, click the label in the top-right corner of the block (it reads **Plain text** until a language is set and shows when you point at the block). Type a name such as `js` or `python`. If the app supports it, the code is then colored for that language. Leave the field empty to clear the language. From the keyboard, press **Alt+F10** (Option+F10 on Mac) inside the code block to reach the label, then Enter.
 
 ### Images
 
@@ -157,7 +157,7 @@ When you write together, undo and redo apply only to your own changes, never to 
 You can use the editor without a mouse, and screen readers announce the editor, the slash menu and the toolbar.
 
 - In the slash menu, the Up and Down arrows move between items and the highlighted item is read out. Enter chooses it; Escape closes the menu.
-- Select text and press **Alt+F10** (Option+F10 on Mac) to move into the formatting toolbar.
+- Select text and press **Alt+F10** (Option+F10 on Mac) to move into the formatting toolbar. In a code block, Alt+F10 moves to the language label instead; Enter changes the language and Escape goes back to the code.
 - In the toolbar, Left and Right arrows move between buttons, and Home and End go to the first and last. Enter or Space presses a button. Screen readers say which formats are on.
 - **Escape** goes back to the text.
 - In the link field, Enter applies the link and Escape cancels.
@@ -179,7 +179,7 @@ You can use the editor without a mouse, and screen readers announce the editor, 
 - **Mod+Z** — Undo
 - **Mod+Shift+Z** or **Mod+Y** — Redo
 - **Mod+A** — Select all
-- **Alt+F10** — Move to the formatting toolbar
+- **Alt+F10** — Move to the formatting toolbar (in a code block: to the language label)
 - **Escape** — Close a menu, leave the toolbar, or stop the AI
 - **Mod+Shift+Enter** — Accept AI suggestions
 - **Mod+Shift+Backspace** — Reject AI suggestions

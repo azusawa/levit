@@ -74,16 +74,53 @@ describe('rendering the language', () => {
     expect(pre.querySelector('code')!.className).toBe('language-js');
   });
 
-  it('clicking the label asks for a new language', () => {
+  it('clicking the label asks for a new language (also the click a screen reader sends)', () => {
     const editor = editorWith([code('c', 'x', 'js')]);
     const prompt = vi.fn(() => 'rust');
     vi.stubGlobal('prompt', prompt);
     const label = editor.container.querySelector('.levit-code-language')!;
     const down = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
     label.dispatchEvent(down);
+    // Pressing does not move the caret; the click asks, once.
     expect(down.defaultPrevented).toBe(true);
+    expect(prompt).not.toHaveBeenCalled();
+    label.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    expect(prompt).toHaveBeenCalledTimes(1);
     expect(prompt).toHaveBeenCalledWith('Code language', 'js');
     expect(editor.state.doc.blocks[0].attrs).toEqual({ language: 'rust' });
+  });
+
+  it('Alt+F10 in a code block moves focus to the label; Enter asks, Escape goes back', () => {
+    const editor = editorWith([code('c', 'x', 'js')]);
+    editor.dispatch(editor.state.tr.setSelection(caret('c', 1)));
+    const prompt = vi.fn(() => 'go');
+    vi.stubGlobal('prompt', prompt);
+    const key = (target: Element, init: KeyboardEventInit) => {
+      const e = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...init });
+      target.dispatchEvent(e);
+      return e;
+    };
+    expect(key(editor.container, { key: 'F10', altKey: true }).defaultPrevented).toBe(true);
+    const label = editor.container.querySelector('.levit-code-language') as HTMLElement;
+    expect(document.activeElement).toBe(label);
+
+    key(label, { key: 'Enter' });
+    expect(prompt).toHaveBeenCalledWith('Code language', 'js');
+    // The key changed the language, not the code.
+    expect(editor.state.doc.blocks[0]).toMatchObject({ attrs: { language: 'go' }, content: [{ text: 'x' }] });
+
+    const again = editor.container.querySelector('.levit-code-language') as HTMLElement;
+    again.focus();
+    key(again, { key: 'Escape' });
+    expect(editor.hasFocus()).toBe(true);
+    expect(document.activeElement).not.toBe(again);
+  });
+
+  it('Alt+F10 outside a code block leaves the focus alone', () => {
+    const editor = editorWith([createBlock('paragraph', {}, [createTextNode('p')], 'p'), code('c', 'x', 'js')]);
+    editor.dispatch(editor.state.tr.setSelection(caret('p', 1)));
+    editor.container.dispatchEvent(new KeyboardEvent('keydown', { key: 'F10', altKey: true, bubbles: true, cancelable: true }));
+    expect(document.activeElement).not.toBe(editor.container.querySelector('.levit-code-language'));
   });
 });
 

@@ -65,6 +65,7 @@ export class InputController {
     this.on(this.container, 'beforeinput', this.handleBeforeInput);
     this.on(this.container, 'keydown', this.handleKeyDown);
     this.on(this.container, 'mousedown', this.handleMouseDown);
+    this.on(this.container, 'click', this.handleClick);
     this.on(this.container, 'compositionstart', this.handleCompositionStart);
     this.on(this.container, 'compositionend', this.handleCompositionEnd);
     this.on(this.container, 'paste', this.handlePaste);
@@ -150,6 +151,7 @@ export class InputController {
   }
 
   private handleKeyDown(e: KeyboardEvent): void {
+    if (this.languageLabelKey(e)) return;
     if (this.isComposing) return;
     this.syncSelectionFromDOM();
 
@@ -230,7 +232,8 @@ export class InputController {
 
     if (e.key === 'Enter' && isMod && !e.defaultPrevented) {
       e.preventDefault();
-      this.editor.chain().toggleTaskChecked().run();
+      // Mod+Shift+Enter accepts AI suggestions; with none, it does nothing.
+      if (!e.shiftKey) this.editor.chain().toggleTaskChecked().run();
       return;
     }
 
@@ -262,13 +265,9 @@ export class InputController {
    * language label asks for a new language. Neither moves the caret.
    */
   private handleMouseDown(e: MouseEvent): void {
-    const label = (e.target as Element | null)?.closest?.('.levit-code-language');
-    if (label && this.container.contains(label)) {
+    // Pressing the language label must not move the caret; the click asks.
+    if (this.languageLabel(e.target)) {
       e.preventDefault();
-      const pre = label.closest('[data-block-id]');
-      const blockId = pre?.getAttribute('data-block-id');
-      const language = window.prompt(this.editor.messages.codeLanguagePrompt, pre?.getAttribute('data-language') ?? '');
-      if (blockId && language !== null) this.editor.chain().setCodeLanguage(language, blockId).run();
       return;
     }
 
@@ -277,6 +276,57 @@ export class InputController {
     e.preventDefault();
     const blockId = box.closest('[data-block-id]')?.getAttribute('data-block-id');
     if (blockId) this.editor.chain().toggleTaskChecked(blockId).run();
+  }
+
+  /** A click on a code block's language label (also the one a screen reader sends). */
+  private handleClick(e: MouseEvent): void {
+    const label = this.languageLabel(e.target);
+    if (!label) return;
+    e.preventDefault();
+    this.askLanguage(label);
+  }
+
+  private languageLabel(target: EventTarget | null): HTMLElement | null {
+    const label = (target as Element | null)?.closest?.<HTMLElement>('.levit-code-language');
+    return label && this.container.contains(label) ? label : null;
+  }
+
+  private askLanguage(label: HTMLElement): void {
+    const pre = label.closest('[data-block-id]');
+    const blockId = pre?.getAttribute('data-block-id');
+    const language = window.prompt(this.editor.messages.codeLanguagePrompt, pre?.getAttribute('data-language') ?? '');
+    if (blockId && language !== null) this.editor.chain().setCodeLanguage(language, blockId).run();
+    this.editor.focus();
+  }
+
+  /**
+   * Keys for the language label: Alt+F10 in a code block moves focus to it,
+   * and on the label Enter or Space asks for a language and Escape goes back
+   * to the text. True when the key was one of these.
+   */
+  private languageLabelKey(e: KeyboardEvent): boolean {
+    const label = this.languageLabel(e.target);
+    if (label) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        this.askLanguage(label);
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        this.editor.focus();
+      }
+      // Other keys on the label do not edit the code.
+      return true;
+    }
+    if (e.key !== 'F10' || !e.altKey) return false;
+    const { doc, selection } = this.editor.state;
+    if (!selection.isCollapsed) return false;
+    const pre = this.container.querySelector(`[data-block-id="${CSS.escape(selection.head.blockId)}"]`);
+    const block = doc.blocks[findBlockIndex(doc, selection.head.blockId)];
+    const target = block?.type === 'code_block' ? pre?.querySelector<HTMLElement>('.levit-code-language') : null;
+    if (!target) return false;
+    e.preventDefault();
+    target.focus();
+    return true;
   }
 
   private inListItem(): boolean {

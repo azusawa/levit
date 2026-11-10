@@ -388,3 +388,20 @@ describe('review fixes: a reused element that stops being an atom', () => {
     expect(container.firstElementChild!.classList.contains('levit-atom')).toBe(false);
   });
 });
+
+describe('changing the type of selected blocks', () => {
+  it('leaves images and dividers in the selection as they are', () => {
+    const state = stateWith([para('a', 'one'), img('i'), hr('h'), para('b', 'two')], {
+      anchor: { blockId: 'a', offset: 0 },
+      head: { blockId: 'b', offset: 3 },
+      isCollapsed: false,
+    });
+    const next = state.tr.setBlockType('heading', { level: 1 }).apply();
+    expect(next.doc.blocks.map((b) => [b.type, b.attrs])).toEqual([
+      ['heading', { level: 1 }],
+      ['image', { src: 'https://x.test/a.png', alt: 'A' }],
+      ['horizontal_rule', {}],
+      ['heading', { level: 1 }],
+    ]);
+  });
+});

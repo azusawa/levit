@@ -851,6 +851,8 @@ export class Transaction {
     if (fromIdx === -1 || toIdx === -1) return this;
 
     for (let i = fromIdx; i <= toIdx; i++) {
+      // Images, dividers and other blocks without text keep their type.
+      if (this.isAtom(this.doc.blocks[i].type)) continue;
       const block = this.edit(i);
       block.type = type;
       block.attrs = { ...attrs };
