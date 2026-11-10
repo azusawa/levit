@@ -18,7 +18,7 @@ npm run dev        # 데모 페이지 실행 (Vite)
 
 ## 저장소 구조
 
-npm 워크스페이스로 패키지 세 개를 함께 관리합니다. 버전은 셋이 항상 같습니다.
+npm 워크스페이스로 패키지 네 개를 함께 관리합니다. 버전은 넷이 항상 같습니다.
 
 | 경로 | 패키지 | 내용 |
 |---|---|---|
@@ -88,7 +88,7 @@ npm run check:package  # 배포될 패키지 검사 (publint, arethetypeswrong).
 
 ## 배포 절차 (관리자용)
 
-패키지 세 개를 같은 버전으로 함께 배포합니다. (`levit`은 기존 패키지와 이름이 비슷해 npm이 허용하지 않아
+패키지 네 개를 같은 버전으로 함께 배포합니다. (`levit`은 기존 패키지와 이름이 비슷해 npm이 허용하지 않아
 `@yonailab` 아래에 둡니다.) `publishConfig.access`가 `public`이라 `--access` 옵션은 필요 없습니다.
 
 ### 평소 배포: 태그를 올리면 GitHub Actions가 배포
@@ -97,7 +97,7 @@ npm 토큰은 어디에도 저장하지 않습니다. `.github/workflows/release
 배포하고, 각 버전에 어느 저장소·커밋에서 빌드됐는지 증명하는 provenance가 붙습니다.
 
 ```bash
-node scripts/set-version.mjs 0.4.1   # 세 패키지 버전 + 래퍼가 요구하는 본체 버전을 함께 변경
+node scripts/set-version.mjs 0.4.1   # 네 패키지 버전 + 래퍼가 요구하는 본체 버전을 함께 변경
 npm install                          # package-lock.json 갱신
 git commit -am "Release 0.4.1"
 git tag -a v0.4.1 -m "Release 0.4.1"   # 주석 태그: --follow-tags가 함께 올림
@@ -112,8 +112,9 @@ gh release create v0.4.1 --generate-notes   # 배포가 끝나면 GitHub Release
 
 ### 처음 한 번만 할 설정
 
-1. **첫 배포는 직접 합니다.** npm에 아직 없는 패키지(`@yonailab/levit-react`, `@yonailab/levit-vue`)에는 Trusted
-   Publishing을 설정할 수 없기 때문입니다. 일반 터미널에서 `npm login` 후 `npm publish --workspaces`로 배포하세요.
+1. **첫 배포는 직접 합니다.** npm에 아직 없는 패키지(`@yonailab/levit-react`, `@yonailab/levit-vue`, 0.6.0의
+   `@yonailab/levit-yjs`)에는 Trusted Publishing을 설정할 수 없기 때문입니다. 일반 터미널에서 `npm login` 후
+   `npm publish -w <패키지 이름>`으로 배포하세요.
    이때 태그를 올리면 Release 워크플로도 시작되지만, 이미 배포된 버전이라 publish 단계에서 실패합니다. 정상입니다.
 2. **npmjs.com에서 패키지마다 Trusted Publisher를 등록합니다.** 패키지 → Settings → Trusted Publisher → GitHub Actions:
    - Organization or user: `azusawa`

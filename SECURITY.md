@@ -2,14 +2,14 @@
 
 ## 지원하는 버전
 
-보안 수정은 npm에 나와 있는 최신 마이너 버전과 그 바로 전 버전에 적용합니다. 패키지 세 개
-(`@yonailab/levit`, `@yonailab/levit-react`, `@yonailab/levit-vue`)는 버전이 항상 같습니다.
+보안 수정은 npm에 나와 있는 최신 마이너 버전과 그 바로 전 버전에 적용합니다. 패키지 네 개
+(`@yonailab/levit`, `@yonailab/levit-react`, `@yonailab/levit-vue`, `@yonailab/levit-yjs`)는 버전이 항상 같습니다.
 
 | 버전 | 보안 수정 |
 |---|---|
+| 0.6.x | ✅ |
 | 0.5.x | ✅ |
-| 0.4.x | ✅ |
-| 0.3.x 이하 | ❌ (최신 버전으로 올려 주세요) |
+| 0.4.x 이하 | ❌ (최신 버전으로 올려 주세요) |
 
 ## 취약점 신고
 
