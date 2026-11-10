@@ -88,6 +88,19 @@ describe('review fixes: Markdown details', () => {
     expect(markdownToDocument('```js title="a"\ncode\n```').blocks[0].attrs).toEqual({ language: 'js' });
   });
 
+  it('keeps blank lines inside a code block, and its indentation', () => {
+    const doc = markdownToDocument('Before\n\n```ts\n  const a = 1;\n\n\n  const b = 2;\n```\n\nAfter');
+    expect(doc.blocks.map((b) => b.type)).toEqual(['paragraph', 'code_block', 'paragraph']);
+    expect(doc.blocks[1].attrs).toEqual({ language: 'ts' });
+    expect(doc.blocks[1].content[0].text).toBe('  const a = 1;\n\n\n  const b = 2;');
+    expect(doc.blocks[2].content[0].text).toBe('After');
+  });
+
+  it('reads a code block back the way it was written, blank lines included', () => {
+    const doc = createDocument([createBlock('code_block', { language: 'js' }, [createTextNode('a();\n\nb();')])]);
+    expect(markdownToDocument(documentToMarkdown(doc)).blocks[0].content[0].text).toBe('a();\n\nb();');
+  });
+
   it('still reads inline marks the same way', () => {
     const nodes = markdownToDocument('**b** *i* `c` ~~s~~ ==h== [l](https://x.test) plain').blocks[0].content;
     expect(nodes.map((n) => [n.text, (n.marks ?? []).map((m) => m.type)])).toEqual([

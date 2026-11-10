@@ -318,8 +318,43 @@ function readCodeFence(block: string): { language: string; text: string } | null
   let languageEnd = 3;
   while (languageEnd < infoEnd && !/[\s`]/.test(block[languageEnd])) languageEnd++;
   const language = block.slice(3, languageEnd);
-  const text = newline === -1 ? '' : block.slice(newline + 1, -3).trim();
+  // Keep the code as written: only the line break before the closing fence goes.
+  const text = newline === -1 ? '' : block.slice(newline + 1, -3).replace(/\n[ \t]*$/, '');
   return { language, text };
+}
+
+/**
+ * Splits Markdown into blocks at blank lines. A fenced code block is one block,
+ * blank lines and all, even without blank lines around it.
+ */
+function splitBlocks(markdown: string): string[] {
+  const blocks: string[] = [];
+  let current: string[] = [];
+  let fence = false;
+  const flush = () => {
+    if (current.length > 0) blocks.push(current.join('\n'));
+    current = [];
+  };
+  for (const line of markdown.split(/\r?\n/)) {
+    const isFence = /^ {0,3}```/.test(line);
+    if (fence) {
+      current.push(line);
+      if (/^ {0,3}```\s*$/.test(line)) {
+        fence = false;
+        flush();
+      }
+    } else if (isFence) {
+      flush();
+      current.push(line);
+      fence = true;
+    } else if (line.trim() === '') {
+      flush();
+    } else {
+      current.push(line);
+    }
+  }
+  flush();
+  return blocks;
 }
 
 export function markdownToDocument(markdown: string, options: SerializerOptions = {}): DocumentData {
@@ -328,7 +363,7 @@ export function markdownToDocument(markdown: string, options: SerializerOptions 
     return createDocument();
   }
 
-  const rawBlocks = markdown.split(/\r?\n\r?\n/);
+  const rawBlocks = splitBlocks(markdown);
   const blocks: BlockNode[] = [];
 
   for (const raw of rawBlocks) {
