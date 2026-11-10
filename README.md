@@ -3,7 +3,10 @@
 [![CI](https://github.com/azusawa/levit/actions/workflows/ci.yml/badge.svg)](https://github.com/azusawa/levit/actions/workflows/ci.yml)
 
 <p align="center">
-  <img src="./logo.svg" alt="Levit Logo" width="80"/>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="./brand/levit-logo-dark.svg">
+    <img src="./brand/levit-logo.svg" alt="Levit" width="240">
+  </picture>
   <br />
   <strong>심플하고 모던한 완성형 웹 에디터 (Zero-Dependency & AI-Ready)</strong>
   <br />

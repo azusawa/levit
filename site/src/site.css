@@ -3,15 +3,17 @@
    editor's own look applies. */
 
 :root {
-  --bg: #f7f9fa;
-  --surface: #ecf0f2;
-  --surface-2: #dfe6ea;
-  --ink: #1f3038;
-  --muted: #5d6b72;
-  --accent: #1d4ed8;
+  --bg: #f7f7f6;
+  --surface: #ededeb;
+  --surface-2: #e0e0dd;
+  --ink: #0b0b0c;
+  --muted: #5f5f63;
+  --accent: #0b0b0c;
+  /* The brand pink: the selected block in the logo. Highlights only; white text on it is too faint. */
+  --pink: #ff3d7f;
   --accent-ink: #ffffff;
-  --deep: #1f3038;
-  --deep-2: #2b4450;
+  --deep: #0b0b0c;
+  --deep-2: #1f1f23;
 
   --font: 'General Sans', system-ui, -apple-system, 'Segoe UI', 'Apple SD Gothic Neo', 'Malgun Gothic',
     'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', Meiryo, sans-serif;
@@ -76,12 +78,12 @@ select {
 }
 
 :focus-visible {
-  outline: 3px solid var(--accent);
+  outline: 3px solid var(--pink);
   outline-offset: 3px;
 }
 
 ::selection {
-  background: #bfd3fb;
+  background: #ffc4d8;
 }
 
 code,
@@ -125,15 +127,13 @@ pre {
   letter-spacing: -0.02em;
   text-decoration: none;
 }
-.mark {
-  width: 28px;
-  height: 28px;
+.wordmark .mark {
+  width: 26px;
+  height: 26px;
 }
-.mark rect {
-  fill: var(--accent);
-}
-.mark path {
-  fill: #fff;
+.wordmark .word {
+  height: 21px;
+  width: auto;
 }
 
 .site-nav,
@@ -178,7 +178,7 @@ pre {
   transition: transform 150ms var(--ease), background-color 150ms;
 }
 .button:hover {
-  background: #1e40af;
+  background: #2c2c31;
 }
 .button:active {
   transform: scale(0.97);
@@ -498,7 +498,7 @@ pre {
   font-size: clamp(2rem, 1rem + 4.4vw, 5.5rem);
   font-weight: 500;
   letter-spacing: -0.03em;
-  caret-color: var(--accent);
+  caret-color: var(--pink);
 }
 .formats-input:focus-visible {
   outline: none;
@@ -645,8 +645,8 @@ pre {
   border-radius: 6px;
 }
 .band-menus li:first-child {
-  background: #eaf1fe;
-  color: #1d4ed8;
+  background: #ffe3ec;
+  color: #b0124a;
 }
 .band-browsers {
   display: grid;
@@ -686,7 +686,7 @@ pre {
   margin-top: 10px;
   opacity: 1;
 }
-.band.is-on[data-band='0'] { background: #dbe6f7; }
+.band.is-on[data-band='0'] { background: #ffe3ec; }
 .band.is-on[data-band='1'] { background: #d6ebe7; }
 .band.is-on[data-band='2'] { background: #ece4d3; }
 .band.is-on[data-band='3'] { background: #dfead6; }
@@ -747,7 +747,7 @@ pre {
   padding: 28px clamp(16px, 2vw, 28px);
 }
 .field:nth-child(1) { background: var(--surface); }
-.field:nth-child(2) { background: #cfdae0; }
+.field:nth-child(2) { background: #dadad7; }
 .field:nth-child(3) { background: var(--deep-2); color: #f2f6f8; }
 .field:nth-child(4) { background: var(--deep); color: #f2f6f8; }
 .field-heading {
@@ -980,22 +980,22 @@ details[open] .plus::after {
   min-height: 300px !important;
   background: var(--deep) !important;
   color: var(--bg);
-  font-size: clamp(4rem, 2rem + 9vw, 11rem);
-  font-weight: 700;
-  letter-spacing: -0.05em;
-  line-height: 1;
+}
+.tile-word svg {
+  width: min(46%, 400px);
+  height: auto;
 }
 .tile-invite {
   grid-column: span 4;
   justify-content: space-between;
-  background: var(--accent) !important;
-  color: var(--accent-ink);
+  background: var(--pink) !important;
+  color: var(--ink);
   font-size: 28px;
   font-weight: 500;
   transition: background-color 150ms;
 }
 .tile-invite:hover {
-  background: #1e40af !important;
+  background: #ff5c94 !important;
 }
 .tile-invite svg {
   align-self: flex-end;
@@ -1128,7 +1128,9 @@ details[open] .plus::after {
   margin-top: 0.35em;
 }
 .prose a {
-  color: var(--accent);
+  color: var(--ink);
+  text-decoration-color: var(--pink);
+  text-decoration-thickness: 2px;
   text-underline-offset: 3px;
 }
 .prose :not(pre) > code {

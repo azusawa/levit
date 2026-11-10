@@ -39,6 +39,22 @@ describe('site pages', () => {
     expect(html).toContain('href="https://github.com/azusawa/levit"');
   });
 
+  it.each(PAGES)('$lang $kind: icons and a link preview image', ({ lang, kind }) => {
+    const { html } = doc(lang, kind);
+    expect(html).toContain('<link rel="icon" href="/levit/favicon.ico" sizes="48x48">');
+    expect(html).toContain('<link rel="icon" type="image/svg+xml" href="/levit/favicon.svg">');
+    expect(html).toContain('<link rel="apple-touch-icon" href="/levit/apple-touch-icon.png">');
+    expect(html).toContain('<meta property="og:image" content="https://azusawa.github.io/levit/og-image.png">');
+    expect(html).toContain('<meta name="twitter:card" content="summary_large_image">');
+  });
+
+  it('the header shows the new mark, with the selected block in the brand pink', () => {
+    const { html } = doc('en', 'landing');
+    const header = html.slice(html.indexOf('<header class="site-header">'), html.indexOf('</header>'));
+    expect(header).toContain('#ff3d7f');
+    expect(header).toContain('aria-label="Levit home"');
+  });
+
   it('the landing page holds the playground with its four parts, labelled in the page language', () => {
     for (const lang of LANGS) {
       const { html } = doc(lang, 'landing');

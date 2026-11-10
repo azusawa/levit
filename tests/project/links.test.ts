@@ -68,10 +68,13 @@ describe('project links', () => {
     expect(existsSync(resolve(root, match![1]))).toBe(true);
   });
 
-  it('README logo is a file in the repository', () => {
-    const match = read('README.md').match(/<img src="([^"]+)" alt="Levit Logo"/);
-    expect(match).not.toBeNull();
-    expect(match![1]).not.toMatch(/^https?:/);
-    expect(existsSync(resolve(root, match![1]))).toBe(true);
+  it('README logos (light and dark) are files in the repository', () => {
+    const readme = read('README.md');
+    const files = [readme.match(/<img src="([^"]+)" alt="Levit"/)?.[1], readme.match(/srcset="([^"]+)"/)?.[1]];
+    for (const file of files) {
+      expect(file).toBeDefined();
+      expect(file).not.toMatch(/^https?:/);
+      expect(existsSync(resolve(root, file!))).toBe(true);
+    }
   });
 });

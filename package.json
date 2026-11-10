@@ -19,7 +19,8 @@
     "check:package": "npm run check:package --workspaces --if-present",
     "site:dev": "vite --config site/vite.config.ts",
     "site:build": "vite build --config site/vite.config.ts",
-    "site:preview": "vite preview --config site/vite.config.ts --port 5192"
+    "site:preview": "vite preview --config site/vite.config.ts --port 5192",
+    "brand:images": "node scripts/brand-images.mjs"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.5",

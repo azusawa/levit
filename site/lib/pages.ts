@@ -27,6 +27,11 @@ export function pageFor(path: string): { lang: Lang; kind: Kind } | undefined {
   return PAGES.find((p) => pagePath(p.lang, p.kind) === clean);
 }
 
+// The logo, drawn in the text color with the brand pink block (brand/levit-logo.svg).
+const PINK = '#ff3d7f';
+const MARK = `<path d="M8 26V8h18M56 38v18H38" fill="none" stroke="currentColor" stroke-width="8"/><rect x="25" y="25" width="14" height="14" fill="${PINK}"/>`;
+const WORD = `<g fill="none" stroke="currentColor" stroke-width="13" stroke-linejoin="round"><path d="M5 8v82"/><path d="M25 65h40a20 20 0 1 0-4.7 12.9"/><path d="M80 40l18 50 18-50"/><path d="M133 40v50"/><path d="M158 16v58a16 16 0 0 0 16 16h4M146 42h28"/></g><rect x="126.5" y="12" width="13" height="13" fill="${PINK}"/>`;
+
 const escape = (text: string) =>
   text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -54,8 +59,8 @@ export function renderPage(lang: Lang, kind: Kind, { base, siteUrl = SITE_URL }:
   <a class="skip" href="#main">${escape(s.doc.skip)}</a>
   <header class="site-header">
     <a class="wordmark" href="${link(lang, 'landing')}" aria-label="${escape(s.nav.home)}">
-      <svg class="mark" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="12"/><path d="M23 16h7v26h15v6H23z"/></svg>
-      <span>Levit</span>
+      <svg class="mark" viewBox="0 0 64 64" aria-hidden="true">${MARK}</svg>
+      <svg class="word" viewBox="-2 6 184 92" aria-hidden="true">${WORD}</svg>
     </a>
     <nav class="site-nav" aria-label="Levit">
       <a href="${link(lang, 'guide')}"${kind === 'guide' ? ' aria-current="page"' : ''}>${escape(s.nav.guide)}</a>
@@ -87,7 +92,14 @@ export function renderPage(lang: Lang, kind: Kind, { base, siteUrl = SITE_URL }:
   <meta property="og:description" content="${escape(description)}">
   <meta property="og:type" content="website">
   <meta property="og:url" content="${siteUrl}${pagePath(lang, kind)}">
-  <link rel="icon" type="image/svg+xml" href="${base}logo.svg">
+  <meta property="og:image" content="${siteUrl}og-image.png">
+  <meta property="og:image:width" content="1280">
+  <meta property="og:image:height" content="640">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="${base}favicon.ico" sizes="48x48">
+  <link rel="icon" type="image/svg+xml" href="${base}favicon.svg">
+  <link rel="apple-touch-icon" href="${base}apple-touch-icon.png">
+  <meta name="theme-color" content="#0b0b0c">
   <link rel="preconnect" href="https://api.fontshare.com">
   <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin>
   <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,700&display=swap">
@@ -345,7 +357,7 @@ function footer(s: SiteStrings, lang: Lang, link: LinkFn): string {
     <div class="tile tile-issues">
       <a href="${REPO}/issues">${escape(f.issues)}</a>
     </div>
-    <div class="tile tile-word" aria-hidden="true">Levit</div>
+    <div class="tile tile-word" aria-hidden="true"><svg viewBox="-2 6 184 92">${WORD}</svg></div>
     <a class="tile tile-invite" href="${link(lang, 'docs')}">
       <span>${escape(f.invite)}</span>
       <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M10 38 38 10M16 10h22v22"/></svg>
