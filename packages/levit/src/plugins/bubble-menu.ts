@@ -9,7 +9,12 @@ export interface BubbleMenuInstance {
   destroy: () => void;
 }
 
+const bubbleMenus = new WeakMap<LevitEditor, BubbleMenuInstance>();
+
+/** The bubble menu of an editor. An editor has one: calling this again returns it. */
 export function createBubbleMenu(editor: LevitEditor): BubbleMenuInstance {
+  const existing = bubbleMenus.get(editor);
+  if (existing) return existing;
   const m = editor.messages;
   const menu = document.createElement('div');
   menu.className = 'levit-bubble-menu';
@@ -234,14 +239,17 @@ export function createBubbleMenu(editor: LevitEditor): BubbleMenuInstance {
 
   document.addEventListener('selectionchange', updateVisibility);
 
-  return {
+  const instance: BubbleMenuInstance = {
     element: menu,
     show,
     hide,
     destroy: () => {
+      bubbleMenus.delete(editor);
       document.removeEventListener('selectionchange', updateVisibility);
       editor.container.removeEventListener('keydown', handleEditorKeyDown);
       menu.remove();
     },
   };
+  bubbleMenus.set(editor, instance);
+  return instance;
 }

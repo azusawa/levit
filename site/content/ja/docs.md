@@ -38,7 +38,7 @@ Levit は ESM 専用です。バンドラーか `import` で使ってくださ�
 </script>
 ```
 
-この要素は `placeholder`、`lang`（組み込みメッセージは `ko` か `ja`。後から変えると同じ内容でエディタを作り直します）、`theme`（`dark` か `light`）、初期値の `value`（ドキュメント JSON）属性を読みます。React・Vue のコンポーネントと同じく、バブルメニューとスラッシュメニューが標準で付き、`bubble-menu="false"` や `slash-menu="false"` で外せます。`getJSON()`、`setJSON()`、`getText()`、`focus()` メソッドと、エディタ本体を持つ `editor` プロパティもあります。要素をページ内の別の場所へ移しても、ドキュメントはそのままです。
+この要素は `placeholder`、`lang`（組み込みメッセージは `ko` か `ja`。後から変えると同じ内容で新しい `editor` を作るので、イベントは付け直してください）、`theme`（`dark` か `light`）、初期値の `value`（ドキュメント JSON）属性を読みます。React・Vue のコンポーネントと同じく、バブルメニューとスラッシュメニューが標準で付き、`bubble-menu="false"` や `slash-menu="false"` で外せます。`getJSON()`、`setJSON()`、`getText()`、`focus()` メソッドと、エディタ本体を持つ `editor` プロパティもあります。要素をページ内の別の場所へ移しても同じエディタのままで、取り除いた後も `getJSON()` でドキュメントを取得できます。
 
 ### JavaScript / TypeScript
 

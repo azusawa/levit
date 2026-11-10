@@ -34,7 +34,12 @@ function chooseImage(editor: LevitEditor): void {
 
 let menuCount = 0;
 
+const slashMenus = new WeakMap<LevitEditor, SlashMenuInstance>();
+
+/** The slash menu of an editor. An editor has one: calling this again returns it. */
 export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
+  const existing = slashMenus.get(editor);
+  if (existing) return existing;
   const m = editor.messages;
   const menu = document.createElement('div');
   menu.className = 'levit-slash-menu';
@@ -314,10 +319,11 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
   editor.container.addEventListener('keydown', handleKeyDown, true);
   document.body.appendChild(menu);
 
-  return {
+  const instance: SlashMenuInstance = {
     element: menu,
     getItems: () => [...items],
     destroy: () => {
+      slashMenus.delete(editor);
       close();
       offTransaction();
       offUpdate();
@@ -328,5 +334,7 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
       menu.remove();
     },
   };
+  slashMenus.set(editor, instance);
+  return instance;
 }
 

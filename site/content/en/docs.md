@@ -38,7 +38,7 @@ Without a build step, load the script and the stylesheet and use the `<levit-edi
 </script>
 ```
 
-The element reads `placeholder`, `lang` (`ko` or `ja` for built-in messages; changing it later rebuilds the editor with the same text), `theme` (`dark` or `light`) and an initial `value` (document JSON). It comes with the bubble and slash menus, like the React and Vue components; `bubble-menu="false"` or `slash-menu="false"` leaves one out. It also has `getJSON()`, `setJSON()`, `getText()`, `focus()`, and an `editor` property with the full editor. Moving the element in the page keeps its document.
+The element reads `placeholder`, `lang` (`ko` or `ja` for built-in messages; changing it later builds a new `editor` with the same text, so attach handlers again), `theme` (`dark` or `light`) and an initial `value` (document JSON). It comes with the bubble and slash menus, like the React and Vue components; `bubble-menu="false"` or `slash-menu="false"` leaves one out. It also has `getJSON()`, `setJSON()`, `getText()`, `focus()`, and an `editor` property with the full editor. Moving the element in the page keeps the same editor, and after removal `getJSON()` still returns the document.
 
 ### JavaScript or TypeScript
 

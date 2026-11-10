@@ -22,10 +22,12 @@ Levit is a web editor library designed from scratch using standard Web APIs (DOM
 </script>
 ```
 The element adds the bubble and slash menus (`bubble-menu="false"` /
-`slash-menu="false"` leave them out). Attributes: `placeholder`, `lang` (ko/ja;
-a later change rebuilds the editor with the same document), `theme`
-(dark/light), `value` (initial JSON). Methods: getJSON(), setJSON(), getText(),
-focus(); `el.editor` is the full LevitEditor. Moving the element keeps its document.
+`slash-menu="false"` leave them out, also later). Attributes: `placeholder`,
+`lang` (ko/ja; a later change builds a new `el.editor` with the same document),
+`theme` (dark/light, also on the menus), `value` (initial JSON). Methods:
+getJSON(), setJSON(), getText(), focus(); `el.editor` is the full LevitEditor.
+Moving the element keeps the same editor; after removal getJSON() still works.
+createBubbleMenu/createSlashMenu return the editor's existing menu if it has one.
 
 ### Vanilla JavaScript / TypeScript
 ```ts
