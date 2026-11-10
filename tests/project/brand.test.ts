@@ -52,6 +52,20 @@ describe('brand files', () => {
     expect(sizes).toEqual([16, 32, 48]);
   });
 
+  it('the web app manifest offers the 192 and 512 px icons', () => {
+    const manifest = JSON.parse(read('site/public/manifest.webmanifest'));
+    expect(manifest.name).toBe('Levit');
+    expect(manifest.icons.map((i: { src: string; sizes: string }) => [i.src, i.sizes])).toEqual([
+      ['icon-192.png', '192x192'],
+      ['icon-512.png', '512x512'],
+    ]);
+  });
+
+  it('the site uses no colors of the old blue-gray palette', () => {
+    const css = read('site/src/site.css').toLowerCase();
+    for (const old of ['#1f3038', '#d3dce1', '#f2f6f8', '#e8eef1', '#5d6b72', '#1d4ed8']) expect(css).not.toContain(old);
+  });
+
   it('the demo and test pages use the new icon', () => {
     expect(read('logo.svg')).toBe(read('brand/levit-icon.svg'));
   });

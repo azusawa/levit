@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { PAGES, LANGS, pagePath, renderPage } from '../../site/lib/pages';
 import { strings } from '../../site/lib/strings';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 const doc = (lang: string, kind: string) => {
   const html = renderPage(lang as any, kind as any, { base: '/levit/' });
@@ -41,11 +43,23 @@ describe('site pages', () => {
 
   it.each(PAGES)('$lang $kind: icons and a link preview image', ({ lang, kind }) => {
     const { html } = doc(lang, kind);
-    expect(html).toContain('<link rel="icon" href="/levit/favicon.ico" sizes="48x48">');
+    expect(html).toContain('<link rel="icon" href="/levit/favicon.ico" sizes="32x32">');
+    expect(html).toContain('<link rel="manifest" href="/levit/manifest.webmanifest">');
+    expect(html).toContain('<meta name="theme-color" content="#f7f7f6">');
     expect(html).toContain('<link rel="icon" type="image/svg+xml" href="/levit/favicon.svg">');
     expect(html).toContain('<link rel="apple-touch-icon" href="/levit/apple-touch-icon.png">');
     expect(html).toContain('<meta property="og:image" content="https://azusawa.github.io/levit/og-image.png">');
     expect(html).toContain('<meta name="twitter:card" content="summary_large_image">');
+  });
+
+  it('the header and footer draw the logo from the brand files, so they never drift apart', () => {
+    const { html } = doc('en', 'landing');
+    const inner = (file: string) =>
+      readFileSync(resolve(__dirname, '../../brand', file), 'utf8')
+        .replace(/^<svg[^>]*>|<\/svg>\s*$/g, '')
+        .replaceAll('#0b0b0c', 'currentColor');
+    expect(html).toContain(inner('levit-mark.svg'));
+    expect(html.split(inner('levit-wordmark.svg')).length - 1).toBe(2);
   });
 
   it('the header shows the new mark, with the selected block in the brand pink', () => {

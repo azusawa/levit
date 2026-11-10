@@ -27,10 +27,14 @@ export function pageFor(path: string): { lang: Lang; kind: Kind } | undefined {
   return PAGES.find((p) => pagePath(p.lang, p.kind) === clean);
 }
 
-// The logo, drawn in the text color with the brand pink block (brand/levit-logo.svg).
-const PINK = '#ff3d7f';
-const MARK = `<path d="M8 26V8h18M56 38v18H38" fill="none" stroke="currentColor" stroke-width="8"/><rect x="25" y="25" width="14" height="14" fill="${PINK}"/>`;
-const WORD = `<g fill="none" stroke="currentColor" stroke-width="13" stroke-linejoin="round"><path d="M5 8v82"/><path d="M25 65h40a20 20 0 1 0-4.7 12.9"/><path d="M80 40l18 50 18-50"/><path d="M133 40v50"/><path d="M158 16v58a16 16 0 0 0 16 16h4M146 42h28"/></g><rect x="126.5" y="12" width="13" height="13" fill="${PINK}"/>`;
+// The logo, from brand/: the black parts take the text color (currentColor),
+// the pink block stays pink.
+const brandShapes = (file: string) =>
+  readFileSync(resolve(root, 'brand', file), 'utf8')
+    .replace(/^<svg[^>]*>|<\/svg>\s*$/g, '')
+    .replaceAll('#0b0b0c', 'currentColor');
+const MARK = brandShapes('levit-mark.svg');
+const WORD = brandShapes('levit-wordmark.svg');
 
 const escape = (text: string) =>
   text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -96,10 +100,11 @@ export function renderPage(lang: Lang, kind: Kind, { base, siteUrl = SITE_URL }:
   <meta property="og:image:width" content="1280">
   <meta property="og:image:height" content="640">
   <meta name="twitter:card" content="summary_large_image">
-  <link rel="icon" href="${base}favicon.ico" sizes="48x48">
+  <link rel="icon" href="${base}favicon.ico" sizes="32x32">
   <link rel="icon" type="image/svg+xml" href="${base}favicon.svg">
   <link rel="apple-touch-icon" href="${base}apple-touch-icon.png">
-  <meta name="theme-color" content="#0b0b0c">
+  <link rel="manifest" href="${base}manifest.webmanifest">
+  <meta name="theme-color" content="#f7f7f6">
   <link rel="preconnect" href="https://api.fontshare.com">
   <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin>
   <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,700&display=swap">

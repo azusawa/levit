@@ -1,6 +1,8 @@
 // Makes the website's PNG and ICO images from the logo SVGs in brand/.
-// Run after changing a logo: npm run brand:images (needs Google Chrome or
-// Playwright's Chromium, like the browser tests).
+// Run after changing a logo: npm run brand:images. Uses Google Chrome, or
+// Playwright's Chromium when Chrome is not installed, and the network for the
+// link preview's typeface (General Sans, as on the website), so the image
+// comes out the same on every machine.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { chromium } from '@playwright/test';
@@ -13,15 +15,17 @@ const icon = svg('levit-icon.svg');
 // Phones round the corners of a home-screen icon themselves: give them a full square.
 const squareIcon = icon.replace(' rx="14"', '');
 
-const browser = await chromium.launch({ channel: process.env.CI ? undefined : 'chrome' });
+const browser = await chromium.launch({ channel: 'chrome' }).catch(() => chromium.launch());
 const page = await browser.newPage({ deviceScaleFactor: 1 });
 
 /** Renders some markup at an exact size and returns the PNG. */
 async function render(html, width, height, background = 'transparent') {
   await page.setViewportSize({ width, height });
   await page.setContent(
-    `<!doctype html><meta charset="utf-8"><style>html,body{margin:0;width:${width}px;height:${height}px;background:${background};overflow:hidden}svg{display:block;width:100%;height:100%}</style>${html}`
+    `<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=general-sans@500&display=block"><style>html,body{margin:0;width:${width}px;height:${height}px;background:${background};overflow:hidden}svg{display:block;width:100%;height:100%}</style>${html}`,
+    { waitUntil: 'networkidle' }
   );
+  await page.evaluate(() => document.fonts.ready);
   return page.screenshot({ omitBackground: background === 'transparent', clip: { x: 0, y: 0, width, height } });
 }
 
@@ -55,7 +59,7 @@ const logo = svg('levit-logo-dark.svg');
 writeFileSync(
   out('og-image.png'),
   await render(
-    `<div style="box-sizing:border-box;width:1280px;height:640px;padding:0 120px;display:flex;flex-direction:column;justify-content:center;gap:44px;font-family:'Helvetica Neue',Arial,sans-serif">
+    `<div style="box-sizing:border-box;width:1280px;height:640px;padding:0 120px;display:flex;flex-direction:column;justify-content:center;gap:44px;font-family:'General Sans',sans-serif">
       <div style="width:560px;height:197px">${logo}</div>
       <p style="margin:0;color:#c9c9cc;font-size:44px;line-height:1.3;letter-spacing:-0.01em">Rich text editor with zero dependencies</p>
     </div>`,

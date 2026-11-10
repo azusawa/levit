@@ -11,6 +11,8 @@
   --accent: #0b0b0c;
   /* The brand pink: the selected block in the logo. Highlights only; white text on it is too faint. */
   --pink: #ff3d7f;
+  /* Pink dark enough for text on the light grounds. */
+  --pink-ink: #b0124a;
   --accent-ink: #ffffff;
   --deep: #0b0b0c;
   --deep-2: #1f1f23;
@@ -122,9 +124,6 @@ pre {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  font-weight: 700;
-  font-size: 20px;
-  letter-spacing: -0.02em;
   text-decoration: none;
 }
 .wordmark .mark {
@@ -333,7 +332,7 @@ pre {
 .pg-tools input {
   width: 16px;
   height: 16px;
-  accent-color: var(--accent);
+  accent-color: var(--pink);
 }
 
 .pg-panel {
@@ -502,7 +501,7 @@ pre {
 }
 .formats-input:focus-visible {
   outline: none;
-  border-bottom-color: var(--accent);
+  border-bottom-color: var(--pink);
 }
 .formats-out {
   grid-column: 1 / span 8;
@@ -594,10 +593,10 @@ pre {
   gap: 8px;
   min-height: 220px;
   padding: 16px;
-  border: 1px solid #d3dce1;
+  border: 1px solid #dcdcd9;
   border-radius: 8px;
   background: #ffffff;
-  color: #1f3038;
+  color: #0b0b0c;
   font-size: 14px;
 }
 .band-pre,
@@ -614,7 +613,7 @@ pre {
   background: #f1f5f8;
 }
 .band-caption {
-  color: #5d6b72;
+  color: #5f5f63;
   font-size: 13px;
 }
 .band-editor {
@@ -646,7 +645,7 @@ pre {
 }
 .band-menus li:first-child {
   background: #ffe3ec;
-  color: #b0124a;
+  color: var(--pink-ink);
 }
 .band-browsers {
   display: grid;
@@ -748,8 +747,8 @@ pre {
 }
 .field:nth-child(1) { background: var(--surface); }
 .field:nth-child(2) { background: #dadad7; }
-.field:nth-child(3) { background: var(--deep-2); color: #f2f6f8; }
-.field:nth-child(4) { background: var(--deep); color: #f2f6f8; }
+.field:nth-child(3) { background: var(--deep-2); color: #f5f5f4; }
+.field:nth-child(4) { background: var(--deep); color: #f5f5f4; }
 .field-heading {
   font-size: clamp(1.5rem, 1rem + 1.4vw, 2rem);
   font-weight: 700;
@@ -763,7 +762,7 @@ pre {
   padding: 16px;
   border-radius: 8px;
   background: #fff;
-  color: #1f3038;
+  color: #0b0b0c;
   font-size: 13px;
   line-height: 1.6;
   white-space: pre-wrap;
@@ -886,7 +885,7 @@ details.tile summary::-webkit-details-marker {
   display: none;
 }
 details.tile summary:hover {
-  color: var(--accent);
+  color: var(--pink-ink);
 }
 details.tile[open] {
   background: var(--accent);
@@ -1150,7 +1149,7 @@ details[open] .plus::after {
   padding: 18px 20px;
   border-radius: 8px;
   background: var(--deep);
-  color: #e8eef1;
+  color: #f0f0ee;
   font-size: 14px;
   line-height: 1.6;
   overflow-x: auto;
@@ -1173,7 +1172,7 @@ details[open] .plus::after {
   border: 0;
   border-radius: 4px;
   background: var(--deep-2);
-  color: #e8eef1;
+  color: #f0f0ee;
   font-family: var(--font);
   font-size: 13px;
   cursor: pointer;
