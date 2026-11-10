@@ -38,17 +38,7 @@ Levit は ESM 専用です。バンドラーか `import` で使ってくださ�
 </script>
 ```
 
-この要素は `placeholder`、`lang`（組み込みメッセージは `ko` か `ja`）、`theme`（`dark` か `light`）、初期値の `value`（ドキュメント JSON）属性を読みます。`getJSON()`、`setJSON()`、`getText()`、`focus()` メソッドと、エディタ本体を持つ `editor` プロパティもあります。メニューは自動では付かないので、`editor` に付けてください。
-
-```html
-<script type="module">
-  import { createBubbleMenu, createSlashMenu } from 'https://unpkg.com/@yonailab/levit/dist/index.js';
-
-  const el = document.querySelector('levit-editor');
-  createBubbleMenu(el.editor);
-  createSlashMenu(el.editor);
-</script>
-```
+この要素は `placeholder`、`lang`（組み込みメッセージは `ko` か `ja`。後から変えると同じ内容でエディタを作り直します）、`theme`（`dark` か `light`）、初期値の `value`（ドキュメント JSON）属性を読みます。React・Vue のコンポーネントと同じく、バブルメニューとスラッシュメニューが標準で付き、`bubble-menu="false"` や `slash-menu="false"` で外せます。`getJSON()`、`setJSON()`、`getText()`、`focus()` メソッドと、エディタ本体を持つ `editor` プロパティもあります。要素をページ内の別の場所へ移しても、ドキュメントはそのままです。
 
 ### JavaScript / TypeScript
 

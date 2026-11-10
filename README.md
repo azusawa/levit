@@ -179,6 +179,10 @@ const doc = ref<DocumentData>();
 </script>
 ```
 
+- 버블 메뉴와 슬래시 메뉴가 기본으로 붙습니다. `bubble-menu="false"`, `slash-menu="false"`로 뺄 수 있습니다.
+- `lang="ko"`/`"ja"`로 메뉴 언어를 정하고, 나중에 바꾸면 같은 내용으로 다시 만듭니다. 요소를 다른 곳으로 옮겨도 문서는 그대로입니다.
+- 에디터 전체 기능은 `editor` 속성으로 씁니다(`el.editor.getJSON()` 등).
+
 ---
 
 ## 🤖 AI 연동 (AI-Native Integration)
@@ -404,6 +408,8 @@ createLevitEditor(container, { messages: { bold: 'Gras' } });   // 일부 문구
 | `--levit-selection`, `--levit-highlight` | 선택 영역, 형광펜 |
 | `--levit-code-bg`, `--levit-code-text`, `--levit-quote-border` | 코드, 인용 |
 | `--levit-danger` | 잘못된 입력(링크 주소) |
+| `--levit-comment-bg`, `--levit-comment-active-bg`, `--levit-comment-border` | 댓글이 달린 글 |
+| `--levit-suggestion-insert-bg`, `--levit-suggestion-insert-text`, `--levit-suggestion-delete-text` | AI 제안(넣을 글, 지울 글) |
 | `--levit-font-sans`, `--levit-font-mono`, `--levit-radius`, `--levit-shadow` | 글꼴, 모서리, 그림자 |
 
 변수는 상속되므로 `.levit-editor-root`에 지정하면 그 에디터에만 적용됩니다. 메뉴는 `body`에 붙으므로 메뉴까지 바꾸려면 `:root`에 지정하세요.

@@ -21,6 +21,11 @@ Levit is a web editor library designed from scratch using standard Web APIs (DOM
   });
 </script>
 ```
+The element adds the bubble and slash menus (`bubble-menu="false"` /
+`slash-menu="false"` leave them out). Attributes: `placeholder`, `lang` (ko/ja;
+a later change rebuilds the editor with the same document), `theme`
+(dark/light), `value` (initial JSON). Methods: getJSON(), setJSON(), getText(),
+focus(); `el.editor` is the full LevitEditor. Moving the element keeps its document.
 
 ### Vanilla JavaScript / TypeScript
 ```ts
@@ -163,6 +168,7 @@ editor.chain().selectAll().run();
 ### Editor options
 ```ts
 createLevitEditor(container, {
+  initialContent: savedJSON,   // the document to start with (JSON); empty by default
   placeholder: 'Write...',
   onChange: (editor) => {},
   onSelectionChange: (selection) => {},
@@ -351,8 +357,11 @@ Space asks for a language, Escape returns to the code.
 Every color is a CSS variable (`--levit-bg`, `--levit-surface`, `--levit-border`,
 `--levit-text`, `--levit-text-muted`, `--levit-placeholder`, `--levit-primary`,
 `--levit-primary-hover`, `--levit-on-primary`, `--levit-selection`, `--levit-highlight`,
-`--levit-code-bg`, `--levit-code-text`, `--levit-quote-border`, `--levit-danger`),
-plus `--levit-font-sans`, `--levit-font-mono`, `--levit-radius`, `--levit-shadow`.
+`--levit-code-bg`, `--levit-code-text`, `--levit-quote-border`, `--levit-danger`,
+comments: `--levit-comment-bg`, `--levit-comment-active-bg`, `--levit-comment-border`,
+AI suggestions: `--levit-suggestion-insert-bg`, `--levit-suggestion-insert-text`,
+`--levit-suggestion-delete-text`), plus `--levit-font-sans`, `--levit-font-mono`,
+`--levit-radius`, `--levit-shadow`.
 Dark mode: `[data-theme="dark"]`, or the system setting unless `[data-theme="light"]`.
 
 ## 10. React and Vue

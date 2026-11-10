@@ -38,17 +38,7 @@ Without a build step, load the script and the stylesheet and use the `<levit-edi
 </script>
 ```
 
-The element reads `placeholder`, `lang` (`ko` or `ja` for built-in messages), `theme` (`dark` or `light`) and an initial `value` (document JSON). It also has `getJSON()`, `setJSON()`, `getText()`, `focus()`, and an `editor` property with the full editor. The element does not add the menus itself; attach them to its `editor`:
-
-```html
-<script type="module">
-  import { createBubbleMenu, createSlashMenu } from 'https://unpkg.com/@yonailab/levit/dist/index.js';
-
-  const el = document.querySelector('levit-editor');
-  createBubbleMenu(el.editor);
-  createSlashMenu(el.editor);
-</script>
-```
+The element reads `placeholder`, `lang` (`ko` or `ja` for built-in messages; changing it later rebuilds the editor with the same text), `theme` (`dark` or `light`) and an initial `value` (document JSON). It comes with the bubble and slash menus, like the React and Vue components; `bubble-menu="false"` or `slash-menu="false"` leaves one out. It also has `getJSON()`, `setJSON()`, `getText()`, `focus()`, and an `editor` property with the full editor. Moving the element in the page keeps its document.
 
 ### JavaScript or TypeScript
 

@@ -38,17 +38,7 @@ Levit은 ESM 전용입니다. 번들러나 `import`로 사용하세요. 서버 �
 </script>
 ```
 
-이 요소는 `placeholder`, `lang`(내장 문구는 `ko` 또는 `ja`), `theme`(`dark` 또는 `light`), 초기값 `value`(문서 JSON) 속성을 읽습니다. `getJSON()`, `setJSON()`, `getText()`, `focus()` 메서드와, 에디터 인스턴스 전체를 담은 `editor` 속성도 있습니다. 메뉴는 자동으로 붙지 않으므로 `editor`에 직접 연결합니다.
-
-```html
-<script type="module">
-  import { createBubbleMenu, createSlashMenu } from 'https://unpkg.com/@yonailab/levit/dist/index.js';
-
-  const el = document.querySelector('levit-editor');
-  createBubbleMenu(el.editor);
-  createSlashMenu(el.editor);
-</script>
-```
+이 요소는 `placeholder`, `lang`(내장 문구는 `ko` 또는 `ja`. 나중에 바꾸면 같은 내용으로 에디터를 다시 만듭니다), `theme`(`dark` 또는 `light`), 초기값 `value`(문서 JSON) 속성을 읽습니다. React·Vue 컴포넌트처럼 버블 메뉴와 슬래시 메뉴가 기본으로 붙고, `bubble-menu="false"`나 `slash-menu="false"`로 뺄 수 있습니다. `getJSON()`, `setJSON()`, `getText()`, `focus()` 메서드와, 에디터 인스턴스 전체를 담은 `editor` 속성도 있습니다. 요소를 페이지의 다른 곳으로 옮겨도 문서는 그대로입니다.
 
 ### JavaScript / TypeScript
 
