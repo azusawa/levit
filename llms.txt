@@ -333,12 +333,12 @@ A handler that throws does not stop the others; the error goes to `onError` (or 
 
 ## 8. Messages and accessibility
 ```ts
-import { ko, en } from '@yonailab/levit';
-createLevitEditor(el, { messages: ko });                // Korean menus, prompts and labels
+import { ko, ja, en } from '@yonailab/levit';
+createLevitEditor(el, { messages: ko });                // Korean menus, prompts and labels (ja: Japanese)
 createLevitEditor(el, { messages: { bold: 'Gras' } });  // override some messages
 editor.t('codeLanguageLabel', { language: 'ts' });      // a message with {placeholders} filled
 ```
-`<levit-editor lang="ko">` uses Korean. The editor element is `role="textbox"`
+`<levit-editor lang="ko">` uses Korean, `lang="ja"` Japanese. The editor element is `role="textbox"`
 with `aria-multiline` and an `aria-label` (unless the page names it). The slash
 menu is a `listbox` the editor points at with `aria-activedescendant`. The
 bubble menu is a `toolbar`: `Alt+F10` moves focus to it from selected text,

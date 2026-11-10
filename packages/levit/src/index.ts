@@ -19,7 +19,7 @@ export {
 export type { EditorEvents, EditorEventName, EditorEventHandler } from './core/events.js';
 
 // Messages (i18n)
-export { en, ko, locales, type LevitMessages } from './i18n/messages.js';
+export { en, ja, ko, locales, type LevitMessages } from './i18n/messages.js';
 
 // Plugins
 export type {

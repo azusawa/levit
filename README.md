@@ -57,7 +57,7 @@
    - 글에 **댓글**을 달고(`commentsPlugin`), 댓글 내용은 앱이 원하는 곳에 저장합니다.
    - 수만 개 블록의 긴 문서에서도 바뀐 블록만 다시 그려, 입력 속도가 같은 내용의 일반 편집 영역(contenteditable)과 비슷합니다.
 7. **다국어와 접근성**
-   - 메뉴와 안내 문구는 영어가 기본이고, `messages: ko`로 한국어를 쓰거나 원하는 문구로 바꿉니다.
+   - 메뉴와 안내 문구는 영어가 기본이고, `messages: ko`(한국어), `messages: ja`(일본어)를 쓰거나 원하는 문구로 바꿉니다.
    - 스크린 리더가 편집 영역, 슬래시 메뉴, 서식 도구 모음을 읽어 줍니다. `Alt+F10`으로 도구 모음에 들어가 키보드만으로 서식을 바꿀 수 있습니다.
 
 ---
@@ -360,13 +360,14 @@ commands: {
 ## 🌐 다국어와 ♿ 접근성
 
 ```ts
-import { createLevitEditor, ko } from '@yonailab/levit';
+import { createLevitEditor, ko, ja } from '@yonailab/levit';
 
 createLevitEditor(container, { messages: ko });                 // 한국어
+createLevitEditor(container, { messages: ja });                 // 일본어
 createLevitEditor(container, { messages: { bold: 'Gras' } });   // 일부 문구만 바꾸기
 ```
 
-웹 컴포넌트는 `<levit-editor lang="ko">`로 한국어를 씁니다.
+웹 컴포넌트는 `<levit-editor lang="ko">`로 한국어, `lang="ja"`로 일본어를 씁니다.
 
 - 편집 영역은 스크린 리더에 "여러 줄 텍스트 입력란"으로 알려집니다.
 - 슬래시 메뉴는 방향키로 고르는 항목을 읽어 줍니다.

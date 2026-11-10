@@ -2,7 +2,8 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { LevitEditor } from '../../src/core/editor';
 import { createBubbleMenu } from '../../src/plugins/bubble-menu';
 import { createSlashMenu } from '../../src/plugins/slash-menu';
-import { en, ko } from '../../src/i18n/messages';
+import { en, ja, ko, locales } from '../../src/i18n/messages';
+import * as levit from '../../src/index';
 import { createBlock, createDocument, createTextNode } from '../../src/core/model/document';
 import '../../src/ui/web-component';
 
@@ -22,6 +23,17 @@ describe('messages', () => {
   it('Korean has every message English has, and none are empty', () => {
     expect(Object.keys(ko).sort()).toEqual(Object.keys(en).sort());
     for (const value of Object.values(ko)) expect(value.trim()).not.toBe('');
+  });
+
+  it('Japanese has every message English has, and none are empty', () => {
+    expect(Object.keys(ja).sort()).toEqual(Object.keys(en).sort());
+    for (const value of Object.values(ja)) expect(value.trim()).not.toBe('');
+    expect(ja.bold).toBe('太字');
+  });
+
+  it('ja is a built-in locale and exported from the package', () => {
+    expect(locales.ja).toBe(ja);
+    expect(levit.ja).toBe(ja);
   });
 
   it('uses English by default', () => {
@@ -80,6 +92,16 @@ describe('messages', () => {
     const editor = (el as any).editor as LevitEditor;
     expect(editor.messages.bold).toBe(ko.bold);
     expect(editor.container.getAttribute('data-placeholder')).toBe(ko.placeholder);
+    el.remove();
+  });
+
+  it('<levit-editor lang="ja"> uses Japanese', () => {
+    const el = document.createElement('levit-editor');
+    el.setAttribute('lang', 'ja');
+    document.body.appendChild(el);
+    const editor = (el as any).editor as LevitEditor;
+    expect(editor.messages.bold).toBe(ja.bold);
+    expect(editor.container.getAttribute('data-placeholder')).toBe(ja.placeholder);
     el.remove();
   });
 });

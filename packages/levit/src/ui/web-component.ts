@@ -19,7 +19,7 @@ export class LevitEditorElement extends BaseElement {
     this.mountPoint = document.createElement('div');
     this.appendChild(this.mountPoint);
 
-    // lang="ko" (or "ko-KR") picks the built-in Korean messages.
+    // lang="ko" (or "ko-KR") picks the built-in Korean messages; "ja" Japanese.
     const lang = (this.getAttribute('lang') ?? '').toLowerCase().split('-')[0];
     const messages = locales[lang] ?? en;
     const placeholder = this.getAttribute('placeholder') || messages.placeholder;

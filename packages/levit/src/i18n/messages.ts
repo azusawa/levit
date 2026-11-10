@@ -127,8 +127,67 @@ export const ko: LevitMessages = {
   comment: '댓글',
 };
 
+export const ja: LevitMessages = {
+  editorLabel: 'リッチテキストエディター',
+  placeholder: '入力するか「/」でコマンドを開きます...',
+
+  formattingToolbar: '書式',
+  bold: '太字',
+  italic: '斜体',
+  underline: '下線',
+  strikethrough: '取り消し線',
+  highlight: 'ハイライト',
+  code: 'コード',
+  link: 'リンク',
+  linkUrl: 'リンクのURL',
+  linkPlaceholder: 'https://example.com',
+  quote: '引用',
+
+  slashMenuLabel: 'ブロックを挿入',
+  paragraph: 'テキスト',
+  paragraphDescription: '通常の段落',
+  heading1: '見出し1',
+  heading1Description: '大きな見出し',
+  heading2: '見出し2',
+  heading2Description: '中くらいの見出し',
+  heading3: '見出し3',
+  heading3Description: '小さな見出し',
+  quoteDescription: '引用文や出典',
+  codeBlock: 'コードブロック',
+  codeBlockDescription: 'コードの断片',
+  bulletList: '箇条書きリスト',
+  bulletListDescription: '点で示すリスト',
+  orderedList: '番号付きリスト',
+  orderedListDescription: '順番に番号を付けるリスト',
+  taskList: 'ToDoリスト',
+  taskListDescription: 'チェックボックスでタスク管理',
+  divider: '区切り線',
+  dividerDescription: '段落の間の横線',
+  image: '画像',
+  imageDescription: '画像をアップロードするかURLで追加',
+  imageUrlPrompt: '画像のURL',
+
+  markDone: '完了にする',
+  markNotDone: '未完了にする',
+  codeLanguagePrompt: 'コードの言語',
+  codeLanguageLabel: '言語: {language}',
+  setCodeLanguage: '言語を設定',
+  plainText: 'プレーンテキスト',
+
+  aiImprove: '文章を整える',
+  aiImproveDescription: '選択した文章を直して整える',
+  aiContinue: '続きを書く',
+  aiContinueDescription: 'ここからAIが続きを書く',
+  aiSummarize: '要約',
+  aiSummarizeDescription: '選択範囲または文書全体の要約',
+  suggestionToolbar: 'AIの提案',
+  suggestionAccept: '採用',
+  suggestionReject: '却下',
+  comment: 'コメント',
+};
+
 /** Built-in message sets, by language code. */
-export const locales: Record<string, LevitMessages> = { en, ko };
+export const locales: Record<string, LevitMessages> = { en, ko, ja };
 
 /** Fills `{name}` placeholders in a message. */
 export function format(message: string, values: Record<string, string> = {}): string {
