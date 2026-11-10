@@ -57,6 +57,35 @@ describe('CI', () => {
   });
 });
 
+describe('website workflow (GitHub Pages)', () => {
+  const pages = () => workflow('pages.yml');
+
+  it('publishes the site from main, one run at a time', () => {
+    expect(pages()).toMatch(/on:\s*\n\s+push:\s*\n\s+branches: \[main\]/);
+    expect(pages()).toMatch(/concurrency:\s*\n\s+group: pages\s*\n\s+cancel-in-progress: false/);
+  });
+
+  it('builds the site in a job that cannot deploy', () => {
+    const build = jobSection(pages(), 'build');
+    expect(build).not.toMatch(/id-token|pages: write/);
+    expect(build).toContain('npm ci --ignore-scripts');
+    expect(build).toContain('npm run site:build');
+    expect(build).toContain('actions/upload-pages-artifact@');
+    expect(build).toMatch(/path: dist-site/);
+  });
+
+  it('deploys in a job that runs no project code, behind the github-pages environment', () => {
+    const deploy = jobSection(pages(), 'deploy');
+    expect(deploy).toMatch(/needs: build/);
+    expect(deploy).toContain('environment:');
+    expect(deploy).toContain('name: github-pages');
+    expect(deploy).toContain('pages: write');
+    expect(deploy).toContain('id-token: write');
+    expect(deploy).toContain('actions/deploy-pages@');
+    expect(deploy).not.toMatch(/npm (ci|install|run|test)|actions\/checkout/);
+  });
+});
+
 describe('release workflow (npm Trusted Publishing)', () => {
   const release = () => workflow('release.yml');
 

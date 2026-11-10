@@ -28,6 +28,7 @@ npm 워크스페이스로 패키지 네 개를 함께 관리합니다. 버전은
 | `packages/yjs` | `@yonailab/levit-yjs` | Yjs 실시간 공동 편집 (`yjs`는 peer 의존성) |
 
 - 루트에는 데모(`index.html`), E2E 테스트(`e2e/`), 문서, 저장소 검사(`tests/project/`)가 있습니다.
+- 웹사이트는 `site/`에 있습니다. `npm run site:dev`로 띄우고, 글은 `site/lib/strings.ts`(랜딩)와 `site/content/<언어>/`(사용법·개발 문서 Markdown)에서 고칩니다. main에 올리면 `pages.yml`이 https://azusawa.github.io/levit/ 에 배포합니다.
 - `README.md`, `LICENSE`, `llms.txt`는 루트에서 관리하고, 배포할 때 `packages/levit`으로 복사됩니다.
 - 래퍼의 테스트와 타입 검사는 본체의 소스(`packages/levit/src`)를 직접 읽으므로 빌드가 필요 없습니다.
 - 본체는 진입점이 둘입니다: `@yonailab/levit`과 AI 기능 `@yonailab/levit/ai`(`src/ai/index.ts`).
