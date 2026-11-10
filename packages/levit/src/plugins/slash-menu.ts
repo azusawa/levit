@@ -148,7 +148,7 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
   let shownItems: SlashMenuItem[] = items;
 
   const matches = (item: SlashMenuItem, q: string) => {
-    const needle = q.trim().toLowerCase();
+    const needle = q.toLowerCase();
     return !needle || item.title.toLowerCase().includes(needle) || item.id.toLowerCase().includes(needle);
   };
 
@@ -182,7 +182,9 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
     close();
     if (!item) return;
     // Take out the "/" and what was typed after it; the rest of the line stays.
-    if (at && editor.state.doc.blocks.some((b) => b.id === at.blockId)) {
+    const typed = at && editor.state.doc.blocks.find((b) => b.id === at.blockId);
+    // Only when the text there is still exactly what was typed.
+    if (at && typed && getBlockText(typed).slice(at.offset, at.offset + 1 + query.length) === `/${query}`) {
       const end = { blockId: at.blockId, offset: at.offset + 1 + query.length };
       const start = { blockId: at.blockId, offset: at.offset };
       editor.dispatch(editor.state.tr.setSelection({ anchor: start, head: end, isCollapsed: false }).deleteRange());
@@ -204,10 +206,12 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
     }
     pending = false;
     const next = text.slice(slash.offset + 1, selection.head.offset);
+    // "red / blue": a space right after the "/" means it was just a slash.
+    if (/^\s/.test(next)) return close();
     if (next !== query) {
       query = next;
       shownItems = items.filter((item) => matches(item, query));
-      if (shownItems.length === 0 || query.includes('\n')) return close();
+      if (shownItems.length === 0) return close();
       activeIndex = 0;
       renderList();
     }
@@ -267,12 +271,15 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
 
   function handleKeyDown(e: KeyboardEvent) {
     if (!isOpen) {
-      if (e.key === '/') {
+      // Mod+/ and other shortcuts type nothing.
+      if (e.key === '/' && !e.metaKey && !e.ctrlKey && !e.altKey) {
         const at = opensHere();
         if (at) open(at);
       }
       return;
     }
+    // While an IME composes text, Enter and the arrows belong to it.
+    if (e.isComposing || editor.isComposing) return;
 
     if (e.key === 'ArrowDown') {
       e.preventDefault();
@@ -295,7 +302,10 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
   const onPointerDown = (e: MouseEvent) => {
     if (isOpen && !menu.contains(e.target as Node)) close();
   };
+  // Every change and every caret move, including undo and quiet selection moves.
   const offTransaction = editor.on('transaction', sync);
+  const offUpdate = editor.on('update', sync);
+  const offSelection = editor.on('selectionUpdate', sync);
   const offBlur = editor.on('blur', close);
   document.addEventListener('mousedown', onPointerDown, true);
 
@@ -310,6 +320,8 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
     destroy: () => {
       close();
       offTransaction();
+      offUpdate();
+      offSelection();
       offBlur();
       document.removeEventListener('mousedown', onPointerDown, true);
       editor.container.removeEventListener('keydown', handleKeyDown, true);

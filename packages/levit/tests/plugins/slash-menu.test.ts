@@ -117,6 +117,60 @@ describe('slash menu: typing after "/"', () => {
   });
 });
 
+describe('slash menu: never takes text it did not see typed', () => {
+  it('stays closed for Mod+/ and other shortcuts, which type nothing', () => {
+    setup([createBlock('paragraph', {}, [createTextNode('Hello world')], 'p')]);
+    caret('p', 6);
+    container.dispatchEvent(new KeyboardEvent('keydown', { key: '/', metaKey: true, bubbles: true, cancelable: true }));
+    container.dispatchEvent(new KeyboardEvent('keydown', { key: '/', ctrlKey: true, bubbles: true, cancelable: true }));
+    expect(isOpen()).toBe(false);
+    press('Enter');
+    expect(editor.state.doc.blocks.map((b) => getBlockText(b))).toEqual(['Hello ', 'world']);
+  });
+
+  it('closes when undo takes the "/" away', () => {
+    setup([createBlock('paragraph', {}, [createTextNode('Intro')], 'p')]);
+    caret('p', 5);
+    type(' ');
+    type('/he');
+    expect(isOpen()).toBe(true);
+    while (blockText().includes('/')) editor.undo();
+    expect(isOpen()).toBe(false);
+    press('Enter');
+    expect(editor.state.doc.blocks.map((b) => getBlockText(b))[0]).toMatch(/^Intro/);
+  });
+
+  it('closes when the caret moves before the "/", also without a transaction (arrow keys, clicks)', () => {
+    setup([createBlock('paragraph', {}, [createTextNode('Intro ')], 'p')]);
+    caret('p', 6);
+    type('/he');
+    editor.setSelectionQuietly({ anchor: { blockId: 'p', offset: 2 }, head: { blockId: 'p', offset: 2 }, isCollapsed: true });
+    expect(isOpen()).toBe(false);
+  });
+
+  it('closes when a space follows the "/", as in "red / blue"', () => {
+    setup();
+    caret('p', 0);
+    type('red / b');
+    expect(isOpen()).toBe(false);
+    press('Enter');
+    expect(editor.state.doc.blocks.map((b) => getBlockText(b))).toEqual(['red / b', '']);
+  });
+
+  it('leaves Enter and the arrows to the IME while it is composing', () => {
+    setup();
+    caret('p', 0);
+    type('/');
+    const enter = new KeyboardEvent('keydown', { key: 'Enter', isComposing: true, bubbles: true, cancelable: true });
+    // happy-dom leaves isComposing out of the event init.
+    Object.defineProperty(enter, 'isComposing', { value: true });
+    container.dispatchEvent(enter);
+    // The menu chose nothing: the line is still a paragraph holding the "/".
+    expect(editor.state.doc.blocks[0].type).toBe('paragraph');
+    expect(blockText()).toBe('/');
+  });
+});
+
 describe('slash menu: closing', () => {
   it('closes when the caret moves to another line', () => {
     setup([createBlock('paragraph', {}, [], 'p'), createBlock('paragraph', {}, [createTextNode('x')], 'q')]);
