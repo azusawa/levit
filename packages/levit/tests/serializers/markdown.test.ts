@@ -96,6 +96,11 @@ describe('review fixes: Markdown details', () => {
     expect(doc.blocks[2].content[0].text).toBe('After');
   });
 
+  it('reads the rest normally when a code fence is never closed', () => {
+    const doc = markdownToDocument('```js\nfoo\n\n# Title\n\n- a');
+    expect(doc.blocks.map((b) => b.type)).toEqual(['paragraph', 'heading', 'bullet_list_item']);
+  });
+
   it('reads a code block back the way it was written, blank lines included', () => {
     const doc = createDocument([createBlock('code_block', { language: 'js' }, [createTextNode('a();\n\nb();')])]);
     expect(markdownToDocument(documentToMarkdown(doc)).blocks[0].content[0].text).toBe('a();\n\nb();');

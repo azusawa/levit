@@ -8,6 +8,8 @@ import { PAGES, pageFor, pagePath, renderPage } from './lib/pages.ts';
 const root = import.meta.dirname;
 const packages = resolve(root, '../packages');
 const base = process.env.SITE_BASE ?? '/levit/';
+// Set both to publish somewhere else, e.g. SITE_BASE=/ SITE_URL=https://levit.example/
+const siteUrl = process.env.SITE_URL;
 
 function pages(): Plugin {
   return {
@@ -17,7 +19,7 @@ function pages(): Plugin {
       handler(_html, ctx) {
         const page = pageFor(ctx.path);
         if (!page) throw new Error(`No site page for ${ctx.path}`);
-        return renderPage(page.lang, page.kind, { base });
+        return renderPage(page.lang, page.kind, { base, siteUrl });
       },
     },
     // Rebuild a page in the dev server when its Markdown or strings change.

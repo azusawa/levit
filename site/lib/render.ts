@@ -45,7 +45,9 @@ export function renderDoc(markdown: string): RenderedDoc {
   const toc: TocEntry[] = [];
   const ids: string[] = [];
   for (const block of blocks) {
-    if (block.type !== 'heading' || (block.attrs?.level ?? 1) > 3) continue;
+    // Only h2 and h3 get ids (and a place in the table of contents).
+    const level = block.attrs?.level ?? 1;
+    if (block.type !== 'heading' || level < 2 || level > 3) continue;
     const text = plainText(block.content);
     const id = unique(slugify(text));
     ids.push(id);

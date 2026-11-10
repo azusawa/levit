@@ -1,6 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const PORT = 5190;
+const SITE_PORT = PORT + 3;
+// e2e/site.spec.ts reads where the website is served from this.
+process.env.LEVIT_SITE_URL = `http://localhost:${SITE_PORT}/levit/`;
 
 export default defineConfig({
   testDir: './e2e',
@@ -26,8 +29,8 @@ export default defineConfig({
     },
     // The website (site/), for e2e/site.spec.ts.
     {
-      command: `npx vite --config site/vite.config.ts --port ${PORT + 3} --strictPort`,
-      url: `http://localhost:${PORT + 3}/levit/`,
+      command: `npx vite --config site/vite.config.ts --port ${SITE_PORT} --strictPort`,
+      url: process.env.LEVIT_SITE_URL,
       reuseExistingServer: !process.env.CI,
     },
   ],

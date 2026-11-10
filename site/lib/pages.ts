@@ -34,10 +34,13 @@ const escape = (text: string) =>
 const inline = (text: string) => escape(text).replace(/`([^`]+)`/g, '<code>$1</code>');
 
 interface Options {
+  /** The path the site is served under, like '/levit/'. */
   base: string;
+  /** The site's full address, for canonical and alternate links. */
+  siteUrl?: string;
 }
 
-export function renderPage(lang: Lang, kind: Kind, { base }: Options): string {
+export function renderPage(lang: Lang, kind: Kind, { base, siteUrl = SITE_URL }: Options): string {
   const s = strings[lang];
   const link = (l: Lang, k: Kind) => `${base}${pagePath(l, k)}`;
   const doc = kind === 'landing' ? null : renderDoc(readFileSync(resolve(root, `site/content/${lang}/${kind}.md`), 'utf8'));
@@ -45,7 +48,7 @@ export function renderPage(lang: Lang, kind: Kind, { base }: Options): string {
   const description =
     kind === 'landing' ? s.meta.landingDescription : kind === 'guide' ? s.meta.guideDescription : s.meta.docsDescription;
 
-  const alternates = LANGS.map((l) => `<link rel="alternate" hreflang="${l}" href="${SITE_URL}${pagePath(l, kind)}">`).join('\n  ');
+  const alternates = LANGS.map((l) => `<link rel="alternate" hreflang="${l}" href="${siteUrl}${pagePath(l, kind)}">`).join('\n  ');
 
   const nav = `
   <a class="skip" href="#main">${escape(s.doc.skip)}</a>
@@ -77,13 +80,13 @@ export function renderPage(lang: Lang, kind: Kind, { base }: Options): string {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${escape(title)}</title>
   <meta name="description" content="${escape(description)}">
-  <link rel="canonical" href="${SITE_URL}${pagePath(lang, kind)}">
+  <link rel="canonical" href="${siteUrl}${pagePath(lang, kind)}">
   ${alternates}
-  <link rel="alternate" hreflang="x-default" href="${SITE_URL}${pagePath('en', kind)}">
+  <link rel="alternate" hreflang="x-default" href="${siteUrl}${pagePath('en', kind)}">
   <meta property="og:title" content="${escape(title)}">
   <meta property="og:description" content="${escape(description)}">
   <meta property="og:type" content="website">
-  <meta property="og:url" content="${SITE_URL}${pagePath(lang, kind)}">
+  <meta property="og:url" content="${siteUrl}${pagePath(lang, kind)}">
   <link rel="icon" type="image/svg+xml" href="${base}logo.svg">
   <link rel="preconnect" href="https://api.fontshare.com">
   <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin>

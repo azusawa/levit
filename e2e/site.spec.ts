@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 
 // The website (site/), served by its own Vite server: see playwright.config.ts.
-const SITE = 'http://localhost:5193/levit/';
+const SITE = process.env.LEVIT_SITE_URL ?? 'http://localhost:5193/levit/';
 
 const panel = (page: Page, name: string) => page.locator(`[data-panel="${name}"]`);
 const editor = (page: Page, name: string) => page.locator(`[data-editor="${name}"]`);
@@ -45,6 +45,39 @@ test.describe('landing page', () => {
     await page.getByRole('button', { name: 'Accept' }).click();
     await expect(editor(page, 'ai').locator('ins, del')).toHaveCount(0);
     await expect(editor(page, 'ai')).toContainText('Our new editor is fast and has no dependencies');
+  });
+
+  test('AI and comment buttons still work after the sample text is deleted', async ({ page }) => {
+    const errors: string[] = [];
+    page.on('pageerror', (e) => errors.push(e.message));
+    await page.goto(SITE);
+    for (const tab of ['AI', 'Comments']) {
+      await page.getByRole('tab', { name: tab }).click();
+      const name = tab === 'AI' ? 'ai' : 'comments';
+      await editor(page, name).click();
+      await page.keyboard.press('ControlOrMeta+a');
+      await page.keyboard.press('Backspace');
+      await page.keyboard.type('Short');
+    }
+    await page.getByRole('tab', { name: 'AI' }).click();
+    await page.locator('[data-ai="improve"]').click();
+    await expect(editor(page, 'ai').locator('ins').first()).toBeVisible();
+    await page.getByRole('tab', { name: 'Comments' }).click();
+    await page.locator('[data-comment-add]').click();
+    await expect(page.locator('[data-comment-list] > li')).toHaveCount(1);
+    expect(errors).toEqual([]);
+  });
+
+  test('while an AI answer streams, the other AI buttons wait and Stop works', async ({ page }) => {
+    await page.goto(SITE);
+    await page.getByRole('tab', { name: 'AI' }).click();
+    await page.locator('[data-ai="continue"]').click();
+    await expect(page.locator('[data-ai="summarize"]')).toBeDisabled();
+    await expect(page.locator('[data-menus]')).toBeDisabled();
+    await page.locator('[data-ai="stop"]').click();
+    await expect(page.locator('[data-ai="summarize"]')).toBeEnabled();
+    await expect(page.locator('[data-ai="stop"]')).toBeDisabled();
+    await expect(page.locator('[data-menus]')).toBeEnabled();
   });
 
   test('Together: what one person types shows up for the other', async ({ page }) => {
@@ -104,6 +137,18 @@ test.describe('guide and docs', () => {
     const target = decodeURIComponent((await link.getAttribute('href'))!.slice(1));
     await link.click();
     await expect(page.locator(`[id="${target}"]`)).toBeInViewport();
+  });
+
+  test('a code copy button goes back to its label, even after two quick clicks', async ({ page, context, browserName }) => {
+    test.skip(browserName !== 'chromium', 'clipboard permission is a Chromium feature');
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await page.goto(SITE + 'ja/docs/');
+    const button = page.locator('.prose pre .code-copy').first();
+    await expect(button).toHaveText('コピー');
+    await button.dblclick();
+    await expect(button).toHaveText('コピーしました');
+    await expect(button).toHaveText('コピー', { timeout: 5000 });
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('npm install');
   });
 
   test('the language links lead to the same page in another language', async ({ page }) => {

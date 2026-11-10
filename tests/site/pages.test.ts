@@ -55,6 +55,14 @@ describe('site pages', () => {
     expect(html).toMatch(/<h2 id="[^"]+">/);
   });
 
+  it('can be built for another address, with links and canonical URLs to match', () => {
+    const html = renderPage('ko', 'guide', { base: '/', siteUrl: 'https://levit.example/' });
+    expect(html).toContain('<link rel="canonical" href="https://levit.example/ko/guide/">');
+    expect(html).toContain('hreflang="ja" href="https://levit.example/ja/guide/"');
+    expect(html).toContain('href="/ko/docs/"');
+    expect(html).not.toContain('azusawa.github.io');
+  });
+
   it('every language has every string English has', () => {
     const keys = (o: object, prefix = ''): string[] =>
       Object.entries(o).flatMap(([k, v]) => (v && typeof v === 'object' && !Array.isArray(v) ? keys(v, `${prefix}${k}.`) : [`${prefix}${k}`]));

@@ -1,29 +1,24 @@
 // The guide and docs pages: copy buttons on code and the section being read
 // marked in the table of contents.
 import '@yonailab/levit/levit.css';
+import { strings, type Lang } from '../lib/strings';
 import { setUpPage } from './page';
 import './site.css';
 
-setUpPage();
+const s = strings[(document.documentElement.lang || 'en') as Lang] ?? strings.en;
 
+// A copy button on every code block; setUpPage gives it its behaviour.
 for (const pre of document.querySelectorAll<HTMLPreElement>('.prose pre')) {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'code-copy';
-  button.textContent = document.documentElement.lang === 'ko' ? '복사' : document.documentElement.lang === 'ja' ? 'コピー' : 'Copy';
-  button.dataset.copied = document.documentElement.lang === 'ko' ? '복사됨' : document.documentElement.lang === 'ja' ? 'コピーしました' : 'Copied';
-  button.addEventListener('click', async () => {
-    try {
-      await navigator.clipboard.writeText(pre.querySelector('code')?.textContent ?? '');
-      const label = button.textContent;
-      button.textContent = button.dataset.copied!;
-      setTimeout(() => (button.textContent = label), 1600);
-    } catch {
-      // No clipboard access.
-    }
-  });
+  button.textContent = s.hero.copy;
+  button.dataset.copy = pre.querySelector('code')?.textContent ?? '';
+  button.dataset.copied = s.hero.copied;
   pre.append(button);
 }
+
+setUpPage();
 
 const links = new Map<string, HTMLAnchorElement>();
 for (const a of document.querySelectorAll<HTMLAnchorElement>('.toc a')) links.set(decodeURIComponent(a.hash.slice(1)), a);

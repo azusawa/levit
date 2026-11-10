@@ -146,8 +146,10 @@ function nextNote() {
   return all[commentCount++ % all.length];
 }
 
+/** Selects a phrase in a block, or the whole block. Uses the last block when there are fewer. */
 function selectText(ed: LevitEditor, blockIndex: number, phrase: string) {
-  const block = ed.state.doc.blocks[blockIndex];
+  const blocks = ed.state.doc.blocks;
+  const block = blocks[Math.min(blockIndex, blocks.length - 1)];
   const text = block.content.map((n) => n.text).join('');
   // The phrase, or the whole block when there is none (or it is not there).
   const found = phrase ? text.indexOf(phrase) : -1;
@@ -221,6 +223,14 @@ build();
 
 // ---- AI buttons
 const stopButton = root.querySelector<HTMLButtonElement>('[data-ai="stop"]')!;
+const aiButtons = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-ai]:not([data-ai="stop"])'));
+const menusSelect = root.querySelector<HTMLSelectElement>('[data-menus]')!;
+/** One answer at a time; the editors are not rebuilt while it streams. */
+function setRunning(running: boolean) {
+  for (const b of aiButtons) b.disabled = running;
+  stopButton.disabled = !running;
+  menusSelect.disabled = running;
+}
 for (const button of root.querySelectorAll<HTMLButtonElement>('[data-ai]')) {
   const command = button.dataset.ai!;
   button.addEventListener('click', async () => {
@@ -233,11 +243,11 @@ for (const button of root.querySelectorAll<HTMLButtonElement>('[data-ai]')) {
       const end = last.content.map((n) => n.text).join('').length;
       ed.dispatch(ed.state.tr.setSelection({ anchor: { blockId: last.id, offset: end }, head: { blockId: last.id, offset: end }, isCollapsed: true }));
     }
-    stopButton.disabled = false;
+    setRunning(true);
     try {
       await runAICommand(ed, command);
     } finally {
-      stopButton.disabled = true;
+      setRunning(false);
     }
   });
 }
@@ -251,7 +261,7 @@ root.querySelector('[data-comment-add]')!.addEventListener('click', () => {
 });
 
 // ---- Menu language and dark theme
-root.querySelector<HTMLSelectElement>('[data-menus]')!.addEventListener('change', (e) => {
+menusSelect.addEventListener('change', (e) => {
   menusLang = (e.target as HTMLSelectElement).value as Lang;
   rebuild();
 });

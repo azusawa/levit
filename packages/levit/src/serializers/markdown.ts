@@ -335,7 +335,10 @@ function splitBlocks(markdown: string): string[] {
     if (current.length > 0) blocks.push(current.join('\n'));
     current = [];
   };
-  for (const line of markdown.split(/\r?\n/)) {
+  const lines = markdown.split(/\r?\n/);
+  let fenceStart = -1;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
     const isFence = /^ {0,3}```/.test(line);
     if (fence) {
       current.push(line);
@@ -347,10 +350,21 @@ function splitBlocks(markdown: string): string[] {
       flush();
       current.push(line);
       fence = true;
+      fenceStart = i;
     } else if (line.trim() === '') {
       flush();
     } else {
       current.push(line);
+    }
+  }
+  if (fence) {
+    // A fence that never closes is not a code block: read its lines again as
+    // ordinary blocks, split at blank lines.
+    current = [];
+    fence = false;
+    for (const line of lines.slice(fenceStart)) {
+      if (line.trim() === '') flush();
+      else current.push(line);
     }
   }
   flush();

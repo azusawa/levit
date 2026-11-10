@@ -14,13 +14,15 @@ export function setUpPage() {
 
   for (const button of document.querySelectorAll<HTMLButtonElement>('[data-copy]')) {
     const label = button.textContent;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     button.addEventListener('click', async () => {
       try {
         await navigator.clipboard.writeText(button.dataset.copy!);
         button.textContent = button.dataset.copied ?? label;
-        setTimeout(() => (button.textContent = label), 1600);
+        clearTimeout(timer);
+        timer = setTimeout(() => (button.textContent = label), 1600);
       } catch {
-        // No clipboard access: the command stays visible to copy by hand.
+        // No clipboard access: the text stays visible to copy by hand.
       }
     });
   }

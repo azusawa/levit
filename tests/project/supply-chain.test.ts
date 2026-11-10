@@ -44,6 +44,10 @@ describe('GitHub Actions', () => {
 describe('CI', () => {
   const ci = () => workflow('ci.yml');
 
+  it('builds the website on every change, so a broken site fails before main', () => {
+    expect(jobSection(ci(), 'test')).toContain('npm run site:build');
+  });
+
   it('installs without running dependency install scripts', () => {
     expect(ci()).not.toMatch(/run: npm ci\s*$/m);
     expect(ci()).toMatch(/run: npm ci --ignore-scripts/);

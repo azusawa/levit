@@ -44,6 +44,12 @@ describe('renderDoc: a Markdown page for the site', () => {
     expect(html).toContain('const a = 1;\n\nconst b = 2;');
   });
 
+  it('keeps ids in order when the body has another top-level heading', () => {
+    const { html } = renderDoc('# T\n\n## A\n\n# Again\n\n## B');
+    expect(html).toContain('<h2 id="a">A</h2>');
+    expect(html).toContain('<h2 id="b">B</h2>');
+  });
+
   it('escapes text, so a page cannot inject markup', () => {
     const { html, toc } = renderDoc('# T\n\n## <img src=x onerror=alert(1)>\n\nUse `<levit-editor>`.');
     expect(html).not.toContain('<img');
