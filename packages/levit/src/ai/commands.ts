@@ -113,6 +113,12 @@ export function aiPlugin(options: AIPluginOptions): LevitPlugin {
   const run = (id: string) => (editor: LevitEditor) => {
     runAICommand(editor, id).catch((error) => editor.reportError(error));
   };
+  // The slash menu leaves only a caret. A command that needs selected text
+  // then works on the line the caret is in (nothing on an empty line).
+  const runFromSlash = (command: AICommand) => (editor: LevitEditor) => {
+    if (command.needsSelection && editor.state.selection.isCollapsed && !selectLine(editor)) return;
+    run(command.id)(editor);
+  };
 
   const plugin: LevitPlugin = {
     name: 'ai',
@@ -135,7 +141,7 @@ export function aiPlugin(options: AIPluginOptions): LevitPlugin {
       title: title(command),
       description: description(command),
       icon: command.icon ?? '✨',
-      action: run(command.id),
+      action: runFromSlash(command),
     })),
     bubbleItems: commands
       .filter((command) => command.bubble)
@@ -143,6 +149,25 @@ export function aiPlugin(options: AIPluginOptions): LevitPlugin {
   };
   configs.set(plugin, options);
   return plugin;
+}
+
+/** Selects the text of the caret's line, without the spaces around it. False when there is none. */
+function selectLine(editor: LevitEditor): boolean {
+  const { selection, doc } = editor.state;
+  const block = doc.blocks.find((b) => b.id === selection.head.blockId);
+  if (!block) return false;
+  const text = getBlockText(block);
+  const from = text.length - text.trimStart().length;
+  const to = text.trimEnd().length;
+  if (to <= from) return false;
+  editor.dispatch(
+    editor.state.tr.setSelection({
+      anchor: { blockId: block.id, offset: from },
+      head: { blockId: block.id, offset: to },
+      isCollapsed: false,
+    })
+  );
+  return true;
 }
 
 function allCommands(options: AIPluginOptions): AICommand[] {

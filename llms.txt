@@ -35,7 +35,7 @@ const editor = createLevitEditor(container, {
 
 // Attach modern menus
 createBubbleMenu(editor);
-createSlashMenu(editor);
+createSlashMenu(editor);   // "/" at the start of a line or after a space; typing after it filters
 ```
 
 ## 2. Document Data Schema (JSON)

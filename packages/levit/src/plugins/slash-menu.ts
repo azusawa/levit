@@ -140,9 +140,21 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
     return el;
   };
 
+  /** Where the "/" that opened the menu is, and what was typed after it. */
+  let slash: { blockId: string; offset: number } | null = null;
+  // True from the "/" keydown until the "/" is in the document.
+  let pending = false;
+  let query = '';
+  let shownItems: SlashMenuItem[] = items;
+
+  const matches = (item: SlashMenuItem, q: string) => {
+    const needle = q.trim().toLowerCase();
+    return !needle || item.title.toLowerCase().includes(needle) || item.id.toLowerCase().includes(needle);
+  };
+
   function renderList() {
     menu.replaceChildren();
-    items.forEach((item, index) => {
+    shownItems.forEach((item, index) => {
       const el = part('div', `levit-slash-item${index === activeIndex ? ' is-active' : ''}`);
       el.id = `${menu.id}-${index}`;
       el.setAttribute('role', 'option');
@@ -165,26 +177,63 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
   }
 
   function selectItem(index: number) {
-    const item = items[index];
-    if (item) {
-      // Clear slash if present
-      const currentBlock = editor.state.doc.blocks.find(
-        (b) => b.id === editor.state.selection.anchor.blockId
-      );
-      if (currentBlock && getBlockText(currentBlock) === '/') {
-        editor.chain().deleteBackward().run();
-      }
-      item.action(editor);
-    }
+    const item = shownItems[index];
+    const at = slash;
     close();
+    if (!item) return;
+    // Take out the "/" and what was typed after it; the rest of the line stays.
+    if (at && editor.state.doc.blocks.some((b) => b.id === at.blockId)) {
+      const end = { blockId: at.blockId, offset: at.offset + 1 + query.length };
+      const start = { blockId: at.blockId, offset: at.offset };
+      editor.dispatch(editor.state.tr.setSelection({ anchor: start, head: end, isCollapsed: false }).deleteRange());
+    }
+    item.action(editor);
+  }
+
+  /** Follows the document after each change: the query, or closing. */
+  function sync() {
+    if (!isOpen || !slash) return;
+    const { selection, doc } = editor.state;
+    const block = doc.blocks.find((b) => b.id === slash!.blockId);
+    if (!block || !selection.isCollapsed || selection.head.blockId !== slash.blockId) return close();
+    const text = getBlockText(block);
+    if (text[slash.offset] !== '/' || selection.head.offset <= slash.offset) {
+      // Before the "/" goes in, the caret is still in front of it.
+      if (pending && selection.head.offset === slash.offset) return;
+      return close();
+    }
+    pending = false;
+    const next = text.slice(slash.offset + 1, selection.head.offset);
+    if (next !== query) {
+      query = next;
+      shownItems = items.filter((item) => matches(item, query));
+      if (shownItems.length === 0 || query.includes('\n')) return close();
+      activeIndex = 0;
+      renderList();
+    }
+  }
+
+  /** "/" opens the menu at the start of a line or after a space, never inside a word or code. */
+  function opensHere(): { blockId: string; offset: number } | null {
+    const { selection, doc } = editor.state;
+    if (!selection.isCollapsed) return null;
+    const block = doc.blocks.find((b) => b.id === selection.head.blockId);
+    if (!block || block.type === 'code_block') return null;
+    const offset = selection.head.offset;
+    const before = getBlockText(block)[offset - 1];
+    return offset === 0 || /\s/.test(before) ? { blockId: block.id, offset } : null;
   }
 
   let positionTimer: ReturnType<typeof setTimeout> | undefined;
 
   // Mark the menu open right away so keys pressed before it is shown
   // (Escape, Enter, arrows) are handled by the menu, not the editor.
-  function open() {
+  function open(at: { blockId: string; offset: number }) {
     isOpen = true;
+    pending = true;
+    slash = at;
+    query = '';
+    shownItems = items;
     activeIndex = 0;
     renderList();
     // Wait for the "/" to be rendered so the caret rect points at it.
@@ -207,6 +256,8 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
 
   function close() {
     isOpen = false;
+    pending = false;
+    slash = null;
     editor.container.removeAttribute('aria-controls');
     editor.container.removeAttribute('aria-activedescendant');
     clearTimeout(positionTimer);
@@ -216,17 +267,20 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
 
   function handleKeyDown(e: KeyboardEvent) {
     if (!isOpen) {
-      if (e.key === '/') open();
+      if (e.key === '/') {
+        const at = opensHere();
+        if (at) open(at);
+      }
       return;
     }
 
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      activeIndex = (activeIndex + 1) % items.length;
+      activeIndex = (activeIndex + 1) % shownItems.length;
       renderList();
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      activeIndex = (activeIndex - 1 + items.length) % items.length;
+      activeIndex = (activeIndex - 1 + shownItems.length) % shownItems.length;
       renderList();
     } else if (e.key === 'Enter') {
       e.preventDefault();
@@ -236,6 +290,14 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
       close();
     }
   }
+
+  // A click anywhere but the menu closes it.
+  const onPointerDown = (e: MouseEvent) => {
+    if (isOpen && !menu.contains(e.target as Node)) close();
+  };
+  const offTransaction = editor.on('transaction', sync);
+  const offBlur = editor.on('blur', close);
+  document.addEventListener('mousedown', onPointerDown, true);
 
   // Capture phase: run before the editor's own keydown handler, so Enter picks
   // the menu item instead of splitting the block.
@@ -247,6 +309,9 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
     getItems: () => [...items],
     destroy: () => {
       close();
+      offTransaction();
+      offBlur();
+      document.removeEventListener('mousedown', onPointerDown, true);
       editor.container.removeEventListener('keydown', handleKeyDown, true);
       menu.remove();
     },

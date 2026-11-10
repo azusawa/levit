@@ -177,6 +177,30 @@ test.describe('slash menu', () => {
     expect(await texts(page)).toEqual(['Heading']);
   });
 
+  test('typing after "/" narrows the list, and Enter takes the match without leaving the "/"', async ({ page }) => {
+    await page.keyboard.type('Note /quo');
+    await expect(page.locator('.levit-slash-item')).toHaveCount(1);
+    await expect(page.locator('.levit-slash-item')).toContainText('Quote');
+    await page.keyboard.press('Enter');
+    await expect(page.locator('.levit-slash-menu')).toBeHidden();
+    expect((await blocks(page))[0].type).toBe('blockquote');
+    expect(await texts(page)).toEqual(['Note ']);
+  });
+
+  test('does not open for "/" inside a word, and Enter still makes a new line', async ({ page }) => {
+    await page.keyboard.type('and/or');
+    await expect(page.locator('.levit-slash-menu')).toBeHidden();
+    await page.keyboard.press('Enter');
+    expect(await texts(page)).toEqual(['and/or', '']);
+  });
+
+  test('closes when you click elsewhere on the page', async ({ page }) => {
+    await page.keyboard.type('/');
+    await expect(page.locator('.levit-slash-menu')).toBeVisible();
+    await page.mouse.click(5, 5);
+    await expect(page.locator('.levit-slash-menu')).toBeHidden();
+  });
+
   test('choosing an item with the mouse converts the block', async ({ page }) => {
     await page.keyboard.type('/');
     await page.locator('.levit-slash-item', { hasText: 'Quote' }).click();

@@ -14,7 +14,7 @@ A document is a column of blocks: paragraphs, headings, quotes, lists, code, ima
 
 ### The slash menu
 
-Type `/` to open a menu of blocks. Move with the Up and Down arrows, press Enter to choose, or click an item. Escape closes the menu. The block you are in becomes the type you pick, so it works best on an empty line.
+Type `/` at the start of a line or after a space to open a menu of blocks. Keep typing to narrow the list: `/head` shows only the headings. Move with the Up and Down arrows, press Enter to choose, or click an item. Escape, a click elsewhere or deleting the `/` closes the menu. A `/` inside a word, like and/or, or in a code block types a plain slash. The block you are in becomes the type you pick, and the `/` and what you typed after it are removed.
 
 - **Text** — plain body text.
 - **Heading 1**, **Heading 2**, **Heading 3** — large, medium and small headings for sections.
@@ -123,7 +123,7 @@ Undo also covers formatting, pastes and AI answers.
 
 If the app connects an AI service, three commands are added. The text the AI writes appears with its formatting (headings, lists, bold) as it arrives.
 
-- **Improve writing** — fixes and polishes the selected text. Select text and press the **Improve writing** button in the bubble menu.
+- **Improve writing** — fixes and polishes the selected text. Select text and press the **Improve writing** button in the bubble menu, or choose it from the slash menu to improve the whole line.
 - **Continue writing** — the AI writes on from the caret. Type `/` and choose it from the slash menu.
 - **Summarize** — writes a short summary of the whole document in a new block below the current one. Type `/` and choose it from the slash menu.
 

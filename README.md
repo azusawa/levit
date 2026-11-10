@@ -91,7 +91,7 @@ const editor = createLevitEditor(container, {
 
 // 버블 메뉴 및 슬래시 커맨드 활성화
 createBubbleMenu(editor);
-createSlashMenu(editor);
+createSlashMenu(editor);   // 줄 첫머리나 띄어쓰기 뒤의 "/"로 열고, 이어서 입력하면 걸러짐
 ```
 
 ### 3. 이미지 업로드와 문법 강조 (선택)

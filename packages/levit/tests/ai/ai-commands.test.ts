@@ -202,6 +202,29 @@ describe('menus', () => {
     bubble.destroy();
   });
 
+  it('from the slash menu, a command that needs selected text works on the whole line', async () => {
+    const { provider, requests } = fakeProvider('Fixed line.');
+    const editor = editorWith([para('a', 'Before.'), para('b', 'bad line '), para('c', 'After.')], provider);
+    select(editor, 'b', 9, 9);
+    const slash = createSlashMenu(editor);
+    slash.getItems().find((i) => i.id === 'ai-improve')!.action(editor);
+    await vi.waitFor(() => expect(requests).toHaveLength(1));
+    expect(requests[0].text).toBe('bad line');
+    await vi.waitFor(() => expect(editor.commands.acceptSuggestions()).toBe(true));
+    expect(texts(editor)).toEqual(['Before.', 'Fixed line. ', 'After.']);
+    slash.destroy();
+  });
+
+  it('from the slash menu on an empty line, a command that needs selected text does nothing', async () => {
+    const { provider } = fakeProvider('x');
+    const editor = editorWith([para('a', '')], provider);
+    const slash = createSlashMenu(editor);
+    slash.getItems().find((i) => i.id === 'ai-improve')!.action(editor);
+    await Promise.resolve();
+    expect(provider).not.toHaveBeenCalled();
+    slash.destroy();
+  });
+
   it('errors from menu runs go to onError', async () => {
     const onError = vi.fn();
     const provider = vi.fn(() => (async function* () { throw new Error('offline'); })());
