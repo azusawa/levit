@@ -76,6 +76,12 @@ describe('CI', () => {
     const ci = read('.github/workflows/ci.yml');
     expect(ci).toMatch(/playwright install --with-deps chrome firefox webkit/);
   });
+
+  it('stops the browser tests after 15 minutes instead of hanging', () => {
+    const ci = read('.github/workflows/ci.yml');
+    const job = ci.slice(ci.indexOf('\n  e2e:'));
+    expect(job.split('\n    steps:')[0]).toMatch(/^    timeout-minutes: 15$/m);
+  });
 });
 
 describe('editing features (phase 2) are documented', () => {
