@@ -234,3 +234,33 @@ describe('review fixes: suggestions', () => {
     expect(texts(editor)).toEqual(['Above.', 'New one.', 'New two.', 'New three.', 'Below.']);
   });
 });
+
+describe('AI answers with tables', () => {
+  const answer = ['| A | B |\n', '| --- | --- |\n| 1 | 2 |'];
+  const cells = (editor: LevitEditor) => editor.state.doc.blocks.filter((b) => b.type === 'table_cell').map((b) => getBlockText(b));
+
+  it('a table proposed in place of text becomes a table once accepted', async () => {
+    const editor = setup([para('a', 'Prices')], answer);
+    select(editor, 'a', 0, 'a', 6);
+    await runAICommand(editor, 'improve');
+    editor.commands.acceptSuggestions();
+    expect(cells(editor)).toEqual(['A', 'B', '1', '2']);
+    expect(editor.container.querySelectorAll('table td')).toHaveLength(2);
+  });
+
+  it('rejecting a proposed table brings back the text and leaves no cells', async () => {
+    const editor = setup([para('a', 'Prices')], answer);
+    select(editor, 'a', 0, 'a', 6);
+    await runAICommand(editor, 'improve');
+    editor.commands.rejectSuggestions();
+    expect(cells(editor)).toEqual([]);
+    expect(texts(editor).filter(Boolean)).toEqual(['Prices']);
+  });
+
+  it('continuing writes a table straight in', async () => {
+    const editor = setup([para('a', 'Prices')], ['\n\n', ...answer]);
+    select(editor, 'a', 6, 'a', 6);
+    await runAICommand(editor, 'continue');
+    expect(cells(editor)).toEqual(['A', 'B', '1', '2']);
+  });
+});
