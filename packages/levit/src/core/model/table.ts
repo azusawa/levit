@@ -1,0 +1,77 @@
+import { BlockNode, DocumentData } from './types.js';
+import { createBlock, findBlockIndex, generateBlockId } from './document.js';
+
+/**
+ * Tables. The document stays a flat list of blocks: every cell is a
+ * `table_cell` block, and its attrs say which table (`table`) and which row
+ * (`row`) it belongs to. Cells of one row follow each other, and rows of one
+ * table follow each other. Header cells have `header: true`.
+ *
+ * Keeping cells as blocks means the caret, selections, undo and
+ * collaboration work in tables as they do anywhere else. Adding a row or a
+ * column only adds blocks, so two people can do it at the same time.
+ */
+export const TABLE_CELL = 'table_cell';
+
+export function isTableCell(type: string): boolean {
+  return type === TABLE_CELL;
+}
+
+/** Where a cell is: its table's first and last block, the rows (block indexes), and its own row and column. */
+export interface TablePosition {
+  start: number;
+  end: number;
+  rows: number[][];
+  row: number;
+  col: number;
+}
+
+const tableOf = (block: BlockNode) => String(block.attrs?.table ?? '');
+const rowOf = (block: BlockNode) => String(block.attrs?.row ?? '');
+
+/** The table the block at index belongs to, or null when it is not a cell. */
+export function tableAtIndex(blocks: readonly BlockNode[], index: number): TablePosition | null {
+  const block = blocks[index];
+  if (!block || !isTableCell(block.type)) return null;
+  const table = tableOf(block);
+  const inTable = (i: number) => blocks[i] && isTableCell(blocks[i].type) && tableOf(blocks[i]) === table;
+  let start = index;
+  while (inTable(start - 1)) start -= 1;
+  let end = index;
+  while (inTable(end + 1)) end += 1;
+
+  const rows: number[][] = [];
+  let row = 0;
+  let col = 0;
+  for (let i = start; i <= end; i++) {
+    if (i === start || rowOf(blocks[i]) !== rowOf(blocks[i - 1])) rows.push([]);
+    const current = rows[rows.length - 1];
+    if (i === index) {
+      row = rows.length - 1;
+      col = current.length;
+    }
+    current.push(i);
+  }
+  return { start, end, rows, row, col };
+}
+
+/** The table the block belongs to, or null when it is not a cell. */
+export function tableAt(doc: DocumentData, blockId: string): TablePosition | null {
+  return tableAtIndex(doc.blocks, findBlockIndex(doc, blockId));
+}
+
+/** A new empty cell. */
+export function createCell(table: string, row: string, header = false): BlockNode {
+  return createBlock(TABLE_CELL, header ? { table, row, header: true } : { table, row });
+}
+
+/** The cells of a new empty table, row after row. The first row is a header unless told otherwise. */
+export function createTable(rows: number, cols: number, { header = true }: { header?: boolean } = {}): BlockNode[] {
+  const table = generateBlockId('t');
+  const out: BlockNode[] = [];
+  for (let r = 0; r < rows; r++) {
+    const row = generateBlockId('r');
+    for (let c = 0; c < cols; c++) out.push(createCell(table, row, header && r === 0));
+  }
+  return out;
+}

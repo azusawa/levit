@@ -8,6 +8,7 @@ import {
 import {
   createBlock,
   findBlockIndex,
+  generateBlockId,
   getBlockText,
   isListItem,
   listIndent,
@@ -29,6 +30,7 @@ import {
   previousWordOffset,
 } from '../model/text.js';
 import { BlockNode } from '../model/types.js';
+import { createCell, createTable, isTableCell, tableAtIndex, type TablePosition } from '../model/table.js';
 import { EditorState } from './state.js';
 
 export function cloneDocument(doc: DocumentData): DocumentData {
@@ -161,6 +163,8 @@ export class Transaction {
       const [left] = splitBlockContent(block, from.offset);
       const [, right] = splitBlockContent(block, to.offset);
       block.content = mergeBlockContent(left, right);
+    } else if (this.doc.blocks.slice(fromIdx, toIdx + 1).some((b) => isTableCell(b.type))) {
+      return this.deleteRangeWithCells(fromIdx, toIdx, from, to);
     } else {
       const startBlock = this.edit(fromIdx);
       const endBlock = this.doc.blocks[toIdx];
@@ -185,6 +189,57 @@ export class Transaction {
     };
     this.docChanged = true;
     this.selectionChanged = true;
+    return this;
+  }
+
+  /**
+   * deleteRange for a selection that touches a table. Cells are never merged
+   * or split: selected cells are emptied, and a table is removed only when
+   * the selection covers all of it.
+   */
+  private deleteRangeWithCells(fromIdx: number, toIdx: number, from: EditorPosition, to: EditorPosition): this {
+    const blocks = this.doc.blocks;
+    const covered = new Set<number>();
+    for (let i = fromIdx; i <= toIdx; i++) {
+      const t = tableAtIndex(blocks, i);
+      if (!t) continue;
+      const startsInside = t.start > fromIdx || (t.start === fromIdx && from.offset === 0);
+      const endsInside = t.end < toIdx || (t.end === toIdx && to.offset >= getBlockText(blocks[toIdx]).length);
+      if (startsInside && endsInside) for (let k = t.start; k <= t.end; k++) covered.add(k);
+      i = t.end;
+    }
+
+    const kept: BlockNode[] = [];
+    let first: BlockNode | null = null;
+    let last: BlockNode | null = null;
+    for (let i = fromIdx; i <= toIdx; i++) {
+      if (covered.has(i)) continue;
+      const type = blocks[i].type;
+      const edge = i === fromIdx || i === toIdx;
+      // Blocks between the ends go, except cells of a table that stays.
+      if (!edge && !isTableCell(type)) continue;
+      // Selected images and dividers go too.
+      if (edge && this.isAtom(type)) continue;
+      const block = this.edit(i);
+      const start = i === fromIdx ? from.offset : 0;
+      const end = i === toIdx ? to.offset : getBlockText(block).length;
+      const [left] = splitBlockContent(block, start);
+      const [, right] = splitBlockContent(block, end);
+      block.content = mergeBlockContent(left, right);
+      kept.push(block);
+      if (i === fromIdx) first = block;
+      if (i === toIdx) last = block;
+    }
+    // Text on both sides of a removed table joins up, as with no table between.
+    if (first && last && !isTableCell(first.type) && !isTableCell(last.type)) {
+      first.content = mergeBlockContent(first.content, last.content);
+      kept.pop();
+    }
+    if (kept.length === 0) kept.push(createBlock('paragraph'));
+    this.doc.blocks.splice(fromIdx, toIdx - fromIdx + 1, ...kept);
+    if (first) this.setCaret(first.id, from.offset);
+    else this.setCaret(kept[0].id, 0);
+    this.docChanged = true;
     return this;
   }
 
@@ -266,6 +321,9 @@ export class Transaction {
       return this.deleteInBlock(blockIdx, target(getBlockText(block), offset), offset);
     }
 
+    // Cells are never merged: Backspace at the start of one does nothing.
+    if (isTableCell(block.type)) return this;
+
     // Offset is 0 in a nested list item: move it up a level first.
     if (listIndent(block) > 0) {
       return this.outdentListItem();
@@ -277,6 +335,13 @@ export class Transaction {
       edited.type = 'paragraph';
       edited.attrs = {};
       this.docChanged = true;
+      return this;
+    }
+
+    // Offset is 0 after a table: go into its last cell instead of merging.
+    const prev = this.doc.blocks[blockIdx - 1];
+    if (prev && isTableCell(prev.type)) {
+      this.setCaret(prev.id, getBlockText(prev).length);
       return this;
     }
 
@@ -340,7 +405,8 @@ export class Transaction {
     }
 
     const next = this.doc.blocks[blockIdx + 1];
-    if (!next) return this;
+    // Cells are never merged with each other or with the text around a table.
+    if (!next || isTableCell(block.type) || isTableCell(next.type)) return this;
     if (this.isAtom(next.type)) {
       this.doc.blocks.splice(blockIdx + 1, 1);
       this.docChanged = true;
@@ -412,34 +478,57 @@ export class Transaction {
     if (blockIdx === -1) return this;
 
     const block = this.edit(blockIdx);
+    // A cell holds only text: what is pasted into one goes on its lines.
+    if (isTableCell(block.type)) {
+      const texts = fragment.filter((b) => !this.isAtom(b.type));
+      if (texts.length === 0) return this;
+      const lines: InlineNode[] = [];
+      texts.forEach((b, i) => {
+        if (i > 0) lines.push({ text: '\n', marks: [] });
+        lines.push(...b.content);
+      });
+      fragment = [createBlock('paragraph', {}, normalizeInlineNodes(lines))];
+    }
     const offset = this.selection.anchor.offset;
     const [left, right] = splitBlockContent(block, offset);
     // Pasted blocks get new ids, unless the caller keeps them (streaming
-    // keeps ids so finished blocks are not redrawn).
-    const pasted = fragment.map((b) =>
-      createBlock(
+    // keeps ids so finished blocks are not redrawn). Pasted tables get new
+    // table and row ids too, so they never join a table already here.
+    const renamed = new Map<string, string>();
+    const rename = (key: string, prefix: string) => {
+      if (!renamed.has(key)) renamed.set(key, generateBlockId(prefix));
+      return renamed.get(key)!;
+    };
+    const pasted = fragment.map((b) => {
+      const attrs = { ...b.attrs };
+      if (isTableCell(b.type) && !options.keepIds) {
+        attrs.table = rename(`t:${attrs.table}`, 't');
+        attrs.row = rename(`r:${attrs.table}:${b.attrs?.row}`, 'r');
+      }
+      return createBlock(
         b.type,
-        { ...b.attrs },
+        attrs,
         b.content.map((c) => ({ text: c.text, marks: [...(c.marks ?? [])] })),
         options.keepIds ? b.id : undefined
-      )
-    );
+      );
+    });
 
-    // Images and dividers cannot share a block with text, so they are put
-    // between the two halves of the current block.
+    // Images, dividers and tables cannot share a block with text, so they
+    // are put between the two halves of the current block.
     const first = pasted[0];
     const last = pasted[pasted.length - 1];
-    if (this.isAtom(first.type) || this.isAtom(last.type)) {
+    const standsAlone = (type: string) => this.isAtom(type) || isTableCell(type);
+    if (standsAlone(first.type) || standsAlone(last.type)) {
       // Text before the first atom joins the left half, like any paste.
       const inserted = [...pasted];
-      if (!this.isAtom(first.type)) {
+      if (!standsAlone(first.type)) {
         block.content = normalizeInlineNodes([...left, ...first.content]);
         inserted.shift();
       } else {
         block.content = left;
       }
       const after: BlockNode[] = [];
-      if (this.isAtom(last.type)) after.push(createBlock(block.type, { ...block.attrs }, right));
+      if (standsAlone(last.type)) after.push(createBlock(block.type, { ...block.attrs }, right));
       else last.content = normalizeInlineNodes([...last.content, ...right]);
       this.doc.blocks.splice(blockIdx + 1, 0, ...inserted, ...after);
       // An empty left half (caret at the start, or an empty line) goes away.
@@ -537,6 +626,14 @@ export class Transaction {
     let idx = findBlockIndex(this.doc, this.selection.anchor.blockId);
     if (idx === -1) return this;
 
+    // In a table, the block goes after the table.
+    const table = tableAtIndex(this.doc.blocks, idx);
+    if (table) {
+      const last = this.doc.blocks[table.end];
+      this.setCaret(last.id, getBlockText(last).length);
+      idx = table.end;
+    }
+
     const block = this.edit(idx);
     const offset = this.selection.anchor.offset;
     const text = getBlockText(block);
@@ -547,7 +644,7 @@ export class Transaction {
       block.attrs = { ...attrs };
       atom = block;
     } else {
-      if (offset < text.length && !this.isAtom(block.type)) {
+      if (offset < text.length && !this.isAtom(block.type) && !table) {
         const [left, right] = splitBlockContent(block, offset);
         block.content = left;
         this.doc.blocks.splice(idx + 1, 0, createBlock(block.type, { ...block.attrs }, right));
@@ -563,6 +660,174 @@ export class Transaction {
       this.doc.blocks.splice(idx + 1, 0, next);
     }
     this.setCaret(next.id, 0);
+    this.docChanged = true;
+    return this;
+  }
+
+  /**
+   * Inserts an empty table at the caret, like a divider: an empty paragraph
+   * becomes the table, otherwise it goes after the caret's block, splitting it
+   * at the caret. A paragraph follows the table so writing can go on below it.
+   * The caret goes to the first cell. Does nothing inside a table.
+   */
+  insertTable(rows: number, cols: number, options: { header?: boolean } = {}): this {
+    if (!Number.isInteger(rows) || !Number.isInteger(cols) || rows < 1 || cols < 1) return this;
+    if (!this.selection.isCollapsed) this.deleteRange();
+    let idx = findBlockIndex(this.doc, this.selection.anchor.blockId);
+    const block = this.doc.blocks[idx];
+    if (!block || isTableCell(block.type)) return this;
+
+    const cells = createTable(rows, cols, options);
+    const text = getBlockText(block);
+    if (block.type === 'paragraph' && text === '') {
+      this.doc.blocks.splice(idx, 1, ...cells);
+    } else {
+      const offset = this.selection.anchor.offset;
+      if (offset < text.length && !this.isAtom(block.type)) {
+        const edited = this.edit(idx);
+        const [left, right] = splitBlockContent(edited, offset);
+        edited.content = left;
+        this.doc.blocks.splice(idx + 1, 0, createBlock(edited.type, { ...edited.attrs }, right));
+      }
+      idx += 1;
+      this.doc.blocks.splice(idx, 0, ...cells);
+    }
+
+    const next = this.doc.blocks[idx + cells.length];
+    if (!next || this.isAtom(next.type) || isTableCell(next.type)) {
+      this.doc.blocks.splice(idx + cells.length, 0, createBlock('paragraph'));
+    }
+    this.setCaret(cells[0].id, 0);
+    this.docChanged = true;
+    return this;
+  }
+
+  /** The table at the caret, with the caret's block index. */
+  private tableAtCaret(): (TablePosition & { index: number }) | null {
+    const index = findBlockIndex(this.doc, this.selection.head.blockId);
+    const table = tableAtIndex(this.doc.blocks, index);
+    return table && { ...table, index };
+  }
+
+  /** Moves the caret to the end of the next cell (Tab). After the last cell, adds a row. */
+  goToNextCell(): this {
+    const t = this.tableAtCaret();
+    if (!t) return this;
+    if (t.index === t.end) {
+      return this.addRow('after', 0);
+    }
+    const next = this.doc.blocks[t.index + 1];
+    this.setCaret(next.id, getBlockText(next).length);
+    return this;
+  }
+
+  /** Moves the caret to the end of the previous cell (Shift+Tab). */
+  goToPreviousCell(): this {
+    const t = this.tableAtCaret();
+    if (!t || t.index === t.start) return this;
+    const prev = this.doc.blocks[t.index - 1];
+    this.setCaret(prev.id, getBlockText(prev).length);
+    return this;
+  }
+
+  /** Adds an empty row before or after the caret's row, and puts the caret in it. */
+  addRow(where: 'before' | 'after', column?: number): this {
+    const t = this.tableAtCaret();
+    if (!t) return this;
+    const current = t.rows[t.row];
+    const table = String(this.doc.blocks[t.index].attrs?.table ?? '');
+    const row = generateBlockId('r');
+    const cols = Math.max(...t.rows.map((r) => r.length));
+    const cells = Array.from({ length: cols }, () => createCell(table, row));
+    const at = where === 'before' ? current[0] : current[current.length - 1] + 1;
+    this.doc.blocks.splice(at, 0, ...cells);
+    this.setCaret(cells[Math.min(column ?? t.col, cols - 1)].id, 0);
+    this.docChanged = true;
+    return this;
+  }
+
+  /** Adds an empty column left (before) or right (after) of the caret's column, and puts the caret in it. */
+  addColumn(where: 'before' | 'after'): this {
+    const t = this.tableAtCaret();
+    if (!t) return this;
+    const table = String(this.doc.blocks[t.index].attrs?.table ?? '');
+    const position = where === 'before' ? t.col : t.col + 1;
+    let caretCell: BlockNode | null = null;
+    // From the last row up, so the indexes of the rows above stay right.
+    for (let r = t.rows.length - 1; r >= 0; r--) {
+      const row = t.rows[r];
+      const first = this.doc.blocks[row[0]];
+      const cell = createCell(table, String(first.attrs?.row ?? ''), first.attrs?.header === true);
+      const at = position < row.length ? row[position] : row[row.length - 1] + 1;
+      this.doc.blocks.splice(at, 0, cell);
+      if (r === t.row) caretCell = cell;
+    }
+    this.setCaret(caretCell!.id, 0);
+    this.docChanged = true;
+    return this;
+  }
+
+  /** Deletes the caret's row. The caret goes to the row that takes its place. Deleting the only row deletes the table. */
+  deleteRow(): this {
+    const t = this.tableAtCaret();
+    if (!t) return this;
+    if (t.rows.length === 1) return this.deleteTable();
+    const other = t.rows[t.row + 1] ?? t.rows[t.row - 1];
+    const target = this.doc.blocks[other[Math.min(t.col, other.length - 1)]];
+    const row = t.rows[t.row];
+    this.doc.blocks.splice(row[0], row.length);
+    this.setCaret(target.id, getBlockText(target).length);
+    this.docChanged = true;
+    return this;
+  }
+
+  /** Deletes the caret's column. Deleting the only column deletes the table. */
+  deleteColumn(): this {
+    const t = this.tableAtCaret();
+    if (!t) return this;
+    const doomed = t.rows.map((row) => row[t.col]).filter((i) => i !== undefined);
+    if (doomed.length === t.end - t.start + 1) return this.deleteTable();
+    const current = t.rows[t.row];
+    const left = new Set(doomed);
+    const nearby = [current[t.col + 1], current[t.col - 1], ...t.rows.flat()].find((i) => i !== undefined && !left.has(i))!;
+    const target = this.doc.blocks[nearby];
+    for (const i of doomed.reverse()) this.doc.blocks.splice(i, 1);
+    this.setCaret(target.id, getBlockText(target).length);
+    this.docChanged = true;
+    return this;
+  }
+
+  /** Deletes the caret's table. The caret goes to the text after it, or before it. */
+  deleteTable(): this {
+    const t = this.tableAtCaret();
+    if (!t) return this;
+    this.doc.blocks.splice(t.start, t.end - t.start + 1);
+    const takesCaret = (b: BlockNode | undefined) => !!b && !this.isAtom(b.type) && !isTableCell(b.type);
+    const after = this.doc.blocks[t.start];
+    const before = this.doc.blocks[t.start - 1];
+    if (takesCaret(after)) this.setCaret(after.id, 0);
+    else if (takesCaret(before)) this.setCaret(before.id, getBlockText(before).length);
+    else {
+      const paragraph = createBlock('paragraph');
+      this.doc.blocks.splice(t.start, 0, paragraph);
+      this.setCaret(paragraph.id, 0);
+    }
+    this.docChanged = true;
+    return this;
+  }
+
+  /** Turns the first row of the caret's table into a header row, or back. */
+  toggleHeaderRow(): this {
+    const t = this.tableAtCaret();
+    if (!t) return this;
+    const first = t.rows[0];
+    const on = !first.every((i) => this.doc.blocks[i].attrs?.header === true);
+    for (const i of first) {
+      const attrs = { ...this.doc.blocks[i].attrs };
+      if (on) attrs.header = true;
+      else delete attrs.header;
+      this.edit(i).attrs = attrs;
+    }
     this.docChanged = true;
     return this;
   }
@@ -635,6 +900,9 @@ export class Transaction {
 
     const blockIdx = findBlockIndex(this.doc, this.selection.anchor.blockId);
     if (blockIdx === -1) return this;
+
+    // A cell is never split: Enter starts a new line in it.
+    if (isTableCell(this.doc.blocks[blockIdx].type)) return this.insertText('\n');
 
     const block = this.edit(blockIdx);
     const offset = this.selection.anchor.offset;
@@ -851,8 +1119,10 @@ export class Transaction {
     if (fromIdx === -1 || toIdx === -1) return this;
 
     for (let i = fromIdx; i <= toIdx; i++) {
-      // Images, dividers and other blocks without text keep their type.
-      if (this.isAtom(this.doc.blocks[i].type)) continue;
+      // Images, dividers and other blocks without text keep their type, and
+      // table cells stay cells.
+      const current = this.doc.blocks[i].type;
+      if (this.isAtom(current) || isTableCell(current)) continue;
       const block = this.edit(i);
       block.type = type;
       block.attrs = { ...attrs };

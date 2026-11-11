@@ -32,20 +32,21 @@ export function domPointToPosition(
   offset: number
 ): EditorPosition | null {
   if (!container.contains(node)) return null;
-  // A point between blocks (select all when the first or last block is an
-  // image): use the start of the block after it, or the end of the last one.
-  if (node === container) {
-    const blocks = Array.from(container.children).filter((el) => el.hasAttribute('data-block-id'));
-    const after = container.childNodes[offset] as Element | undefined;
-    const block = after?.hasAttribute?.('data-block-id') ? after : null;
-    if (block) return { blockId: block.getAttribute('data-block-id')!, offset: 0 };
-    const last = blocks[blocks.length - 1] as HTMLElement | undefined;
-    if (!last) return null;
-    return { blockId: last.getAttribute('data-block-id')!, offset: getOffsetInBlock(last, last, last.childNodes.length) };
-  }
   const block = findAncestorBlock(node, container);
-  if (!block) return null;
-  return { blockId: block.getAttribute('data-block-id')!, offset: getOffsetInBlock(block, node, offset) };
+  if (block) return { blockId: block.getAttribute('data-block-id')!, offset: getOffsetInBlock(block, node, offset) };
+  // A point between blocks (select all when the first or last block is an
+  // image), or between table cells: use the start of the block after it, or
+  // the end of the last block before it.
+  if (node.nodeType !== Node.ELEMENT_NODE) return null;
+  const after = node.childNodes[offset] as Element | undefined;
+  const next = after?.nodeType === Node.ELEMENT_NODE
+    ? (after.hasAttribute('data-block-id') ? after : after.querySelector('[data-block-id]'))
+    : null;
+  if (next) return { blockId: next.getAttribute('data-block-id')!, offset: 0 };
+  const all = (node as Element).querySelectorAll<HTMLElement>('[data-block-id]');
+  const last = all[all.length - 1];
+  if (!last) return null;
+  return { blockId: last.getAttribute('data-block-id')!, offset: getOffsetInBlock(last, last, last.childNodes.length) };
 }
 
 /** Maps a DOM range (e.g. a beforeinput target range) to an editor selection. */

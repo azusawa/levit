@@ -154,8 +154,8 @@ describe('HTML import of pasted content', () => {
     ]);
   });
 
-  it('turns table cells into paragraphs instead of losing them', () => {
+  it('keeps a table as a table', () => {
     const doc = htmlToDocument('<table><tr><td>x</td><td>y</td></tr></table>');
-    expect(summary(doc)).toEqual([['paragraph', 'x'], ['paragraph', 'y']]);
+    expect(summary(doc)).toEqual([['table_cell', 'x'], ['table_cell', 'y']]);
   });
 });

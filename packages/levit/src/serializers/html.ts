@@ -4,9 +4,11 @@ import {
   createBlock,
   createDocument,
   createTextNode,
+  generateBlockId,
   listIndent,
   normalizeInlineNodes,
 } from '../core/model/document.js';
+import { createCell, tableAtIndex, type TablePosition } from '../core/model/table.js';
 import { defaultSchema, schemaFor, type BlockSpec, type Schema, type SerializerOptions } from '../core/plugin/plugin.js';
 import { normalizeCodeLanguage, normalizeHeadingLevel, sanitizeHref, sanitizeImageSrc } from '../core/model/sanitize.js';
 
@@ -29,7 +31,15 @@ export function documentToHTML(doc: DocumentData, options: SerializerOptions = {
     while (lists.length > depth) html += `</li></${LISTS[lists.pop()!].tag}>`;
   };
 
-  for (const block of doc.blocks) {
+  for (let index = 0; index < doc.blocks.length; index++) {
+    const block = doc.blocks[index];
+    const table = tableAtIndex(doc.blocks, index);
+    if (table) {
+      closeListsTo(0);
+      html += tableHTML(doc.blocks, table, (b) => inlineHTML(b, schema));
+      index = table.end;
+      continue;
+    }
     const list = LISTS[block.type];
     if (list) {
       // An item can be at most one level deeper than the list it follows.
@@ -47,34 +57,7 @@ export function documentToHTML(doc: DocumentData, options: SerializerOptions = {
       closeListsTo(0);
     }
 
-    const isCode = block.type === 'code_block';
-    let contentHtml = '';
-    for (const node of block.content) {
-      let t = escapeHTML(node.text);
-      if (!isCode) t = t.replace(/\n/g, '<br>');
-      if (node.marks && node.marks.length > 0) {
-        for (const m of node.marks) {
-          if (m.type === 'bold') t = `<strong>${t}</strong>`;
-          else if (m.type === 'italic') t = `<em>${t}</em>`;
-          else if (m.type === 'underline') t = `<u>${t}</u>`;
-          else if (m.type === 'strike') t = `<s>${t}</s>`;
-          else if (m.type === 'highlight') t = `<mark>${t}</mark>`;
-          else if (m.type === 'code') t = `<code>${t}</code>`;
-          else if (m.type === 'link') {
-            const href = sanitizeHref(m.attrs?.href);
-            if (href) t = `<a href="${escapeHTML(href)}">${t}</a>`;
-          } else {
-            const spec = schema.marks.get(m.type);
-            if (spec?.toHTML) t = spec.toHTML(t, m);
-          }
-        }
-      }
-      contentHtml += t;
-    }
-    // Browsers hide a final <br>, so a trailing line break needs a second one.
-    if (!isCode && block.content.map((c) => c.text).join('').endsWith('\n')) {
-      contentHtml += '<br>';
-    }
+    const contentHtml = inlineHTML(block, schema);
 
     switch (block.type) {
       case 'heading': {
@@ -120,6 +103,57 @@ export function documentToHTML(doc: DocumentData, options: SerializerOptions = {
 
   closeListsTo(0);
   return html;
+}
+
+/** A block's text as HTML, with its marks. */
+function inlineHTML(block: BlockNode, schema: Schema): string {
+  const isCode = block.type === 'code_block';
+  let contentHtml = '';
+  for (const node of block.content) {
+    let t = escapeHTML(node.text);
+    if (!isCode) t = t.replace(/\n/g, '<br>');
+    if (node.marks && node.marks.length > 0) {
+      for (const m of node.marks) {
+        if (m.type === 'bold') t = `<strong>${t}</strong>`;
+        else if (m.type === 'italic') t = `<em>${t}</em>`;
+        else if (m.type === 'underline') t = `<u>${t}</u>`;
+        else if (m.type === 'strike') t = `<s>${t}</s>`;
+        else if (m.type === 'highlight') t = `<mark>${t}</mark>`;
+        else if (m.type === 'code') t = `<code>${t}</code>`;
+        else if (m.type === 'link') {
+          const href = sanitizeHref(m.attrs?.href);
+          if (href) t = `<a href="${escapeHTML(href)}">${t}</a>`;
+        } else {
+          const spec = schema.marks.get(m.type);
+          if (spec?.toHTML) t = spec.toHTML(t, m);
+        }
+      }
+    }
+    contentHtml += t;
+  }
+  // Browsers hide a final <br>, so a trailing line break needs a second one.
+  if (!isCode && block.content.map((c) => c.text).join('').endsWith('\n')) {
+    contentHtml += '<br>';
+  }
+  return contentHtml;
+}
+
+/** A table: leading rows of header cells go in <thead>, the rest in <tbody>. */
+function tableHTML(blocks: readonly BlockNode[], table: TablePosition, inline: (block: BlockNode) => string): string {
+  const isHeader = (row: number[]) => row.every((k) => blocks[k].attrs?.header === true);
+  let head = 0;
+  while (head < table.rows.length && isHeader(table.rows[head])) head += 1;
+  const rows = (rows: number[][]) =>
+    rows
+      .map((row) => `<tr>${row.map((k) => {
+        const tag = blocks[k].attrs?.header === true ? 'th' : 'td';
+        return `<${tag}>${inline(blocks[k])}</${tag}>`;
+      }).join('')}</tr>`)
+      .join('');
+  let html = '<table>';
+  if (head > 0) html += `<thead>${rows(table.rows.slice(0, head))}</thead>`;
+  if (head < table.rows.length) html += `<tbody>${rows(table.rows.slice(head))}</tbody>`;
+  return `${html}</table>`;
 }
 
 function escapeHTML(str: string): string {
@@ -278,6 +312,8 @@ function readBlockElement(el: Element, ctx: Context, out: BlockNode[]): void {
   } else if (LEAF_TAGS.has(tag)) {
     // A paragraph with images (or plugin blocks): its text and those become separate blocks.
     readBlocks(el, ctx, out);
+  } else if (tag === 'table') {
+    readTable(el, out);
   } else if (tag === 'blockquote') {
     readBlocks(el, { type: 'blockquote' }, out);
   } else if (tag === 'ul' || tag === 'ol') {
@@ -298,6 +334,45 @@ function readBlockElement(el: Element, ctx: Context, out: BlockNode[]): void {
   } else {
     readBlocks(el, ctx, out);
   }
+}
+
+/** Widest a pasted cell may be (colspan), so a huge colspan cannot make thousands of cells. */
+const MAX_COLSPAN = 64;
+
+/** Reads a table's rows into cells. Its caption goes before it as a paragraph. */
+function readTable(table: Element, out: BlockNode[]): void {
+  const rows: Element[] = [];
+  for (const child of Array.from(table.children)) {
+    const tag = tagOf(child);
+    if (tag === 'tr') rows.push(child);
+    else if (tag === 'thead' || tag === 'tbody' || tag === 'tfoot') rows.push(...Array.from(child.children).filter((c) => tagOf(c) === 'tr'));
+    else if (tag === 'caption') readLeaf(child, 'caption', { type: 'paragraph' }, out);
+  }
+  const tableId = generateBlockId('t');
+  for (const tr of rows) {
+    const rowId = generateBlockId('r');
+    for (const td of Array.from(tr.children)) {
+      const tag = tagOf(td);
+      if (tag !== 'td' && tag !== 'th') continue;
+      const header = tag === 'th';
+      const span = Math.min(Math.max(parseInt(td.getAttribute('colspan') ?? '1', 10) || 1, 1), MAX_COLSPAN);
+      out.push({ ...createCell(tableId, rowId, header), content: readCell(td) });
+      for (let k = 1; k < span; k++) out.push(createCell(tableId, rowId, header));
+    }
+  }
+}
+
+/** A cell's content: its paragraphs, list items and nested tables as lines of text. */
+function readCell(td: Element): InlineNode[] {
+  const blocks: BlockNode[] = [];
+  readBlocks(td, { type: 'paragraph' }, blocks);
+  const lines: InlineNode[] = [];
+  for (const block of blocks) {
+    if (schema.isAtom(block.type)) continue;
+    if (lines.length > 0) lines.push(createTextNode('\n'));
+    lines.push(...block.content);
+  }
+  return normalizeInlineNodes(lines);
 }
 
 /** The language of a <pre>: data-language, or a language-x / lang-x class on it or its <code>. */

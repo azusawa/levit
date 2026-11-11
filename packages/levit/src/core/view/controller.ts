@@ -1,6 +1,7 @@
 import { LevitEditor } from '../editor.js';
 import { findBlockIndex, isListItem, sliceDocument } from '../model/document.js';
 import { readClipboard, writeClipboard } from './clipboard.js';
+import { tableAt } from '../model/table.js';
 import { matchesShortcut } from '../plugin/plugin.js';
 import {
   domRangeToEditorSelection,
@@ -218,6 +219,18 @@ export class InputController {
     if (isMod && e.key.toLowerCase() === 'u') {
       e.preventDefault();
       this.editor.chain().toggleUnderline().run();
+      return;
+    }
+
+    // Tab moves between table cells (adding a row after the last one).
+    // Shift+Tab in the first cell is left to the browser, so keyboard users
+    // can still leave the editor.
+    if (e.key === 'Tab' && !isMod && !e.altKey && !e.defaultPrevented && this.editor.isInTable()) {
+      const { doc, selection } = this.editor.state;
+      if (e.shiftKey && tableAt(doc, selection.head.blockId)?.start === findBlockIndex(doc, selection.head.blockId)) return;
+      e.preventDefault();
+      if (e.shiftKey) this.editor.chain().goToPreviousCell().run();
+      else this.editor.chain().goToNextCell().run();
       return;
     }
 

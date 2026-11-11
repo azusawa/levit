@@ -172,6 +172,68 @@ export class ChainedCommands {
     return this;
   }
 
+  /** Inserts an empty table at the caret (3 by 3 with a header row by default). */
+  insertTable(rows = 3, cols = 3, options: { header?: boolean } = {}): this {
+    this.tr.insertTable(rows, cols, options);
+    return this;
+  }
+
+  /** Adds a row above the caret's row. */
+  addRowBefore(): this {
+    this.tr.addRow('before');
+    return this;
+  }
+
+  /** Adds a row below the caret's row. */
+  addRowAfter(): this {
+    this.tr.addRow('after');
+    return this;
+  }
+
+  /** Adds a column left of the caret's column. */
+  addColumnBefore(): this {
+    this.tr.addColumn('before');
+    return this;
+  }
+
+  /** Adds a column right of the caret's column. */
+  addColumnAfter(): this {
+    this.tr.addColumn('after');
+    return this;
+  }
+
+  deleteRow(): this {
+    this.tr.deleteRow();
+    return this;
+  }
+
+  deleteColumn(): this {
+    this.tr.deleteColumn();
+    return this;
+  }
+
+  deleteTable(): this {
+    this.tr.deleteTable();
+    return this;
+  }
+
+  /** Turns the first row of the table into a header row, or back. */
+  toggleHeaderRow(): this {
+    this.tr.toggleHeaderRow();
+    return this;
+  }
+
+  /** Moves to the next cell, adding a row after the last one. */
+  goToNextCell(): this {
+    this.tr.goToNextCell();
+    return this;
+  }
+
+  goToPreviousCell(): this {
+    this.tr.goToPreviousCell();
+    return this;
+  }
+
   setLink(href: string): this {
     this.tr.setLink(href);
     return this;
@@ -521,6 +583,12 @@ export class LevitEditor {
     }
     const nodes = sliceDocument(doc, selection).flatMap((b) => b.content).filter((n) => n.text.length > 0);
     return nodes.length > 0 && nodes.every((n) => n.marks?.some((m) => m.type === markType));
+  }
+
+  /** True when the caret is in a table. */
+  isInTable(): boolean {
+    const { doc, selection } = this.state;
+    return doc.blocks[findBlockIndex(doc, selection.head.blockId)]?.type === 'table_cell';
   }
 
   /** The href shared by all selected text, or null if the selection is not one link. */

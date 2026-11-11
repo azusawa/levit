@@ -83,8 +83,8 @@ export function applyInputRules(tr: Transaction, rules: InputRule[] = defaultInp
   if (idx === -1) return false;
 
   const block = tr.doc.blocks[idx];
-  // Code is literal text: "# " or "- " there must stay as typed.
-  if (block.type === 'code_block') return false;
+  // Code is literal text: "# " or "- " there must stay as typed. Cells stay cells.
+  if (block.type === 'code_block' || block.type === 'table_cell') return false;
   const text = getBlockText(block);
 
   for (const rule of rules) {

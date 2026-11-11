@@ -5,10 +5,12 @@ import {
   createBlock,
   createDocument,
   createTextNode,
+  generateBlockId,
   isListItem,
   listIndent,
 } from '../core/model/document.js';
-import { schemaFor, type SerializerOptions } from '../core/plugin/plugin.js';
+import { schemaFor, type Schema, type SerializerOptions } from '../core/plugin/plugin.js';
+import { createCell, tableAtIndex, type TablePosition } from '../core/model/table.js';
 import { normalizeCodeLanguage, normalizeHeadingLevel, sanitizeHref, sanitizeImageSrc } from '../core/model/sanitize.js';
 
 const BUILT_IN_MARKDOWN_BLOCKS = new Set(BUILT_IN_BLOCK_TYPES);
@@ -23,38 +25,19 @@ export function documentToMarkdown(doc: DocumentData, options: SerializerOptions
   const numbers: number[] = [];
   const widths: number[] = [];
 
-  for (const block of doc.blocks) {
-    let blockText = '';
-    for (const node of block.content) {
-      let t = node.text;
-      if (node.marks && node.marks.length > 0) {
-        for (const m of node.marks) {
-          if (m.type === 'bold') t = `**${t}**`;
-          else if (m.type === 'italic') t = `*${t}*`;
-          else if (m.type === 'code') t = `\`${t}\``;
-          else if (m.type === 'strike') t = `~~${t}~~`;
-          else if (m.type === 'highlight') t = `==${t}==`;
-          else if (m.type === 'link') {
-            const href = sanitizeHref(m.attrs?.href);
-            if (href) t = `[${escapeLabel(t)}](${formatDestination(href)})`;
-          } else {
-            const spec = schema.marks.get(m.type);
-            if (spec?.toMarkdown) t = spec.toMarkdown(t, m);
-          }
-        }
-      }
-      // Backslashes right before a link would escape its "[": double them.
-      if (t.startsWith('[') && node.marks?.some((m) => m.type === 'link')) {
-        blockText += '\\'.repeat(trailingBackslashes(blockText));
-      }
-      blockText += t;
-    }
+  for (let index = 0; index < doc.blocks.length; index++) {
+    const block = doc.blocks[index];
+    const blockText = inlineMarkdown(block, schema);
+    const table = tableAtIndex(doc.blocks, index);
 
     // A line break inside a block is a hard break: "\\" at the end of the line.
     const breaks = (indent: string) => blockText.replace(/\n/g, `\\\n${indent}`);
 
     let line: string;
-    switch (block.type) {
+    if (table) {
+      line = tableMarkdown(doc.blocks, table, (b) => inlineMarkdown(b, schema));
+      index = table.end;
+    } else switch (block.type) {
       case 'heading': {
         const level = normalizeHeadingLevel(block.attrs?.level);
         line = `${'#'.repeat(level)} ${blockText.replace(/\n/g, ' ')}`;
@@ -115,6 +98,97 @@ export function documentToMarkdown(doc: DocumentData, options: SerializerOptions
   }
 
   return out;
+}
+
+/** A block's text as Markdown, with its marks. */
+function inlineMarkdown(block: BlockNode, schema: Schema): string {
+  let blockText = '';
+  for (const node of block.content) {
+    let t = node.text;
+    if (node.marks && node.marks.length > 0) {
+      for (const m of node.marks) {
+        if (m.type === 'bold') t = `**${t}**`;
+        else if (m.type === 'italic') t = `*${t}*`;
+        else if (m.type === 'code') t = `\`${t}\``;
+        else if (m.type === 'strike') t = `~~${t}~~`;
+        else if (m.type === 'highlight') t = `==${t}==`;
+        else if (m.type === 'link') {
+          const href = sanitizeHref(m.attrs?.href);
+          if (href) t = `[${escapeLabel(t)}](${formatDestination(href)})`;
+        } else {
+          const spec = schema.marks.get(m.type);
+          if (spec?.toMarkdown) t = spec.toMarkdown(t, m);
+        }
+      }
+    }
+    // Backslashes right before a link would escape its "[": double them.
+    if (t.startsWith('[') && node.marks?.some((m) => m.type === 'link')) {
+      blockText += '\\'.repeat(trailingBackslashes(blockText));
+    }
+    blockText += t;
+  }
+  return blockText;
+}
+
+/**
+ * A GitHub table. Markdown tables always have a header, so the first row is
+ * written as one. Pipes in cells are escaped, line breaks become <br>, and
+ * short rows get empty cells.
+ */
+function tableMarkdown(blocks: readonly BlockNode[], table: TablePosition, inline: (block: BlockNode) => string): string {
+  const cols = Math.max(...table.rows.map((row) => row.length));
+  const line = (cells: string[]) => `| ${cells.join(' | ')} |`;
+  const rows = table.rows.map((row) =>
+    Array.from({ length: cols }, (_, c) =>
+      row[c] === undefined ? '' : inline(blocks[row[c]]).replace(/\|/g, '\\|').replace(/\n/g, '<br>')
+    )
+  );
+  return [line(rows[0]), line(Array(cols).fill('---')), ...rows.slice(1).map(line)].join('\n');
+}
+
+/**
+ * Splits a table row at pipes that are not escaped, without the outer pipes.
+ * "\\|" in a cell is a pipe.
+ */
+function splitTableRow(line: string): string[] {
+  let text = line.trim();
+  if (text.startsWith('|')) text = text.slice(1);
+  if (text.endsWith('|') && !text.endsWith('\\|')) text = text.slice(0, -1);
+  const cells: string[] = [];
+  let current = '';
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === '\\' && text[i + 1] === '|') {
+      current += '|';
+      i += 1;
+    } else if (text[i] === '|') {
+      cells.push(current.trim());
+      current = '';
+    } else {
+      current += text[i];
+    }
+  }
+  cells.push(current.trim());
+  return cells;
+}
+
+/** Reads a GitHub table (a header row, a row like "| --- | :-: |", then rows), or null. */
+function readTable(lines: string[]): BlockNode[] | null {
+  if (lines.length < 2 || !lines[0].includes('|') || !lines[1].includes('-')) return null;
+  const header = splitTableRow(lines[0]);
+  const delimiter = splitTableRow(lines[1]);
+  if (delimiter.length !== header.length || !delimiter.every((c) => /^:?-+:?$/.test(c))) return null;
+  const tableId = generateBlockId('t');
+  const blocks: BlockNode[] = [];
+  const row = (cells: string[], isHeader: boolean) => {
+    const rowId = generateBlockId('r');
+    for (let c = 0; c < header.length; c++) {
+      const text = (cells[c] ?? '').replace(/<br\s*\/?>/gi, '\n');
+      blocks.push({ ...createCell(tableId, rowId, isHeader), content: parseInlineMarkdown(text) });
+    }
+  };
+  row(header, true);
+  for (const line of lines.slice(2)) row(splitTableRow(line), false);
+  return blocks;
 }
 
 /**
@@ -423,6 +497,13 @@ export function markdownToDocument(markdown: string, options: SerializerOptions 
 
     // List items: lines start with "-", "*", "+" or "1."; indented lines continue an item.
     const lines = raw.replace(/^\n+/, '').trimEnd().split(/\r?\n/);
+
+    // Table: a header row, a delimiter row, then rows.
+    const table = readTable(lines);
+    if (table) {
+      blocks.push(...table);
+      continue;
+    }
     const continues = (l: string) => /^\s+\S/.test(l) && !readListLine(l);
     if (readListLine(lines[0]) && lines.every((l) => readListLine(l) || continues(l))) {
       const items: { type: string; text: string; indent: number; checked?: boolean }[] = [];

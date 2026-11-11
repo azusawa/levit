@@ -2,6 +2,7 @@ import { BlockNode, InlineMark, InlineNode } from '../model/types.js';
 import { EditorState } from '../state/state.js';
 import { normalizeCodeLanguage, normalizeHeadingLevel, sanitizeHref, sanitizeImageSrc } from '../model/sanitize.js';
 import { isListItem, listIndent } from '../model/document.js';
+import { isTableCell, tableAtIndex } from '../model/table.js';
 import { defaultSchema, type Schema } from '../plugin/plugin.js';
 import { en, format, type LevitMessages } from '../../i18n/messages.js';
 
@@ -53,6 +54,11 @@ export class DOMReconciler {
     }
   }
 
+  /** How many elements the last full render put directly in the container. */
+  private topCount = 0;
+  /** The table each table element was drawn for. */
+  private tableKeys = new WeakMap<HTMLElement, string>();
+
   /**
    * The fast path for the usual edit: same blocks in the same order, a few of
    * them changed. Blocks are immutable, so an unchanged block is the same
@@ -64,18 +70,20 @@ export class DOMReconciler {
     // Anything else in the container (a node an extension put in place of a
     // block) changes one of these counts, and the full render cleans it up.
     const { childNodes, children } = this.container;
-    if (!last || last.length !== blocks.length || childNodes.length !== blocks.length || children.length !== blocks.length) return false;
+    if (!last || last.length !== blocks.length || childNodes.length !== this.topCount || children.length !== this.topCount) return false;
     const changed: number[] = [];
     for (let i = 0; i < blocks.length; i++) {
       if (blocks[i] === last[i]) continue;
       if (blocks[i].id !== last[i].id) return false;
+      // A cell that moved to another row or table changes the table's shape.
+      if ((isTableCell(blocks[i].type) || isTableCell(last[i].type)) && !sameCellPlace(blocks[i], last[i])) return false;
       changed.push(i);
     }
     let renumber = false;
     for (const i of changed) {
       const block = blocks[i];
       const el = this.elements.get(block.id);
-      if (!el || el.parentNode !== this.container || el.tagName.toLowerCase() !== this.getBlockTagName(block)) return false;
+      if (!el || !this.isPlaced(el, block) || el.tagName.toLowerCase() !== this.getBlockTagName(block)) return false;
       const snapshot = this.computeBlockSnapshot(block);
       if (this.renderedSnapshots.get(block.id) !== snapshot) {
         this.applyBlockClasses(el, block);
@@ -88,79 +96,101 @@ export class DOMReconciler {
     return true;
   }
 
-  private renderAll(blocks: readonly BlockNode[]): void {
-    const state = { doc: { blocks } };
-    // Drop anything the browser put directly into the container.
-    for (const node of Array.from(this.container.childNodes)) {
-      if (!(node instanceof HTMLElement) || !node.hasAttribute('data-block-id')) {
-        node.remove();
+  /** True when a block's element is where the last full render put it. */
+  private isPlaced(el: HTMLElement, block: BlockNode): boolean {
+    if (!isTableCell(block.type)) return el.parentNode === this.container;
+    // td > tr > tbody > table > div.levit-table > container
+    return el.parentElement?.parentElement?.parentElement?.parentElement?.parentNode === this.container;
+  }
+
+  /** Block elements where the last render put them: in the container, or in a table's rows. */
+  private placedElements(): Map<string, HTMLElement> {
+    const found = new Map<string, HTMLElement>();
+    const add = (el: Element) => {
+      const id = el.getAttribute('data-block-id');
+      if (id && !found.has(id)) found.set(id, el as HTMLElement);
+    };
+    for (const child of Array.from(this.container.children)) {
+      if (child.hasAttribute('data-block-id')) add(child);
+      else if (this.tableKeys.has(child as HTMLElement)) {
+        for (const row of Array.from(child.querySelector(':scope > table > tbody')?.children ?? [])) {
+          for (const cell of Array.from(row.children)) add(cell);
+        }
       }
+    }
+    return found;
+  }
+
+  private renderAll(blocks: readonly BlockNode[]): void {
+    const domBlockMap = this.placedElements();
+    const domTables = new Map<string, HTMLElement>();
+    for (const child of Array.from(this.container.children) as HTMLElement[]) {
+      const key = this.tableKeys.get(child);
+      if (key !== undefined && !domTables.has(key)) domTables.set(key, child);
     }
 
     const activeBlockIds = new Set<string>();
-    const currentChildren = Array.from(this.container.children) as HTMLElement[];
-    const domBlockMap = new Map<string, HTMLElement>();
-
-    for (const child of currentChildren) {
-      const id = child.getAttribute('data-block-id');
-      if (id) {
-        domBlockMap.set(id, child);
-      }
-    }
-
-    let previousSibling: HTMLElement | null = null;
     const rendered: [BlockNode, HTMLElement][] = [];
+    const top: HTMLElement[] = [];
 
-    for (let i = 0; i < state.doc.blocks.length; i++) {
-      const block = state.doc.blocks[i];
+    // The block's element: the one drawn before, brought up to date, or a new one.
+    const elementFor = (block: BlockNode): HTMLElement => {
       activeBlockIds.add(block.id);
-
-      const blockSnapshot = this.computeBlockSnapshot(block);
-      let blockEl = domBlockMap.get(block.id);
-
-      const expectedTagName = this.getBlockTagName(block);
-
-      if (!blockEl || blockEl.tagName.toLowerCase() !== expectedTagName) {
-        // Need to create element
-        const newEl = this.createBlockElement(block);
-        if (blockEl && blockEl.parentNode === this.container) {
-          this.container.replaceChild(newEl, blockEl);
-        } else if (previousSibling) {
-          previousSibling.after(newEl);
-        } else {
-          this.container.prepend(newEl);
-        }
-        blockEl = newEl;
-        this.renderedSnapshots.set(block.id, blockSnapshot);
-      } else {
-        // Element exists, check if content changed
-        const lastSnapshot = this.renderedSnapshots.get(block.id);
-        if (lastSnapshot !== blockSnapshot) {
-          this.applyBlockClasses(blockEl, block);
-          this.updateBlockContent(blockEl, block);
-          this.renderedSnapshots.set(block.id, blockSnapshot);
-        }
-
-        // Ensure correct position in DOM
-        const currentSibling = blockEl.previousElementSibling;
-        if (currentSibling !== previousSibling) {
-          if (previousSibling) {
-            previousSibling.after(blockEl);
-          } else {
-            this.container.prepend(blockEl);
-          }
-        }
+      const snapshot = this.computeBlockSnapshot(block);
+      let el = domBlockMap.get(block.id);
+      if (!el || el.tagName.toLowerCase() !== this.getBlockTagName(block)) {
+        el = this.createBlockElement(block);
+        this.renderedSnapshots.set(block.id, snapshot);
+      } else if (this.renderedSnapshots.get(block.id) !== snapshot) {
+        this.applyBlockClasses(el, block);
+        this.updateBlockContent(el, block);
+        this.renderedSnapshots.set(block.id, snapshot);
       }
+      rendered.push([block, el]);
+      this.elements.set(block.id, el);
+      return el;
+    };
 
-      previousSibling = blockEl;
-      rendered.push([block, blockEl]);
-      this.elements.set(block.id, blockEl);
+    let i = 0;
+    while (i < blocks.length) {
+      const table = tableAtIndex(blocks, i);
+      if (!table) {
+        top.push(elementFor(blocks[i]));
+        i += 1;
+        continue;
+      }
+      const key = String(blocks[i].attrs?.table ?? '');
+      let wrapper = domTables.get(key);
+      domTables.delete(key);
+      let tbody = wrapper?.querySelector<HTMLElement>(':scope > table > tbody');
+      if (!wrapper || !tbody) {
+        wrapper = document.createElement('div');
+        wrapper.className = 'levit-table';
+        const el = document.createElement('table');
+        tbody = document.createElement('tbody');
+        el.appendChild(tbody);
+        wrapper.appendChild(el);
+        this.tableKeys.set(wrapper, key);
+      }
+      // Only the table goes in the wrapper, and only the rows in the table.
+      placeChildren(wrapper, [wrapper.querySelector(':scope > table')!]);
+      placeChildren(wrapper.firstElementChild!, [tbody]);
+      const oldRows = Array.from(tbody.children).filter((el) => el.tagName === 'TR') as HTMLElement[];
+      const rows = table.rows.map((cells, r) => {
+        const tr = oldRows[r] ?? document.createElement('tr');
+        placeChildren(tr, cells.map((k) => elementFor(blocks[k])));
+        return tr;
+      });
+      placeChildren(tbody, rows);
+      top.push(wrapper);
+      i = table.end + 1;
     }
 
-    // Remove orphaned DOM elements
-    for (const [id, element] of domBlockMap.entries()) {
+    placeChildren(this.container, top);
+    this.topCount = top.length;
+
+    for (const id of domBlockMap.keys()) {
       if (!activeBlockIds.has(id)) {
-        element.remove();
         this.renderedSnapshots.delete(id);
         this.elements.delete(id);
       }
@@ -220,6 +250,8 @@ export class DOMReconciler {
         return 'div';
       case 'image':
         return 'figure';
+      case 'table_cell':
+        return block.attrs?.header === true ? 'th' : 'td';
       default:
         return 'p';
     }
@@ -249,6 +281,7 @@ export class DOMReconciler {
     } else {
       el.removeAttribute('contenteditable');
     }
+    if (el.tagName === 'TH') el.setAttribute('scope', 'col');
     const indent = listIndent(block);
     if (indent > 0) el.setAttribute('data-indent', String(indent));
     else el.removeAttribute('data-indent');
@@ -431,6 +464,26 @@ export class DOMReconciler {
 
     el.appendChild(inner);
     return el;
+  }
+}
+
+/** True when two versions of a block sit in the same table row. */
+function sameCellPlace(a: BlockNode, b: BlockNode): boolean {
+  return a.type === b.type && a.attrs?.table === b.attrs?.table && a.attrs?.row === b.attrs?.row;
+}
+
+/**
+ * Makes the parent's children exactly `wanted`, in order: other nodes are
+ * removed, and nodes already in place are not touched (moving a node would
+ * lose the caret in it).
+ */
+function placeChildren(parent: Element, wanted: readonly Element[]): void {
+  const keep = new Set<Node>(wanted);
+  for (const child of Array.from(parent.childNodes)) if (!keep.has(child)) child.remove();
+  let cursor: ChildNode | null = parent.firstChild;
+  for (const el of wanted) {
+    if (cursor === el) cursor = cursor.nextSibling;
+    else parent.insertBefore(el, cursor);
   }
 }
 
