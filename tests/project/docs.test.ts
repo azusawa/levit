@@ -82,6 +82,11 @@ describe('CI', () => {
     const job = ci.slice(ci.indexOf('\n  e2e:'));
     expect(job.split('\n    steps:')[0]).toMatch(/^    timeout-minutes: 15$/m);
   });
+
+  it('stops installing the browsers after 2 minutes', () => {
+    const ci = read('.github/workflows/ci.yml');
+    expect(ci).toMatch(/- run: npx playwright install --with-deps chrome firefox webkit\n        timeout-minutes: 2\n/);
+  });
 });
 
 describe('editing features (phase 2) are documented', () => {
