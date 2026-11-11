@@ -25,28 +25,43 @@ function getOffsetInBlock(blockEl: HTMLElement, targetNode: Node, targetOffset: 
   return before.toString().length;
 }
 
-/** Maps a DOM boundary point to an editor position, or null if it is outside the blocks. */
+/** The end of a block element. */
+function blockEnd(block: Element): EditorPosition {
+  return { blockId: block.getAttribute('data-block-id')!, offset: getOffsetInBlock(block as HTMLElement, block, block.childNodes.length) };
+}
+
+/** The block element itself, or the first or last one inside an element. */
+function blockIn(node: Node | undefined, last: boolean): Element | null {
+  if (node?.nodeType !== Node.ELEMENT_NODE) return null;
+  const el = node as Element;
+  if (el.hasAttribute('data-block-id')) return el;
+  const all = el.querySelectorAll('[data-block-id]');
+  return all[last ? all.length - 1 : 0] ?? null;
+}
+
+/**
+ * Maps a DOM boundary point to an editor position, or null if it is outside
+ * the blocks. A point between blocks goes to the start of the block after it,
+ * or, with endOfBefore (the end of a selection), to the end of the block before it.
+ */
 export function domPointToPosition(
   container: HTMLElement,
   node: Node,
-  offset: number
+  offset: number,
+  endOfBefore = false
 ): EditorPosition | null {
   if (!container.contains(node)) return null;
   const block = findAncestorBlock(node, container);
   if (block) return { blockId: block.getAttribute('data-block-id')!, offset: getOffsetInBlock(block, node, offset) };
   // A point between blocks (select all when the first or last block is an
-  // image), or between table cells: use the start of the block after it, or
-  // the end of the last block before it.
+  // image), or between table cells.
   if (node.nodeType !== Node.ELEMENT_NODE) return null;
-  const after = node.childNodes[offset] as Element | undefined;
-  const next = after?.nodeType === Node.ELEMENT_NODE
-    ? (after.hasAttribute('data-block-id') ? after : after.querySelector('[data-block-id]'))
-    : null;
+  const before = endOfBefore ? blockIn(node.childNodes[offset - 1], true) : null;
+  if (before) return blockEnd(before);
+  const next = blockIn(node.childNodes[offset], false);
   if (next) return { blockId: next.getAttribute('data-block-id')!, offset: 0 };
-  const all = (node as Element).querySelectorAll<HTMLElement>('[data-block-id]');
-  const last = all[all.length - 1];
-  if (!last) return null;
-  return { blockId: last.getAttribute('data-block-id')!, offset: getOffsetInBlock(last, last, last.childNodes.length) };
+  const last = blockIn(node, true);
+  return last ? blockEnd(last) : null;
 }
 
 /** Maps a DOM range (e.g. a beforeinput target range) to an editor selection. */
@@ -84,32 +99,63 @@ export function positionFromPoint(container: HTMLElement, x: number, y: number):
 export function domSelectionToEditorSelection(container: HTMLElement): EditorSelection | null {
   const sel = window.getSelection();
   if (!sel || sel.rangeCount === 0) return null;
+  if (sel.rangeCount > 1) return cellSelection(container, sel);
 
   // Read both ends from the Range, and use anchor only to tell the direction.
   // Some DOM implementations (e.g. happy-dom) report a wrong focusNode.
-  // Firefox selects table cells dragged across as one range per cell: read
-  // from the earliest start to the latest end.
-  let range = sel.getRangeAt(0);
-  let last = range;
-  for (let i = 1; i < sel.rangeCount; i++) {
-    const r = sel.getRangeAt(i);
-    if (r.compareBoundaryPoints(Range.START_TO_START, range) < 0) range = r;
-    if (r.compareBoundaryPoints(Range.END_TO_END, last) > 0) last = r;
-  }
+  const range = sel.getRangeAt(0);
   const isBackward =
-    sel.rangeCount === 1 &&
     !range.collapsed &&
     sel.anchorNode === range.endContainer &&
     sel.anchorOffset === range.endOffset;
 
   const start = domPointToPosition(container, range.startContainer, range.startOffset);
-  const end = domPointToPosition(container, last.endContainer, last.endOffset);
+  const end = domPointToPosition(container, range.endContainer, range.endOffset, !range.collapsed);
   if (!start || !end) return null;
 
   return {
     anchor: isBackward ? end : start,
     head: isBackward ? start : end,
     isCollapsed: sel.isCollapsed,
+  };
+}
+
+/**
+ * Firefox selects table cells dragged across as one range per cell. Cells
+ * that follow each other become one selection from the first to the last.
+ * Cells with others between them (a column) cannot be one selection without
+ * taking those in, so only the cell where the drag started is used.
+ */
+function cellSelection(container: HTMLElement, sel: Selection): EditorSelection | null {
+  const ranges: { range: Range; start: EditorPosition; end: EditorPosition }[] = [];
+  for (let i = 0; i < sel.rangeCount; i++) {
+    const range = sel.getRangeAt(i);
+    const start = domPointToPosition(container, range.startContainer, range.startOffset);
+    const end = domPointToPosition(container, range.endContainer, range.endOffset, !range.collapsed);
+    if (start && end) ranges.push({ range, start, end });
+  }
+  if (ranges.length === 0) return null;
+  ranges.sort((a, b) => a.range.compareBoundaryPoints(Range.START_TO_START, b.range));
+
+  const order = new Map(
+    Array.from(container.querySelectorAll('[data-block-id]'), (el, i) => [el.getAttribute('data-block-id')!, i])
+  );
+  const index = (p: EditorPosition) => order.get(p.blockId) ?? -1;
+  const joined = ranges.every((r, i) => i === 0 || index(r.start) <= index(ranges[i - 1].end) + 1);
+
+  const anchorIn = (r: Range) => !!sel.anchorNode && r.comparePoint(sel.anchorNode, sel.anchorOffset) >= 0;
+  const first = ranges[0];
+  const last = ranges[ranges.length - 1];
+  if (!joined) {
+    const own = [...ranges].reverse().find((r) => anchorIn(r.range)) ?? first;
+    return { anchor: own.start, head: own.end, isCollapsed: false };
+  }
+  // The drag went back when it started in the last range.
+  const isBackward = ranges.length > 1 && anchorIn(last.range);
+  return {
+    anchor: isBackward ? last.end : first.start,
+    head: isBackward ? first.start : last.end,
+    isCollapsed: false,
   };
 }
 

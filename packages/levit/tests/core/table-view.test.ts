@@ -205,14 +205,19 @@ describe('review fixes: bad ids', () => {
 
 describe('Firefox cell selection', () => {
   /** Firefox selects cells dragged across as one range per cell, each around its td. */
+  function cellRange(id: string) {
+    const range = document.createRange();
+    range.selectNode(element.querySelector(`[data-block-id="${id}"]`)!);
+    return range;
+  }
+
   function selectCells(...ids: string[]) {
-    const ranges = ids.map((id) => {
-      const td = element.querySelector(`[data-block-id="${id}"]`)!;
-      const range = document.createRange();
-      range.selectNode(td);
-      return range;
-    });
-    const first = ranges[0];
+    selectRanges(ids.map(cellRange));
+  }
+
+  /** The anchor is the start of the range at anchorIndex (the first by default). */
+  function selectRanges(ranges: Range[], anchorIndex = 0) {
+    const first = ranges[anchorIndex];
     vi.spyOn(window, 'getSelection').mockReturnValue({
       rangeCount: ranges.length,
       getRangeAt: (i: number) => ranges[i],
@@ -238,12 +243,57 @@ describe('Firefox cell selection', () => {
 
   it('reads the cells in document order whatever order the ranges come in', () => {
     make();
-    selectCells('d', 'a', 'c');
+    const ranges = ['d', 'b', 'c'].map(cellRange);
+    selectRanges(ranges, 1);
     expect(domSelectionToEditorSelection(element)).toEqual({
-      anchor: { blockId: 'a', offset: 0 },
+      anchor: { blockId: 'b', offset: 0 },
       head: { blockId: 'd', offset: 1 },
       isCollapsed: false,
     });
+  });
+
+  it('a selected cell ends at its own end, not at the start of the next cell', () => {
+    make();
+    selectCells('a');
+    expect(domSelectionToEditorSelection(element)).toEqual({
+      anchor: { blockId: 'a', offset: 0 },
+      head: { blockId: 'a', offset: 1 },
+      isCollapsed: false,
+    });
+  });
+
+  it('keeps the direction of a drag that goes back', () => {
+    make();
+    const ranges = ['c', 'd'].map(cellRange);
+    selectRanges(ranges, 1);
+    expect(domSelectionToEditorSelection(element)).toEqual({
+      anchor: { blockId: 'd', offset: 1 },
+      head: { blockId: 'c', offset: 0 },
+      isCollapsed: false,
+    });
+  });
+
+  it('ignores ranges outside the editor', () => {
+    make();
+    const outside = document.createElement('p');
+    outside.textContent = 'outside';
+    document.body.insertBefore(outside, element);
+    const ranges = [document.createRange(), ...['c', 'd'].map(cellRange)];
+    ranges[0].selectNodeContents(outside);
+    selectRanges(ranges, 1);
+    expect(domSelectionToEditorSelection(element)).toEqual({
+      anchor: { blockId: 'c', offset: 0 },
+      head: { blockId: 'd', offset: 1 },
+      isCollapsed: false,
+    });
+    outside.remove();
+  });
+
+  it('a column selection never reaches the cells between the selected ones', () => {
+    make();
+    selectCells('a', 'c');
+    editor.container.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true, cancelable: true }));
+    expect(tables()[0][0][1]).toBe('th:B');
   });
 
   it('Backspace empties all the selected cells', () => {
