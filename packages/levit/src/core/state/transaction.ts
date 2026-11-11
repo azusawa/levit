@@ -718,10 +718,10 @@ export class Transaction {
   goToNextCell(): this {
     const t = this.tableAtCaret();
     if (!t) return this;
-    if (t.index === t.end) {
-      return this.addRow('after', 0);
-    }
-    const next = this.doc.blocks[t.index + 1];
+    const order = t.rows.flat();
+    const at = order.indexOf(t.index);
+    if (at === order.length - 1) return this.addRow('after', 0);
+    const next = this.doc.blocks[order[at + 1]];
     this.setCaret(next.id, getBlockText(next).length);
     return this;
   }
@@ -729,8 +729,11 @@ export class Transaction {
   /** Moves the caret to the end of the previous cell (Shift+Tab). */
   goToPreviousCell(): this {
     const t = this.tableAtCaret();
-    if (!t || t.index === t.start) return this;
-    const prev = this.doc.blocks[t.index - 1];
+    if (!t) return this;
+    const order = t.rows.flat();
+    const at = order.indexOf(t.index);
+    if (at === 0) return this;
+    const prev = this.doc.blocks[order[at - 1]];
     this.setCaret(prev.id, getBlockText(prev).length);
     return this;
   }
@@ -757,17 +760,17 @@ export class Transaction {
     if (!t) return this;
     const table = String(this.doc.blocks[t.index].attrs?.table ?? '');
     const position = where === 'before' ? t.col : t.col + 1;
-    let caretCell: BlockNode | null = null;
-    // From the last row up, so the indexes of the rows above stay right.
-    for (let r = t.rows.length - 1; r >= 0; r--) {
-      const row = t.rows[r];
+    const inserts = t.rows.map((row) => {
       const first = this.doc.blocks[row[0]];
       const cell = createCell(table, String(first.attrs?.row ?? ''), first.attrs?.header === true);
-      const at = position < row.length ? row[position] : row[row.length - 1] + 1;
-      this.doc.blocks.splice(at, 0, cell);
-      if (r === t.row) caretCell = cell;
-    }
-    this.setCaret(caretCell!.id, 0);
+      const append = position >= row.length;
+      return { cell, append, at: append ? row[row.length - 1] + 1 : row[position] };
+    });
+    // From the end of the document back, so earlier indexes stay right. At
+    // the same index, a cell that goes after its row's last cell goes first.
+    const order = [...inserts].sort((x, y) => y.at - x.at || Number(x.append) - Number(y.append));
+    for (const { cell, at } of order) this.doc.blocks.splice(at, 0, cell);
+    this.setCaret(inserts[t.row].cell.id, 0);
     this.docChanged = true;
     return this;
   }
@@ -779,8 +782,7 @@ export class Transaction {
     if (t.rows.length === 1) return this.deleteTable();
     const other = t.rows[t.row + 1] ?? t.rows[t.row - 1];
     const target = this.doc.blocks[other[Math.min(t.col, other.length - 1)]];
-    const row = t.rows[t.row];
-    this.doc.blocks.splice(row[0], row.length);
+    for (const i of [...t.rows[t.row]].sort((x, y) => y - x)) this.doc.blocks.splice(i, 1);
     this.setCaret(target.id, getBlockText(target).length);
     this.docChanged = true;
     return this;
@@ -796,7 +798,7 @@ export class Transaction {
     const left = new Set(doomed);
     const nearby = [current[t.col + 1], current[t.col - 1], ...t.rows.flat()].find((i) => i !== undefined && !left.has(i))!;
     const target = this.doc.blocks[nearby];
-    for (const i of doomed.reverse()) this.doc.blocks.splice(i, 1);
+    for (const i of [...doomed].sort((x, y) => y - x)) this.doc.blocks.splice(i, 1);
     this.setCaret(target.id, getBlockText(target).length);
     this.docChanged = true;
     return this;

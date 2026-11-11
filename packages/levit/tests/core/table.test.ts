@@ -344,3 +344,40 @@ describe('table cells are built in', () => {
     expect(() => new Schema([{ name: 'x', blocks: [{ type: 'table_cell' }] }])).toThrow(/built in/);
   });
 });
+
+describe('rows whose cells are apart', () => {
+  // Two people adding a column and a row at the same moment can leave a
+  // row's cells with another row's cell between them.
+  const split = () => [cell('a', 'r1', 'A'), cell('b', 'r1', 'B'), cell('c', 'r2', 'C'), cell('n', 'r3', 'N'), cell('e', 'r2', 'E')];
+
+  it('groups cells by their row', () => {
+    const doc = createDocument(split());
+    const t = tableAt(doc, 'e')!;
+    expect(t.rows).toEqual([[0, 1], [2, 4], [3]]);
+    expect([t.row, t.col]).toEqual([1, 1]);
+  });
+
+  it('Tab follows the rows', () => {
+    let state = stateWith(split(), caret('c', 0)).tr.goToNextCell().apply();
+    expect(state.selection.anchor.blockId).toBe('e');
+    state = state.tr.goToNextCell().apply();
+    expect(state.selection.anchor.blockId).toBe('n');
+    state = state.tr.goToPreviousCell().apply();
+    expect(state.selection.anchor.blockId).toBe('e');
+  });
+
+  it('deletes all cells of a row', () => {
+    const state = stateWith(split(), caret('c', 0)).tr.deleteRow().apply();
+    expect(shape(state.doc)).toEqual([[['A', 'B'], ['N']]]);
+  });
+
+  it('adds a column to every row', () => {
+    const state = stateWith(split(), caret('a', 0)).tr.addColumn('after').apply();
+    expect(shape(state.doc)).toEqual([[['A', '', 'B'], ['C', '', 'E'], ['N', '']]]);
+  });
+
+  it('deletes a column from every row', () => {
+    const state = stateWith(split(), caret('b', 0)).tr.deleteColumn().apply();
+    expect(shape(state.doc)).toEqual([[['A'], ['C'], ['N']]]);
+  });
+});

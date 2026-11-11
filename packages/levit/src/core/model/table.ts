@@ -4,8 +4,8 @@ import { createBlock, findBlockIndex, generateBlockId } from './document.js';
 /**
  * Tables. The document stays a flat list of blocks: every cell is a
  * `table_cell` block, and its attrs say which table (`table`) and which row
- * (`row`) it belongs to. Cells of one row follow each other, and rows of one
- * table follow each other. Header cells have `header: true`.
+ * (`row`) it belongs to. The cells of a table follow each other, row after
+ * row, left to right. Header cells have `header: true`.
  *
  * Keeping cells as blocks means the caret, selections, undo and
  * collaboration work in tables as they do anywhere else. Adding a row or a
@@ -17,7 +17,10 @@ export function isTableCell(type: string): boolean {
   return type === TABLE_CELL;
 }
 
-/** Where a cell is: its table's first and last block, the rows (block indexes), and its own row and column. */
+/**
+ * Where a cell is: its table's first and last block, the rows (each a list
+ * of block indexes, left to right), and its own row and column.
+ */
 export interface TablePosition {
   start: number;
   end: number;
@@ -40,18 +43,18 @@ export function tableAtIndex(blocks: readonly BlockNode[], index: number): Table
   let end = index;
   while (inTable(end + 1)) end += 1;
 
-  const rows: number[][] = [];
-  let row = 0;
-  let col = 0;
+  // Cells of one row usually follow each other, but after two people
+  // changed the table at once another row's cell can sit between them, so
+  // cells are grouped by their row. Rows keep the order they first appear in.
+  const byRow = new Map<string, number[]>();
   for (let i = start; i <= end; i++) {
-    if (i === start || rowOf(blocks[i]) !== rowOf(blocks[i - 1])) rows.push([]);
-    const current = rows[rows.length - 1];
-    if (i === index) {
-      row = rows.length - 1;
-      col = current.length;
-    }
-    current.push(i);
+    const key = rowOf(blocks[i]);
+    if (!byRow.has(key)) byRow.set(key, []);
+    byRow.get(key)!.push(i);
   }
+  const rows = Array.from(byRow.values());
+  const row = rows.findIndex((cells) => cells.includes(index));
+  const col = rows[row].indexOf(index);
   return { start, end, rows, row, col };
 }
 

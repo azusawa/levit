@@ -330,3 +330,48 @@ describe('review fixes: binding', () => {
     expect(json(b)).toEqual(json(a));
   });
 });
+
+describe('tables with Yjs', () => {
+  const cell = (id: string, row: string, text = '') => createBlock('table_cell', { table: 't', row }, [createTextNode(text)], id);
+  /** Each row of the table as cell texts, cells grouped by their row. */
+  const rows = (editor: LevitEditor) => {
+    const out = new Map<string, string[]>();
+    for (const b of editor.state.doc.blocks) {
+      if (b.type !== 'table_cell') continue;
+      if (!out.has(b.attrs!.row)) out.set(b.attrs!.row, []);
+      out.get(b.attrs!.row)!.push(getBlockText(b));
+    }
+    return Array.from(out.values());
+  };
+
+  it('sends a table and typing in its cells', () => {
+    const { a, b } = pair([cell('c1', 'r1', 'A'), cell('c2', 'r1', 'B'), para('p', '')]);
+    a.dispatch(a.state.tr.setSelection(caret('c2', 1)).insertText('!'));
+    expect(rows(b)).toEqual([['A', 'B!']]);
+    expect(b.container.querySelectorAll('td')).toHaveLength(2);
+  });
+
+  it('keeps rows that two people add at the same time', () => {
+    const { a, b, docA, docB, disconnect } = pair([cell('c1', 'r1', 'A'), cell('c2', 'r1', 'B'), para('p', '')]);
+    disconnect();
+    a.dispatch(a.state.tr.setSelection(caret('c1', 0)).addRow('after').insertText('from a'));
+    b.dispatch(b.state.tr.setSelection(caret('c1', 0)).addRow('after').insertText('from b'));
+    connect(docA, docB);
+    expect(rows(a)).toHaveLength(3);
+    expect(rows(a).flat()).toEqual(expect.arrayContaining(['from a', 'from b']));
+    expect(json(b)).toEqual(json(a));
+  });
+
+  it('a row and a column added at the same time leave a table both can keep editing', () => {
+    const { a, b, docA, docB, disconnect } = pair([cell('c1', 'r1', 'A'), cell('c2', 'r2', 'B'), para('p', '')]);
+    disconnect();
+    a.dispatch(a.state.tr.setSelection(caret('c1', 0)).addColumn('after'));
+    b.dispatch(b.state.tr.setSelection(caret('c2', 0)).addRow('after'));
+    connect(docA, docB);
+    expect(json(b)).toEqual(json(a));
+    // The row added by b is one cell short; adding a column still works on every row.
+    expect(rows(a).map((r) => r.length)).toEqual([2, 2, 1]);
+    a.dispatch(a.state.tr.setSelection(caret('c1', 0)).addColumn('after'));
+    expect(rows(b).map((r) => r.length)).toEqual([3, 3, 2]);
+  });
+});
