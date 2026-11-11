@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { LevitEditor } from '../../src/core/editor';
 import { createBlock, createTextNode } from '../../src/core/model/document';
-import { domPointToPosition } from '../../src/core/view/selection';
+import { domPointToPosition, domSelectionToEditorSelection } from '../../src/core/view/selection';
 
 const cell = (id: string, row: string, text = '', header = false) =>
   createBlock('table_cell', header ? { table: 't', row, header: true } : { table: 't', row }, [createTextNode(text)], id);
@@ -200,5 +200,56 @@ describe('review fixes: bad ids', () => {
     const odd = { toString: 1 } as unknown as string;
     make([createBlock('table_cell', { table: odd, row: odd }, [createTextNode('A')], 'a'), para('p', 'x')]);
     expect(tables()).toEqual([[['td:A']]]);
+  });
+});
+
+describe('Firefox cell selection', () => {
+  /** Firefox selects cells dragged across as one range per cell, each around its td. */
+  function selectCells(...ids: string[]) {
+    const ranges = ids.map((id) => {
+      const td = element.querySelector(`[data-block-id="${id}"]`)!;
+      const range = document.createRange();
+      range.selectNode(td);
+      return range;
+    });
+    const first = ranges[0];
+    vi.spyOn(window, 'getSelection').mockReturnValue({
+      rangeCount: ranges.length,
+      getRangeAt: (i: number) => ranges[i],
+      anchorNode: first.startContainer,
+      anchorOffset: first.startOffset,
+      isCollapsed: false,
+      removeAllRanges: () => {},
+      addRange: () => {},
+    } as unknown as Selection);
+  }
+
+  afterEach(() => vi.restoreAllMocks());
+
+  it('reads every selected cell, not just the first', () => {
+    make();
+    selectCells('c', 'd');
+    expect(domSelectionToEditorSelection(element)).toEqual({
+      anchor: { blockId: 'c', offset: 0 },
+      head: { blockId: 'd', offset: 1 },
+      isCollapsed: false,
+    });
+  });
+
+  it('reads the cells in document order whatever order the ranges come in', () => {
+    make();
+    selectCells('d', 'a', 'c');
+    expect(domSelectionToEditorSelection(element)).toEqual({
+      anchor: { blockId: 'a', offset: 0 },
+      head: { blockId: 'd', offset: 1 },
+      isCollapsed: false,
+    });
+  });
+
+  it('Backspace empties all the selected cells', () => {
+    make();
+    selectCells('c', 'd');
+    editor.container.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true, cancelable: true }));
+    expect(tables()).toEqual([[['th:A', 'th:B'], ['td:', 'td:']]]);
   });
 });

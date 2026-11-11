@@ -87,14 +87,23 @@ export function domSelectionToEditorSelection(container: HTMLElement): EditorSel
 
   // Read both ends from the Range, and use anchor only to tell the direction.
   // Some DOM implementations (e.g. happy-dom) report a wrong focusNode.
-  const range = sel.getRangeAt(0);
+  // Firefox selects table cells dragged across as one range per cell: read
+  // from the earliest start to the latest end.
+  let range = sel.getRangeAt(0);
+  let last = range;
+  for (let i = 1; i < sel.rangeCount; i++) {
+    const r = sel.getRangeAt(i);
+    if (r.compareBoundaryPoints(Range.START_TO_START, range) < 0) range = r;
+    if (r.compareBoundaryPoints(Range.END_TO_END, last) > 0) last = r;
+  }
   const isBackward =
+    sel.rangeCount === 1 &&
     !range.collapsed &&
     sel.anchorNode === range.endContainer &&
     sel.anchorOffset === range.endOffset;
 
   const start = domPointToPosition(container, range.startContainer, range.startOffset);
-  const end = domPointToPosition(container, range.endContainer, range.endOffset);
+  const end = domPointToPosition(container, last.endContainer, last.endOffset);
   if (!start || !end) return null;
 
   return {

@@ -133,7 +133,10 @@ test('pasting a table from HTML', async ({ page }) => {
     const data = new DataTransfer();
     data.setData('text/html', '<table><tr><th>A</th><th>B</th></tr><tr><td>1</td><td>2</td></tr></table>');
     data.setData('text/plain', 'A\tB\n1\t2');
-    document.querySelector('#editor')!.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }));
+    // Firefox ignores clipboardData passed to new ClipboardEvent(), so set it on the event.
+    const event = new Event('paste', { bubbles: true, cancelable: true });
+    Object.defineProperty(event, 'clipboardData', { value: data });
+    document.querySelector('#editor')!.dispatchEvent(event);
   });
   expect(await shape(page)).toEqual([[['A', 'B'], ['1', '2']], 'paragraph:']);
 });
