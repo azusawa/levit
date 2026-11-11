@@ -183,7 +183,7 @@ const fromMd = markdownToDocument('# Title\n\n**Bold** text');
 - 중첩 목록은 중첩된 `<ul>`/`<ol>`이 되고, Markdown에서는 부모 항목 아래에 들여쓴 목록이 됩니다.
 - 체크리스트는 Markdown에서 `- [ ] text` / `- [x] text`, HTML에서는 체크박스가 든 `<li data-checked>`입니다.
 - 형광펜은 `==text==` / `<mark>`, 구분선은 `---` / `<hr>`, 이미지는 `![alt](src)` / `<img>`입니다.
-- 표는 HTML에서 `<table>`이고, 머리글 행은 `<thead>`, 머리글 칸은 `<th>`입니다. Markdown에서는 GitHub 형식의 표(`| a | b |` 다음 줄에 `| --- | --- |`)입니다. Markdown 표에는 항상 머리글 행이 있고, 칸 안의 줄바꿈은 `<br>`입니다. 붙여 넣은 HTML 표는 표로 들어오며, 칸 안의 문단은 칸 안의 줄이 됩니다.
+- 표는 HTML에서 `<table>`이고, 머리글 행은 `<thead>`, 머리글 칸은 `<th>`입니다. Markdown에서는 GitHub 형식의 표(`| a | b |` 다음 줄에 `| --- | --- |`)입니다. Markdown 표에는 머리글 행이 꼭 있어야 해서, 머리글 행이 없는 표는 빈 머리글 행을 붙여 쓰고 읽을 때 다시 뺍니다. 칸 안의 줄바꿈은 `<br>`입니다. 붙여 넣은 HTML 표는 표로 들어오며, 칸 안의 문단은 칸 안의 줄이 됩니다.
 - 코드 언어는 Markdown에서 코드 펜스의 언어 표기, HTML에서는 `class="language-ts"`가 됩니다.
 
 붙여넣기도 같은 변환기를 씁니다. HTML(웹페이지, Google Docs)을 먼저 보고, 다음으로 여러 줄 Markdown, 마지막으로 일반 텍스트(한 줄에 한 문단)를 읽습니다.

@@ -7,8 +7,8 @@ import { schemaFor, type LevitPlugin } from '../plugin/plugin.js';
 /** What a paste or drop should insert: blocks, or raw text for code blocks. */
 export type ClipboardContent = { blocks: BlockNode[] } | { text: string };
 
-// Lines that start like Markdown blocks: headings, lists, quotes, code fences.
-const MARKDOWN_BLOCK = /^(#{1,6}\s|[-*+]\s|\d+\.\s|>|```)/m;
+// Lines that start like Markdown blocks: headings, lists, quotes, code fences, table rows.
+const MARKDOWN_BLOCK = /^(#{1,6}\s|[-*+]\s|\d+\.\s|>|```|\|.*\|)/m;
 
 /**
  * Reads clipboard (or drag) data. HTML wins over plain text. Plain text with

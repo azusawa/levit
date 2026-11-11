@@ -381,3 +381,23 @@ describe('rows whose cells are apart', () => {
     expect(shape(state.doc)).toEqual([[['A'], ['C'], ['N']]]);
   });
 });
+
+describe('review fixes', () => {
+  it('text copied from one cell pastes as text, not as a one-cell table', () => {
+    const state = stateWith([para('p', 'xy')], caret('p', 1)).tr.insertFragment([cell('c', 'r', 'foo', 'u')]).apply();
+    expect(shape(state.doc)).toEqual(['paragraph:xfooy']);
+  });
+
+  it('a row added above a header row is a header row too, so the header stays on top', () => {
+    const blocks = [cell('a', 'r1', 'A', 't', true), cell('b', 'r2', 'B')];
+    let state = stateWith(blocks, caret('a', 0)).tr.addRow('before').apply();
+    expect(state.doc.blocks.map((b) => b.attrs!.header === true)).toEqual([true, true, false]);
+    state = stateWith(blocks, caret('b', 0)).tr.addRow('before').apply();
+    expect(state.doc.blocks.map((b) => b.attrs!.header === true)).toEqual([true, false, false]);
+  });
+
+  it('a table inserted right after another one keeps a paragraph between them', () => {
+    const state = stateWith([cell('a', 'r1', 'A'), para('p', '')], caret('p', 0)).tr.insertTable(1, 1).apply();
+    expect(shape(state.doc)).toEqual([[['A']], 'paragraph:', [['']], 'paragraph:']);
+  });
+});

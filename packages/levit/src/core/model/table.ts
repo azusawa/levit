@@ -1,5 +1,5 @@
-import { BlockNode, DocumentData } from './types.js';
-import { createBlock, findBlockIndex, generateBlockId } from './document.js';
+import { BlockNode, DocumentData, InlineNode } from './types.js';
+import { createBlock, createTextNode, findBlockIndex, generateBlockId, normalizeInlineNodes } from './document.js';
 
 /**
  * Tables. The document stays a flat list of blocks: every cell is a
@@ -29,8 +29,12 @@ export interface TablePosition {
   col: number;
 }
 
-const tableOf = (block: BlockNode) => String(block.attrs?.table ?? '');
-const rowOf = (block: BlockNode) => String(block.attrs?.row ?? '');
+/** A table or row id as a string. Anything else (from a bad document) counts as no id. */
+const idOf = (value: unknown) => (typeof value === 'string' || typeof value === 'number' ? String(value) : '');
+export const tableIdOf = (block: BlockNode) => idOf(block.attrs?.table);
+export const rowIdOf = (block: BlockNode) => idOf(block.attrs?.row);
+const tableOf = tableIdOf;
+const rowOf = rowIdOf;
 
 /** The table the block at index belongs to, or null when it is not a cell. */
 export function tableAtIndex(blocks: readonly BlockNode[], index: number): TablePosition | null {
@@ -77,4 +81,19 @@ export function createTable(rows: number, cols: number, { header = true }: { hea
     for (let c = 0; c < cols; c++) out.push(createCell(table, row, header && r === 0));
   }
   return out;
+}
+
+/**
+ * The text of some blocks as the lines of one cell: images and other blocks
+ * without text are left out. Null when nothing with text is left.
+ */
+export function cellContent(blocks: readonly BlockNode[], isAtom: (type: string) => boolean): InlineNode[] | null {
+  const texts = blocks.filter((b) => !isAtom(b.type));
+  if (texts.length === 0) return null;
+  const lines: InlineNode[] = [];
+  texts.forEach((b, i) => {
+    if (i > 0) lines.push(createTextNode('\n'));
+    lines.push(...b.content);
+  });
+  return normalizeInlineNodes(lines);
 }

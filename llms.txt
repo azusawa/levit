@@ -161,8 +161,8 @@ their parent. Tasks are `- [ ] text` / `- [x] text` in Markdown and
 `<mark>`, dividers `---` / `<hr>`, images `![alt](src)` / `<img>`, and code
 languages ```` ```ts ```` / `<code class="language-ts">`. Tables are
 `<table>` (header rows in `<thead>`, `<th>` cells) and GitHub Markdown tables
-(`| a | b |` then `| --- | --- |`); Markdown tables always have a header row,
-and cell line breaks are `<br>`. Pasted HTML tables stay tables (a cell's
+(`| a | b |` then `| --- | --- |`); a table without a header row is written
+with an empty header row, which reading leaves out. Cell line breaks are `<br>`. Pasted HTML tables stay tables (a cell's
 paragraphs become its lines).
 
 ## 4. Chained Command API

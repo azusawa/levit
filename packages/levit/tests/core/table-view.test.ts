@@ -178,3 +178,27 @@ describe('keys in a table', () => {
     expect(tables()[0]).toHaveLength(2);
   });
 });
+
+describe('review fixes: the view', () => {
+  it('pasting a Markdown table as plain text makes a table', async () => {
+    const { readClipboard } = await import('../../src/core/view/clipboard');
+    const data = { getData: (type: string) => (type === 'text/plain' ? '| a | b |\n|---|---|\n| 1 | 2 |' : '') } as DataTransfer;
+    const content = readClipboard(data, false) as { blocks: { type: string }[] };
+    expect(content.blocks.map((b) => b.type)).toEqual(['table_cell', 'table_cell', 'table_cell', 'table_cell']);
+  });
+
+  it('a stray node the browser leaves in a row is cleaned up', async () => {
+    make();
+    element.querySelector('tr')!.appendChild(document.createTextNode('junk'));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(element.querySelector('tr')!.textContent).toBe('AB');
+  });
+});
+
+describe('review fixes: bad ids', () => {
+  it('draws cells whose table or row id is not a string instead of failing', () => {
+    const odd = { toString: 1 } as unknown as string;
+    make([createBlock('table_cell', { table: odd, row: odd }, [createTextNode('A')], 'a'), para('p', 'x')]);
+    expect(tables()).toEqual([[['td:A']]]);
+  });
+});

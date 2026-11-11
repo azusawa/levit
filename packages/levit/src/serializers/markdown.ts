@@ -27,8 +27,8 @@ export function documentToMarkdown(doc: DocumentData, options: SerializerOptions
 
   for (let index = 0; index < doc.blocks.length; index++) {
     const block = doc.blocks[index];
-    const blockText = inlineMarkdown(block, schema);
     const table = tableAtIndex(doc.blocks, index);
+    const blockText = table ? '' : inlineMarkdown(block, schema);
 
     // A line break inside a block is a hard break: "\\" at the end of the line.
     const breaks = (indent: string) => blockText.replace(/\n/g, `\\\n${indent}`);
@@ -131,9 +131,9 @@ function inlineMarkdown(block: BlockNode, schema: Schema): string {
 }
 
 /**
- * A GitHub table. Markdown tables always have a header, so the first row is
- * written as one. Pipes in cells are escaped, line breaks become <br>, and
- * short rows get empty cells.
+ * A GitHub table. Markdown tables always have a header row: a table without
+ * one gets an empty header row, which reading leaves out again. Pipes in
+ * cells are escaped, line breaks become <br>, and short rows get empty cells.
  */
 function tableMarkdown(blocks: readonly BlockNode[], table: TablePosition, inline: (block: BlockNode) => string): string {
   const cols = Math.max(...table.rows.map((row) => row.length));
@@ -143,7 +143,10 @@ function tableMarkdown(blocks: readonly BlockNode[], table: TablePosition, inlin
       row[c] === undefined ? '' : inline(blocks[row[c]]).replace(/\|/g, '\\|').replace(/\n/g, '<br>')
     )
   );
-  return [line(rows[0]), line(Array(cols).fill('---')), ...rows.slice(1).map(line)].join('\n');
+  const hasHeader = table.rows[0].every((k) => blocks[k].attrs?.header === true);
+  const head = hasHeader ? rows[0] : Array(cols).fill('');
+  const body = hasHeader ? rows.slice(1) : rows;
+  return [line(head), line(Array(cols).fill('---')), ...body.map(line)].join('\n');
 }
 
 /**
@@ -171,12 +174,22 @@ function splitTableRow(line: string): string[] {
   return cells;
 }
 
-/** Reads a GitHub table (a header row, a row like "| --- | :-: |", then rows), or null. */
+/** True when lines[k] and lines[k + 1] start a GitHub table: a header row, then a delimiter row like "| --- | :-: |". */
+function startsTable(lines: string[], k: number): boolean {
+  const head = lines[k];
+  const delimiterLine = lines[k + 1];
+  if (head === undefined || delimiterLine === undefined || !head.includes('|') || !delimiterLine.includes('-')) return false;
+  const delimiter = splitTableRow(delimiterLine);
+  return delimiter.length === splitTableRow(head).length && delimiter.every((c) => /^:?-+:?$/.test(c));
+}
+
+/**
+ * Reads a GitHub table, or null. A header row of empty cells is how a table
+ * without a header is written, so it is left out.
+ */
 function readTable(lines: string[]): BlockNode[] | null {
-  if (lines.length < 2 || !lines[0].includes('|') || !lines[1].includes('-')) return null;
+  if (!startsTable(lines, 0)) return null;
   const header = splitTableRow(lines[0]);
-  const delimiter = splitTableRow(lines[1]);
-  if (delimiter.length !== header.length || !delimiter.every((c) => /^:?-+:?$/.test(c))) return null;
   const tableId = generateBlockId('t');
   const blocks: BlockNode[] = [];
   const row = (cells: string[], isHeader: boolean) => {
@@ -186,9 +199,22 @@ function readTable(lines: string[]): BlockNode[] | null {
       blocks.push({ ...createCell(tableId, rowId, isHeader), content: parseInlineMarkdown(text) });
     }
   };
-  row(header, true);
+  if (header.some((cell) => cell !== '')) row(header, true);
   for (const line of lines.slice(2)) row(splitTableRow(line), false);
-  return blocks;
+  return blocks.length > 0 ? blocks : null;
+}
+
+/**
+ * Splits a block of lines before a table that follows text without a blank
+ * line ("Results:" then "| a | b |"), as GitHub does.
+ */
+function splitBeforeTable(raw: string): string[] {
+  if (raw.trimStart().startsWith('```')) return [raw];
+  const lines = raw.split('\n');
+  for (let k = 1; k < lines.length - 1; k++) {
+    if (startsTable(lines, k)) return [lines.slice(0, k).join('\n'), lines.slice(k).join('\n')];
+  }
+  return [raw];
 }
 
 /**
@@ -451,7 +477,7 @@ export function markdownToDocument(markdown: string, options: SerializerOptions 
     return createDocument();
   }
 
-  const rawBlocks = splitBlocks(markdown);
+  const rawBlocks = splitBlocks(markdown).flatMap(splitBeforeTable);
   const blocks: BlockNode[] = [];
 
   for (const raw of rawBlocks) {

@@ -8,7 +8,7 @@ import {
   listIndent,
   normalizeInlineNodes,
 } from '../core/model/document.js';
-import { createCell, tableAtIndex, type TablePosition } from '../core/model/table.js';
+import { cellContent, createCell, tableAtIndex, type TablePosition } from '../core/model/table.js';
 import { defaultSchema, schemaFor, type BlockSpec, type Schema, type SerializerOptions } from '../core/plugin/plugin.js';
 import { normalizeCodeLanguage, normalizeHeadingLevel, sanitizeHref, sanitizeImageSrc } from '../core/model/sanitize.js';
 
@@ -366,13 +366,7 @@ function readTable(table: Element, out: BlockNode[]): void {
 function readCell(td: Element): InlineNode[] {
   const blocks: BlockNode[] = [];
   readBlocks(td, { type: 'paragraph' }, blocks);
-  const lines: InlineNode[] = [];
-  for (const block of blocks) {
-    if (schema.isAtom(block.type)) continue;
-    if (lines.length > 0) lines.push(createTextNode('\n'));
-    lines.push(...block.content);
-  }
-  return normalizeInlineNodes(lines);
+  return cellContent(blocks, (type) => schema.isAtom(type)) ?? [createTextNode('')];
 }
 
 /** The language of a <pre>: data-language, or a language-x / lang-x class on it or its <code>. */

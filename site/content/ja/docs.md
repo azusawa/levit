@@ -183,7 +183,7 @@ const fromMd = markdownToDocument('# Title\n\n**Bold** text');
 - ネストしたリストは入れ子の `<ul>`/`<ol>` になり、Markdown では親項目の下にインデントしたリストになります。
 - タスクは Markdown では `- [ ] text` / `- [x] text`、HTML ではチェックボックス入りの `<li data-checked>` です。
 - ハイライトは `==text==` / `<mark>`、区切り線は `---` / `<hr>`、画像は `![alt](src)` / `<img>` です。
-- 表は HTML では `<table>` で、見出し行は `<thead>`、見出しセルは `<th>` です。Markdown では GitHub 形式の表（`| a | b |` の次の行に `| --- | --- |`）です。Markdown の表には必ず見出し行があり、セル内の改行は `<br>` です。貼り付けた HTML の表は表のまま入り、セル内の段落はセル内の行になります。
+- 表は HTML では `<table>` で、見出し行は `<thead>`、見出しセルは `<th>` です。Markdown では GitHub 形式の表（`| a | b |` の次の行に `| --- | --- |`）です。Markdown の表には見出し行が必要なので、見出し行のない表は空の見出し行を付けて書き、読み込むときに外します。セル内の改行は `<br>` です。貼り付けた HTML の表は表のまま入り、セル内の段落はセル内の行になります。
 - コードの言語は Markdown ではコードフェンスの言語指定、HTML では `class="language-ts"` になります。
 
 貼り付けも同じ変換処理を使います。まず HTML（Web ページ、Google ドキュメント）、次に複数行の Markdown、最後にプレーンテキスト（1 行 1 段落）として読み込みます。

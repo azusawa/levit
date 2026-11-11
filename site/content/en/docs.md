@@ -184,7 +184,7 @@ How Levit formats map:
 - Tasks are `- [ ] text` / `- [x] text` in Markdown and `<li data-checked>` with a checkbox in HTML.
 - Highlight is `==text==` / `<mark>`, dividers `---` / `<hr>`, images `![alt](src)` / `<img>`.
 - A code language becomes the fence info string in Markdown and `class="language-ts"` in HTML.
-- Tables are `<table>` in HTML, with header rows in `<thead>` and header cells as `<th>`, and GitHub tables in Markdown (`| a | b |`, then `| --- | --- |`). A Markdown table always has a header row, and line breaks in a cell are `<br>`. A pasted HTML table stays a table; the paragraphs of a cell become its lines.
+- Tables are `<table>` in HTML, with header rows in `<thead>` and header cells as `<th>`, and GitHub tables in Markdown (`| a | b |`, then `| --- | --- |`). A table without a header row is written with an empty header row, which reading leaves out again, and line breaks in a cell are `<br>`. A pasted HTML table stays a table; the paragraphs of a cell become its lines.
 
 Pasting uses the same converters: HTML first (web pages, Google Docs), then multi-line Markdown, then plain text, one paragraph per line.
 

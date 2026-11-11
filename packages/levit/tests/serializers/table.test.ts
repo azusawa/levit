@@ -111,9 +111,9 @@ describe('tables to Markdown', () => {
     expect(documentToMarkdown(grid())).toBe('| A | B |\n| --- | --- |\n| **C** | x<y<br>z |');
   });
 
-  it('uses the first row as the header even when it is not one, and pads short rows', () => {
+  it('writes an empty header row for a table without one, and pads short rows', () => {
     const doc = createDocument([para('p'), cell('r1', 'A'), cell('r1', 'B'), cell('r2', 'C'), para('q')]);
-    expect(documentToMarkdown(doc)).toBe('p\n\n| A | B |\n| --- | --- |\n| C |  |\n\nq');
+    expect(documentToMarkdown(doc)).toBe('p\n\n|  |  |\n| --- | --- |\n| A | B |\n| C |  |\n\nq');
   });
 
   it('escapes pipes in cells', () => {
@@ -151,5 +151,19 @@ describe('tables from Markdown', () => {
     markdownToDocument(`| a |\n|${' '.repeat(50000)}-${' '.repeat(50000)}x`);
     markdownToDocument(`a|${'|-'.repeat(30000)}`);
     expect(Date.now() - start).toBeLessThan(500);
+  });
+});
+
+describe('review fixes: Markdown tables', () => {
+  it('a table without a header row keeps none through Markdown', () => {
+    const doc = createDocument([cell('r1', 'A'), cell('r1', 'B'), cell('r2', 'C'), cell('r2', 'D')]);
+    const md = documentToMarkdown(doc);
+    expect(md).toBe('|  |  |\n| --- | --- |\n| A | B |\n| C | D |');
+    expect(shape(markdownToDocument(md))).toEqual([[['A', 'B'], ['C', 'D']]]);
+  });
+
+  it('reads a table that follows a line of text without a blank line', () => {
+    const doc = markdownToDocument('Results:\n| a | b |\n| --- | --- |\n| 1 | 2 |');
+    expect(shape(doc)).toEqual(['paragraph:Results:', [['#a', '#b'], ['1', '2']]]);
   });
 });

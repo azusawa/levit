@@ -2,7 +2,7 @@ import { BlockNode, InlineMark, InlineNode } from '../model/types.js';
 import { EditorState } from '../state/state.js';
 import { normalizeCodeLanguage, normalizeHeadingLevel, sanitizeHref, sanitizeImageSrc } from '../model/sanitize.js';
 import { isListItem, listIndent } from '../model/document.js';
-import { isTableCell, tableAtIndex } from '../model/table.js';
+import { isTableCell, tableAtIndex, tableIdOf } from '../model/table.js';
 import { defaultSchema, type Schema } from '../plugin/plugin.js';
 import { en, format, type LevitMessages } from '../../i18n/messages.js';
 
@@ -159,7 +159,7 @@ export class DOMReconciler {
         i += 1;
         continue;
       }
-      const key = String(blocks[i].attrs?.table ?? '');
+      const key = tableIdOf(blocks[i]);
       let wrapper = domTables.get(key);
       domTables.delete(key);
       let tbody = wrapper?.querySelector<HTMLElement>(':scope > table > tbody');
