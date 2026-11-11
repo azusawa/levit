@@ -112,6 +112,7 @@ Line breaks inside a block (`Shift+Enter`) are stored as `"\n"` in the text.
 - `task_list_item` with `attrs.checked` (boolean)
 - `horizontal_rule`
 - `image` with `attrs.src` and `attrs.alt`
+- `table_cell` with `attrs.table`, `attrs.row` and an optional `attrs.header` (boolean)
 
 Lists are flat: every list item is its own block, and consecutive items of the same type form one list. Nesting is `attrs.indent` (0 to 8, left out at the top level), and an item is at most one level deeper than the one above it.
 
@@ -146,6 +147,17 @@ Typed at the start of a block, these turn into formatting as you type. They do n
 - `[] `, `[ ] ` or `[x] ` for a task (also after `- `)
 - `---` for a divider
 
+Tables are flat too: every cell is a `table_cell` block. `attrs.table` names its table and `attrs.row` its row; the cells of a table follow each other, row after row, left to right. Header cells have `attrs.header: true`, usually in the first row. A cell holds text only, and its line breaks are `"\n"`. Give each table and each row an id of its own.
+
+```json
+[
+  { "type": "table_cell", "attrs": { "table": "t1", "row": "r1", "header": true }, "content": [{ "text": "Name" }] },
+  { "type": "table_cell", "attrs": { "table": "t1", "row": "r1", "header": true }, "content": [{ "text": "Price" }] },
+  { "type": "table_cell", "attrs": { "table": "t1", "row": "r2" }, "content": [{ "text": "Tea" }] },
+  { "type": "table_cell", "attrs": { "table": "t1", "row": "r2" }, "content": [{ "text": "3.00" }] }
+]
+```
+
 ## HTML and Markdown
 
 Serializers convert documents to and from HTML and Markdown. They do not need an editor instance. `htmlToDocument` uses the browser's `DOMParser`, which servers do not have built in.
@@ -172,6 +184,7 @@ How Levit formats map:
 - Tasks are `- [ ] text` / `- [x] text` in Markdown and `<li data-checked>` with a checkbox in HTML.
 - Highlight is `==text==` / `<mark>`, dividers `---` / `<hr>`, images `![alt](src)` / `<img>`.
 - A code language becomes the fence info string in Markdown and `class="language-ts"` in HTML.
+- Tables are `<table>` in HTML, with header rows in `<thead>` and header cells as `<th>`, and GitHub tables in Markdown (`| a | b |`, then `| --- | --- |`). A Markdown table always has a header row, and line breaks in a cell are `<br>`. A pasted HTML table stays a table; the paragraphs of a cell become its lines.
 
 Pasting uses the same converters: HTML first (web pages, Google Docs), then multi-line Markdown, then plain text, one paragraph per line.
 
@@ -205,6 +218,17 @@ editor.chain().setCodeBlock('ts').run();   // setCodeLanguage('py') changes it, 
 editor.chain().insertFragment(blocks).run(); // insert blocks at the caret, like a paste
 editor.chain().insertLineBreak().run();    // Shift+Enter
 editor.chain().selectAll().run();
+```
+
+Tables:
+
+```ts
+editor.chain().insertTable(3, 3).run();    // rows, columns; { header: false } for no header row
+editor.chain().addRowBefore().run();       // also addRowAfter, addColumnBefore, addColumnAfter
+editor.chain().deleteRow().run();          // also deleteColumn, deleteTable
+editor.chain().toggleHeaderRow().run();    // the first row as a header, or back
+editor.chain().goToNextCell().run();       // Tab; goToPreviousCell() is Shift+Tab
+editor.isInTable();                        // true when the caret is in a table
 ```
 
 Deleting works like the keys: `deleteBackward()`, `deleteForward()`, `deleteWordBackward()`, `deleteWordForward()`, `deleteLineBackward()`, `deleteLineForward()` and `deleteSelection()`.

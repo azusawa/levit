@@ -217,3 +217,33 @@ describe('collaboration and long documents (phase 5) are documented', () => {
     }
   });
 });
+
+describe('tables are documented', () => {
+  it('README says how to make and edit a table', () => {
+    const readme = read('README.md');
+    for (const text of ['표', '/table', 'Tab', 'insertTable']) expect(readme, text).toContain(text);
+  });
+
+  it('llms.txt documents the cell block, its attrs, keys, formats and commands', () => {
+    const llms = read('llms.txt');
+    for (const text of [
+      'table_cell', 'attrs.table', 'attrs.row', 'attrs.header',
+      'insertTable(', 'addRowBefore', 'addRowAfter', 'addColumnBefore', 'addColumnAfter',
+      'deleteRow', 'deleteColumn', 'deleteTable', 'toggleHeaderRow', 'goToNextCell', 'isInTable(',
+      '| --- |', '<table>',
+    ]) {
+      expect(llms, text).toContain(text);
+    }
+  });
+
+  it('the site guide and docs cover tables in every language', () => {
+    for (const lang of ['en', 'ko', 'ja']) {
+      const guide = read(`site/content/${lang}/guide.md`);
+      const docs = read(`site/content/${lang}/docs.md`);
+      expect(guide, `${lang} guide`).toContain('/table');
+      expect(guide, `${lang} guide`).toContain('Tab');
+      expect(docs, `${lang} docs`).toContain('table_cell');
+      expect(docs, `${lang} docs`).toContain('insertTable(');
+    }
+  });
+});

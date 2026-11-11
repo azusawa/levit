@@ -112,6 +112,7 @@ editor.getText();         // プレーンテキスト
 - `task_list_item`：`attrs.checked`（boolean）
 - `horizontal_rule`
 - `image`：`attrs.src`、`attrs.alt`
+- `table_cell`：`attrs.table`、`attrs.row`、省略可能な `attrs.header`（boolean）
 
 リストはフラットです。リスト項目 1 つが 1 ブロックで、同じ種類の項目が連続すると 1 つのリストになります。ネストは `attrs.indent`（0〜8、トップレベルでは省略）で表し、項目は直前の項目より最大 1 段だけ深くできます。
 
@@ -146,6 +147,17 @@ editor.getText();         // プレーンテキスト
 - `[] `、`[ ] `、`[x] `：タスク（`- ` の後でも可）
 - `---`：区切り線
 
+表もフラットです。セル 1 つが `table_cell` ブロック 1 つです。`attrs.table` はどの表か、`attrs.row` はどの行かを表します。1 つの表のセルは、行の順に左から右へ続きます。見出しセルには `attrs.header: true` があり、ふつうは最初の行です。セルに入るのは文字だけで、セル内の改行は `"\n"` です。表と行ごとに別々の id を使ってください。
+
+```json
+[
+  { "type": "table_cell", "attrs": { "table": "t1", "row": "r1", "header": true }, "content": [{ "text": "Name" }] },
+  { "type": "table_cell", "attrs": { "table": "t1", "row": "r1", "header": true }, "content": [{ "text": "Price" }] },
+  { "type": "table_cell", "attrs": { "table": "t1", "row": "r2" }, "content": [{ "text": "Tea" }] },
+  { "type": "table_cell", "attrs": { "table": "t1", "row": "r2" }, "content": [{ "text": "3.00" }] }
+]
+```
+
 ## HTML と Markdown
 
 シリアライザーでドキュメントを HTML や Markdown に変換したり、逆に読み込んだりできます。エディタのインスタンスは不要です。ただし `htmlToDocument` はブラウザの `DOMParser` を使うため、サーバーには標準では用意されていません。
@@ -171,6 +183,7 @@ const fromMd = markdownToDocument('# Title\n\n**Bold** text');
 - ネストしたリストは入れ子の `<ul>`/`<ol>` になり、Markdown では親項目の下にインデントしたリストになります。
 - タスクは Markdown では `- [ ] text` / `- [x] text`、HTML ではチェックボックス入りの `<li data-checked>` です。
 - ハイライトは `==text==` / `<mark>`、区切り線は `---` / `<hr>`、画像は `![alt](src)` / `<img>` です。
+- 表は HTML では `<table>` で、見出し行は `<thead>`、見出しセルは `<th>` です。Markdown では GitHub 形式の表（`| a | b |` の次の行に `| --- | --- |`）です。Markdown の表には必ず見出し行があり、セル内の改行は `<br>` です。貼り付けた HTML の表は表のまま入り、セル内の段落はセル内の行になります。
 - コードの言語は Markdown ではコードフェンスの言語指定、HTML では `class="language-ts"` になります。
 
 貼り付けも同じ変換処理を使います。まず HTML（Web ページ、Google ドキュメント）、次に複数行の Markdown、最後にプレーンテキスト（1 行 1 段落）として読み込みます。
@@ -205,6 +218,17 @@ editor.chain().setCodeBlock('ts').run();   // setCodeLanguage('py') で変更、
 editor.chain().insertFragment(blocks).run(); // 貼り付けと同様にキャレット位置へブロックを挿入
 editor.chain().insertLineBreak().run();    // Shift+Enter
 editor.chain().selectAll().run();
+```
+
+表：
+
+```ts
+editor.chain().insertTable(3, 3).run();    // 行、列。見出し行なしは { header: false }
+editor.chain().addRowBefore().run();       // addRowAfter、addColumnBefore、addColumnAfter もあります
+editor.chain().deleteRow().run();          // deleteColumn、deleteTable もあります
+editor.chain().toggleHeaderRow().run();    // 最初の行を見出しに、または戻す
+editor.chain().goToNextCell().run();       // Tab。goToPreviousCell() は Shift+Tab
+editor.isInTable();                        // キャレットが表の中なら true
 ```
 
 削除はキー操作と同じように動きます。`deleteBackward()`、`deleteForward()`、`deleteWordBackward()`、`deleteWordForward()`、`deleteLineBackward()`、`deleteLineForward()`、`deleteSelection()` があります。

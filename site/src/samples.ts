@@ -17,6 +17,11 @@ Levit keeps your writing as **blocks**: headings, lists, quotes, code and more. 
 - [ ] Turn this line into a heading with \`# \`
 - [ ] Paste something from another page
 
+| Key | Does |
+| --- | --- |
+| Tab | Next cell, or a new row |
+| Shift+Tab | Previous cell |
+
 > Good editors get out of the way.
 
 \`\`\`ts
@@ -50,6 +55,11 @@ Levit은 글을 **블록**으로 다룹니다. 제목, 목록, 인용, 코드 �
 - [ ] 줄 앞에 \`# \`를 써서 제목으로 바꾸기
 - [ ] 다른 페이지의 글 붙여 넣어 보기
 
+| 키 | 하는 일 |
+| --- | --- |
+| Tab | 다음 칸, 또는 새 행 |
+| Shift+Tab | 앞 칸 |
+
 > 좋은 에디터는 글쓰기를 방해하지 않습니다.
 
 \`\`\`ts
@@ -82,6 +92,11 @@ Levitは文章を**ブロック**として扱います。見出し、リスト�
 - [x] スラッシュメニューを試す
 - [ ] 行頭に\`# \`と書いて見出しにする
 - [ ] ほかのページの文章を貼り付けてみる
+
+| キー | 動き |
+| --- | --- |
+| Tab | 次のセル、または新しい行 |
+| Shift+Tab | 前のセル |
 
 > よいエディターは書くことの邪魔をしません。
 

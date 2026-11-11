@@ -47,6 +47,7 @@
    - **글머리표 / 번호 목록** (Enter로 다음 항목, 빈 항목에서 Enter 또는 맨 앞 Backspace로 목록 종료)
    - **중첩 목록**: `Tab`으로 한 단계 들여쓰고 `Shift+Tab`으로 내어 씁니다. 번호는 단계마다 따로 매깁니다.
    - **체크리스트**: `[] ` 또는 `[ ] `로 시작하고, 상자를 누르거나 `Cmd/Ctrl+Enter`로 체크합니다.
+   - **표**: 슬래시 메뉴의 `/table`로 넣습니다. `Tab`으로 다음 칸, `Shift+Tab`으로 앞 칸으로 가고, 마지막 칸에서 `Tab`을 누르면 행이 늘어납니다. 칸 안에서 `/`를 누르면 행·열 추가와 삭제, 머리글 행 메뉴가 나옵니다. 웹페이지·스프레드시트의 표와 Markdown 표를 붙여 넣어도 표로 들어옵니다.
    - **구분선**(`---`)과 **이미지**: 이미지는 URL로 넣거나, `uploadImage`를 연결하면 붙여넣기·끌어다 놓기로 올립니다.
    - **코드 블록 언어** 지정과 문법 강조 연결 지점(`highlightCode`)
    - `# `, `> `, ` ``` `, `- `, `* `, `1. `, `[ ] `, `---` 실시간 마크다운 단축키 자동 변환
@@ -310,6 +311,15 @@ const docFromMd = markdownToDocument('# 제목\n\n**굵은 텍스트**');
 // HTML 양방향 변환
 const html = documentToHTML(editor.getJSON());
 const docFromHtml = htmlToDocument('<h1>제목</h1><p>본문</p>');
+```
+
+표는 HTML `<table>`과 GitHub 형식의 Markdown 표(`| a | b |`)로 오갑니다. 코드로 표를 다룰 때는 이렇게 씁니다.
+
+```ts
+editor.chain().insertTable(3, 3).run();   // 3행 3열, 첫 행은 머리글
+editor.chain().addRowAfter().run();       // addRowBefore, addColumnBefore/After
+editor.chain().deleteColumn().run();      // deleteRow, deleteTable, toggleHeaderRow
+editor.isInTable();                       // 캐럿이 표 안에 있는지
 ```
 
 ---

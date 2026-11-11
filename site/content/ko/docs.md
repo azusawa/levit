@@ -112,6 +112,7 @@ editor.getText();         // 순수 텍스트
 - `task_list_item`: `attrs.checked`(boolean)
 - `horizontal_rule`
 - `image`: `attrs.src`, `attrs.alt`
+- `table_cell`: `attrs.table`, `attrs.row`, 그리고 선택 사항인 `attrs.header`(boolean)
 
 목록은 평평합니다. 목록 항목 하나가 블록 하나이고, 같은 종류의 항목이 연속되면 하나의 목록이 됩니다. 중첩은 `attrs.indent`(0~8, 최상위에서는 생략)로 나타내며, 한 항목은 바로 위 항목보다 최대 한 단계까지만 깊어질 수 있습니다.
 
@@ -146,6 +147,17 @@ editor.getText();         // 순수 텍스트
 - `[] `, `[ ] `, `[x] `: 체크리스트(`- ` 뒤에서도 가능)
 - `---`: 구분선
 
+표도 평평합니다. 칸 하나가 `table_cell` 블록 하나입니다. `attrs.table`은 어느 표인지, `attrs.row`는 어느 행인지 나타냅니다. 한 표의 칸은 행 순서대로, 왼쪽에서 오른쪽으로 이어집니다. 머리글 칸에는 `attrs.header: true`가 있고, 보통 첫 행입니다. 칸에는 글만 들어가고, 칸 안의 줄바꿈은 `"\n"`입니다. 표와 행마다 서로 다른 id를 쓰세요.
+
+```json
+[
+  { "type": "table_cell", "attrs": { "table": "t1", "row": "r1", "header": true }, "content": [{ "text": "Name" }] },
+  { "type": "table_cell", "attrs": { "table": "t1", "row": "r1", "header": true }, "content": [{ "text": "Price" }] },
+  { "type": "table_cell", "attrs": { "table": "t1", "row": "r2" }, "content": [{ "text": "Tea" }] },
+  { "type": "table_cell", "attrs": { "table": "t1", "row": "r2" }, "content": [{ "text": "3.00" }] }
+]
+```
+
 ## HTML과 Markdown
 
 직렬화 함수로 문서를 HTML·Markdown으로 내보내거나 가져옵니다. 에디터 인스턴스 없이도 쓸 수 있습니다. 단, `htmlToDocument`는 브라우저의 `DOMParser`를 사용하며, 서버에는 기본으로 들어 있지 않습니다.
@@ -171,6 +183,7 @@ const fromMd = markdownToDocument('# Title\n\n**Bold** text');
 - 중첩 목록은 중첩된 `<ul>`/`<ol>`이 되고, Markdown에서는 부모 항목 아래에 들여쓴 목록이 됩니다.
 - 체크리스트는 Markdown에서 `- [ ] text` / `- [x] text`, HTML에서는 체크박스가 든 `<li data-checked>`입니다.
 - 형광펜은 `==text==` / `<mark>`, 구분선은 `---` / `<hr>`, 이미지는 `![alt](src)` / `<img>`입니다.
+- 표는 HTML에서 `<table>`이고, 머리글 행은 `<thead>`, 머리글 칸은 `<th>`입니다. Markdown에서는 GitHub 형식의 표(`| a | b |` 다음 줄에 `| --- | --- |`)입니다. Markdown 표에는 항상 머리글 행이 있고, 칸 안의 줄바꿈은 `<br>`입니다. 붙여 넣은 HTML 표는 표로 들어오며, 칸 안의 문단은 칸 안의 줄이 됩니다.
 - 코드 언어는 Markdown에서 코드 펜스의 언어 표기, HTML에서는 `class="language-ts"`가 됩니다.
 
 붙여넣기도 같은 변환기를 씁니다. HTML(웹페이지, Google Docs)을 먼저 보고, 다음으로 여러 줄 Markdown, 마지막으로 일반 텍스트(한 줄에 한 문단)를 읽습니다.
@@ -205,6 +218,17 @@ editor.chain().setCodeBlock('ts').run();   // setCodeLanguage('py')로 변경, '
 editor.chain().insertFragment(blocks).run(); // 붙여넣기처럼 커서 위치에 블록 삽입
 editor.chain().insertLineBreak().run();    // Shift+Enter
 editor.chain().selectAll().run();
+```
+
+표:
+
+```ts
+editor.chain().insertTable(3, 3).run();    // 행, 열. 머리글 행이 없으면 { header: false }
+editor.chain().addRowBefore().run();       // addRowAfter, addColumnBefore, addColumnAfter도 있습니다
+editor.chain().deleteRow().run();          // deleteColumn, deleteTable도 있습니다
+editor.chain().toggleHeaderRow().run();    // 첫 행을 머리글로, 또는 되돌리기
+editor.chain().goToNextCell().run();       // Tab. goToPreviousCell()은 Shift+Tab
+editor.isInTable();                        // 캐럿이 표 안에 있으면 true
 ```
 
 삭제는 키 입력과 똑같이 동작합니다. `deleteBackward()`, `deleteForward()`, `deleteWordBackward()`, `deleteWordForward()`, `deleteLineBackward()`, `deleteLineForward()`, `deleteSelection()`이 있습니다.

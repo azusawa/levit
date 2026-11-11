@@ -4,7 +4,7 @@ This guide is for people who write in an editor built with Levit. It covers typi
 
 ## Writing and blocks
 
-A document is a column of blocks: paragraphs, headings, quotes, lists, code, images and dividers. When the editor is empty, it shows a hint: "Type something or press "/" for commands...".
+A document is a column of blocks: paragraphs, headings, quotes, lists, tables, code, images and dividers. When the editor is empty, it shows a hint: "Type something or press "/" for commands...".
 
 - **Enter** starts a new block. In a heading, quote or code block, the new block is a plain paragraph.
 - **Shift+Enter** adds a line break inside the same block. Use it for several lines in one quote or code block.
@@ -25,6 +25,7 @@ Type `/` at the start of a line or after a space to open a menu of blocks. Keep 
 - **To-do List** — tasks with checkboxes.
 - **Divider** — a line between sections.
 - **Image** — upload a picture, or add one by its web address (URL).
+- **Table** — rows and columns.
 
 The app may add its own items at the end of the menu.
 
@@ -75,9 +76,20 @@ Press Enter at the end of a list item to start the next one. Press Enter on an e
 - **Shift+Tab** moves it back out one level.
 - On an empty nested item, Enter or Backspace first moves it out one level.
 
-Numbered lists count by themselves, separately at each level. Tab works this way only inside lists; elsewhere it moves the keyboard focus out of the editor, as on any web page.
+Numbered lists count by themselves, separately at each level. Tab works this way only inside lists (in tables it moves between cells); elsewhere it moves the keyboard focus out of the editor, as on any web page.
 
 In a to-do list, click the box to check or uncheck a task, or press **Mod+Enter** with the caret in it. A new task made with Enter starts unchecked.
+
+## Tables
+
+Choose **Table** in the slash menu (type `/table`) to add a table with three rows and three columns. The first row is a header row, shown in bold.
+
+- Click a cell to write in it. **Tab** moves to the next cell and **Shift+Tab** to the previous one. **Tab** in the last cell adds a row.
+- **Enter** starts a new line inside the cell.
+- Type `/` in a cell for the table commands: **Add row above**, **Add row below**, **Add column left**, **Add column right**, **Delete row**, **Delete column**, **Header row** (turns the header row on or off) and **Delete table**.
+- Backspace at the start of a cell does nothing, so cells never run into each other. Selecting several cells and pressing Backspace empties them. To remove the whole table, use **Delete table**, or select it together with some text before or after it.
+- A table wider than the editor scrolls sideways.
+- Tables you paste from web pages, spreadsheets, Google Docs or Markdown stay tables.
 
 ## Code, images and dividers
 
@@ -105,7 +117,7 @@ Copy and cut keep your formatting, lists and links, so you can paste them into o
 
 When you paste, the editor keeps the structure and cleans up the rest:
 
-- From web pages and Google Docs, headings, lists, bold, italic, links and similar formatting are kept.
+- From web pages and Google Docs, headings, lists, tables, bold, italic, links and similar formatting are kept.
 - Text written in Markdown, such as `# Title` or `- item` on several lines, is turned into the matching blocks.
 - Other plain text becomes one paragraph per line.
 - Unsafe content, such as scripts and dangerous links, is removed.
@@ -161,7 +173,7 @@ You can use the editor without a mouse, and screen readers announce the editor, 
 - In the toolbar, Left and Right arrows move between buttons, and Home and End go to the first and last. Enter or Space presses a button. Screen readers say which formats are on.
 - **Escape** goes back to the text.
 - In the link field, Enter applies the link and Escape cancels.
-- Outside lists, Tab leaves the editor, so you are never trapped in it.
+- Outside lists and tables, Tab leaves the editor, so you are never trapped in it. In a table, Shift+Tab in the first cell leaves it.
 
 ## Shortcut reference
 
@@ -173,8 +185,8 @@ You can use the editor without a mouse, and screen readers announce the editor, 
 - **Mod+U** — Underline
 - **Mod+Shift+X** — Strikethrough
 - **Mod+Shift+H** — Highlight
-- **Tab** — Indent a list item
-- **Shift+Tab** — Outdent a list item
+- **Tab** — Indent a list item; in a table, go to the next cell
+- **Shift+Tab** — Outdent a list item; in a table, go to the previous cell
 - **Mod+Enter** — Check or uncheck a task
 - **Mod+Z** — Undo
 - **Mod+Shift+Z** or **Mod+Y** — Redo
