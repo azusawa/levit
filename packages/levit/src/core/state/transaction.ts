@@ -195,7 +195,7 @@ export class Transaction {
   /**
    * deleteRange for a selection that touches a table. Cells are never merged
    * or split: selected cells are emptied, and a table is removed only when
-   * the selection covers all of it.
+   * the selection covers all of it and more (or the whole document).
    */
   private deleteRangeWithCells(fromIdx: number, toIdx: number, from: EditorPosition, to: EditorPosition): this {
     const blocks = this.doc.blocks;
@@ -203,9 +203,14 @@ export class Transaction {
     for (let i = fromIdx; i <= toIdx; i++) {
       const t = tableAtIndex(blocks, i);
       if (!t) continue;
-      const startsInside = t.start > fromIdx || (t.start === fromIdx && from.offset === 0);
-      const endsInside = t.end < toIdx || (t.end === toIdx && to.offset >= getBlockText(blocks[toIdx]).length);
-      if (startsInside && endsInside) for (let k = t.start; k <= t.end; k++) covered.add(k);
+      const startsBefore = t.start > fromIdx;
+      const endsAfter = t.end < toIdx;
+      const all = (startsBefore || (t.start === fromIdx && from.offset === 0)) &&
+        (endsAfter || (t.end === toIdx && to.offset >= getBlockText(blocks[toIdx]).length));
+      // Selecting all the cells empties them; the table goes only when the
+      // selection reaches past it, or is the whole document.
+      const wholeDocument = fromIdx === 0 && toIdx === blocks.length - 1;
+      if (all && (startsBefore || endsAfter || wholeDocument)) for (let k = t.start; k <= t.end; k++) covered.add(k);
       i = t.end;
     }
 

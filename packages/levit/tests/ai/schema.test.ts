@@ -20,6 +20,8 @@ const VALID = doc(
   block('task_list_item', { checked: true }),
   block('horizontal_rule', {}, [p('')]),
   block('image', { src: 'https://x.test/a.png', alt: 'A' }, [p('')]),
+  block('table_cell', { table: 't1', row: 'r1', header: true }),
+  block('table_cell', { table: 't1', row: 'r2' }),
   block('paragraph', {}, [p('m', [{ type: 'italic' }, { type: 'underline' }, { type: 'strike' }, { type: 'highlight' }, { type: 'code' }])])
 );
 
@@ -29,6 +31,11 @@ const INVALID: [string, unknown, string][] = [
   ['no blocks', { version: 1 }, 'blocks'],
   ['empty blocks', doc(), 'blocks'],
   ['unknown block type', doc(block('table')), 'table'],
+  ['cell without a table', doc(block('table_cell', { row: 'r' })), 'table'],
+  ['cell without a row', doc(block('table_cell', { table: 't' })), 'row'],
+  ['cell row as a number', doc(block('table_cell', { table: 't', row: 1 })), 'row'],
+  ['header as a string', doc(block('table_cell', { table: 't', row: 'r', header: 'yes' })), 'header'],
+  ['unknown cell attr', doc(block('table_cell', { table: 't', row: 'r', colspan: 2 })), 'colspan'],
   ['heading level 7', doc(block('heading', { level: 7 })), 'level'],
   ['indent 9', doc(block('bullet_list_item', { indent: 9 })), 'indent'],
   ['checked as a string', doc(block('task_list_item', { checked: 'yes' })), 'checked'],

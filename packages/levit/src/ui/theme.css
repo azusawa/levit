@@ -161,6 +161,35 @@ levit-editor {
   user-select: none;
 }
 
+/* Tables: each cell is a block. A table wider than the editor scrolls sideways. */
+.levit-table {
+  margin: 0 0 0.75em 0;
+  overflow-x: auto;
+}
+
+.levit-table:last-child {
+  margin-bottom: 0;
+}
+
+.levit-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.levit-block-table_cell {
+  margin: 0;
+  min-width: 4em;
+  padding: 6px 10px;
+  border: 1px solid var(--levit-border);
+  text-align: left;
+  vertical-align: top;
+}
+
+th.levit-block-table_cell {
+  background-color: var(--levit-surface);
+  font-weight: 600;
+}
+
 /* Headings */
 h1.levit-block-heading {
   font-size: 2em;

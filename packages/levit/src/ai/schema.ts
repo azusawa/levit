@@ -58,6 +58,19 @@ export function getDocumentSchema(options: SerializerOptions = {}): JSONSchema {
       attrs({ src: { type: 'string', description: 'http(s), blob, relative, or a bitmap data URL (no SVG).' }, alt: { type: 'string' } }, ['src']),
       true
     ),
+    blockSchema(
+      'table_cell',
+      attrs(
+        {
+          table: { type: 'string', minLength: 1, description: 'The table this cell belongs to. Cells of one table follow each other.' },
+          row: { type: 'string', minLength: 1, description: 'The row this cell belongs to. Cells of one row follow each other, left to right.' },
+          header: { type: 'boolean', description: 'A header cell.' },
+        },
+        ['table', 'row']
+      ),
+      false,
+      'A table cell. A table is a run of cells with the same table id, row after row.'
+    ),
   ];
   for (const spec of schema.blocks.values()) {
     blocks.push(blockSchema(spec.type, (spec.attrsSchema as JSONSchema) ?? { type: 'object' }, spec.atom === true));
@@ -81,7 +94,7 @@ export function getDocumentSchema(options: SerializerOptions = {}): JSONSchema {
     $id: 'https://github.com/azusawa/levit/blob/main/packages/levit/schema/levit-document.schema.json',
     title: 'Levit document',
     description:
-      'A rich-text document: a flat list of blocks. Each block has a type, attrs and content, a list of text runs with marks (formatting). Line breaks inside a block are "\\n". List items are separate blocks; attrs.indent nests them.',
+      'A rich-text document: a flat list of blocks. Each block has a type, attrs and content, a list of text runs with marks (formatting). Line breaks inside a block are "\\n". List items are separate blocks; attrs.indent nests them. Table cells are blocks too: a table is a run of table_cell blocks, row after row.',
     type: 'object',
     required: ['blocks'],
     properties: {
@@ -213,6 +226,11 @@ const BLOCK_ATTRS: Record<string, AttrCheck> = {
   ordered_list_item: both(onlyKeys(['indent']), checkIndent),
   task_list_item: both(onlyKeys(['checked', 'indent']), checkIndent, (a, fail) => {
     if (typeof a.checked !== 'boolean') fail('checked', 'must be true or false');
+  }),
+  table_cell: both(onlyKeys(['table', 'row', 'header']), (a, fail) => {
+    if (typeof a.table !== 'string' || a.table === '') fail('table', 'must be the id of the table, a string');
+    if (typeof a.row !== 'string' || a.row === '') fail('row', 'must be the id of the row, a string');
+    if (a.header !== undefined && typeof a.header !== 'boolean') fail('header', 'must be true or false');
   }),
   image: both(onlyKeys(['src', 'alt']), (a, fail) => {
     if (!sanitizeImageSrc(a.src)) fail('src', 'must be a safe image URL (http, https, blob, relative or a bitmap data URL)');

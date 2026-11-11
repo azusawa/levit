@@ -38,3 +38,11 @@ describe('theme variables', () => {
     expect(hardcoded).toEqual([]);
   });
 });
+
+describe('tables', () => {
+  it('draws cell borders, header cells and lets a wide table scroll', () => {
+    expect(css).toMatch(/\.levit-table\s*\{[^}]*overflow-x:\s*auto/);
+    expect(css).toMatch(/\.levit-block-table_cell\s*\{[^}]*border:[^;]*var\(--levit-border\)/);
+    expect(css).toMatch(/th\.levit-block-table_cell\s*\{[^}]*background[^;]*var\(--levit-surface\)/);
+  });
+});

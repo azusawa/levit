@@ -204,3 +204,58 @@ describe('slash menu: closing', () => {
     expect(editor.state.doc.blocks[0]).toMatchObject({ type: 'heading', attrs: { level: 1 } });
   });
 });
+
+describe('slash menu: tables', () => {
+  const cell = (id: string, row: string, text = '') => createBlock('table_cell', { table: 't', row }, [createTextNode(text)], id);
+  const rows = () => {
+    const out: string[][] = [];
+    let last = '';
+    for (const b of editor.state.doc.blocks) {
+      if (b.type !== 'table_cell') continue;
+      if (b.attrs!.row !== last) out.push([]);
+      last = b.attrs!.row;
+      out[out.length - 1].push(getBlockText(b));
+    }
+    return out;
+  };
+
+  it('inserts a 3 by 3 table with a header row', () => {
+    setup();
+    caret('p', 0);
+    type('/table');
+    expect(shown()).toEqual(['Table']);
+    press('Enter');
+    expect(rows()).toEqual([['', '', ''], ['', '', ''], ['', '', '']]);
+    expect(editor.state.doc.blocks.slice(0, 3).every((b) => b.attrs!.header)).toBe(true);
+    expect(editor.isInTable()).toBe(true);
+  });
+
+  it('shows table commands, not block types, in a cell', () => {
+    setup([cell('a', 'r1', 'A'), cell('b', 'r2', 'B')]);
+    caret('a', 1);
+    type(' /');
+    expect(shown()).toEqual([
+      'Add row above', 'Add row below', 'Add column left', 'Add column right',
+      'Delete row', 'Delete column', 'Header row', 'Delete table',
+    ]);
+  });
+
+  it('runs a table command and takes the typed "/" out of the cell', () => {
+    setup([cell('a', 'r1', 'A'), cell('b', 'r2', 'B')]);
+    caret('a', 1);
+    type(' /col');
+    expect(shown()).toEqual(['Add column left', 'Add column right', 'Delete column']);
+    press('ArrowDown');
+    press('Enter');
+    expect(rows()).toEqual([['A ', ''], ['B', '']]);
+  });
+
+  it('lists the items for where the caret is', () => {
+    setup([createBlock('paragraph', {}, [], 'p'), cell('a', 'r1', 'A')]);
+    caret('p', 0);
+    expect(menu.getItems().map((i) => i.id)).toContain('table');
+    caret('a', 0);
+    expect(menu.getItems().map((i) => i.id)).toContain('delete-table');
+    expect(menu.getItems().map((i) => i.id)).not.toContain('heading-1');
+  });
+});

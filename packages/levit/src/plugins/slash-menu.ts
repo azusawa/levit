@@ -131,11 +131,35 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
       icon: '🖼',
       action: (ed) => chooseImage(ed),
     },
+    {
+      id: 'table',
+      title: m.table,
+      description: m.tableDescription,
+      icon: '▦',
+      action: (ed) => ed.chain().insertTable(3, 3).run(),
+    },
+  ];
+
+  // In a table, the menu changes the table instead: block types do not apply to cells.
+  const tableItems: SlashMenuItem[] = [
+    { id: 'add-row-above', title: m.addRowAbove, description: m.addRowAboveDescription, icon: '↑', action: (ed) => ed.chain().addRowBefore().run() },
+    { id: 'add-row-below', title: m.addRowBelow, description: m.addRowBelowDescription, icon: '↓', action: (ed) => ed.chain().addRowAfter().run() },
+    { id: 'add-column-left', title: m.addColumnLeft, description: m.addColumnLeftDescription, icon: '←', action: (ed) => ed.chain().addColumnBefore().run() },
+    { id: 'add-column-right', title: m.addColumnRight, description: m.addColumnRightDescription, icon: '→', action: (ed) => ed.chain().addColumnAfter().run() },
+    { id: 'delete-row', title: m.deleteRow, description: m.deleteRowDescription, icon: '−', action: (ed) => ed.chain().deleteRow().run() },
+    { id: 'delete-column', title: m.deleteColumn, description: m.deleteColumnDescription, icon: '−', action: (ed) => ed.chain().deleteColumn().run() },
+    { id: 'header-row', title: m.headerRow, description: m.headerRowDescription, icon: 'H', action: (ed) => ed.chain().toggleHeaderRow().run() },
+    { id: 'delete-table', title: m.deleteTable, description: m.deleteTableDescription, icon: '✕', action: (ed) => ed.chain().deleteTable().run() },
   ];
 
   // Entries from the editor's plugins go after the built-in ones.
   const text = (value: string | ((ed: LevitEditor) => string)) => (typeof value === 'function' ? value(editor) : value);
-  items.push(...editor.schema.slashItems.map((item) => ({ ...item, title: text(item.title), description: text(item.description) })));
+  const pluginItems = editor.schema.slashItems.map((item) => ({ ...item, title: text(item.title), description: text(item.description) }));
+  items.push(...pluginItems);
+  tableItems.push(...pluginItems);
+
+  /** The entries for where the caret is. */
+  const available = () => (editor.isInTable() ? tableItems : items);
 
   // Built with textContent: titles can come from plugins and messages.
   const part = (tag: string, className: string, text?: string) => {
@@ -150,7 +174,7 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
   // True from the "/" keydown until the "/" is in the document.
   let pending = false;
   let query = '';
-  let shownItems: SlashMenuItem[] = items;
+  let shownItems: SlashMenuItem[] = [];
 
   const matches = (item: SlashMenuItem, q: string) => {
     const needle = q.toLowerCase();
@@ -215,7 +239,7 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
     if (/^\s/.test(next)) return close();
     if (next !== query) {
       query = next;
-      shownItems = items.filter((item) => matches(item, query));
+      shownItems = available().filter((item) => matches(item, query));
       if (shownItems.length === 0) return close();
       activeIndex = 0;
       renderList();
@@ -242,7 +266,7 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
     pending = true;
     slash = at;
     query = '';
-    shownItems = items;
+    shownItems = available();
     activeIndex = 0;
     renderList();
     // Wait for the "/" to be rendered so the caret rect points at it.
@@ -321,7 +345,7 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
 
   const instance: SlashMenuInstance = {
     element: menu,
-    getItems: () => [...items],
+    getItems: () => [...available()],
     destroy: () => {
       slashMenus.delete(editor);
       close();

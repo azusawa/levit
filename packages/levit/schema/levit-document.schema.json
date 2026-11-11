@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/azusawa/levit/blob/main/packages/levit/schema/levit-document.schema.json",
   "title": "Levit document",
-  "description": "A rich-text document: a flat list of blocks. Each block has a type, attrs and content, a list of text runs with marks (formatting). Line breaks inside a block are \"\\n\". List items are separate blocks; attrs.indent nests them.",
+  "description": "A rich-text document: a flat list of blocks. Each block has a type, attrs and content, a list of text runs with marks (formatting). Line breaks inside a block are \"\\n\". List items are separate blocks; attrs.indent nests them. Table cells are blocks too: a table is a run of table_cell blocks, row after row.",
   "type": "object",
   "required": [
     "blocks"
@@ -317,6 +317,54 @@
             },
             "content": {
               "$ref": "#/$defs/emptyContent"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "description": "A table cell. A table is a run of cells with the same table id, row after row.",
+          "required": [
+            "type",
+            "content"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Optional. A new id is made when missing."
+            },
+            "type": {
+              "const": "table_cell"
+            },
+            "attrs": {
+              "type": "object",
+              "properties": {
+                "table": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "The table this cell belongs to. Cells of one table follow each other."
+                },
+                "row": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "The row this cell belongs to. Cells of one row follow each other, left to right."
+                },
+                "header": {
+                  "type": "boolean",
+                  "description": "A header cell."
+                }
+              },
+              "required": [
+                "table",
+                "row"
+              ],
+              "additionalProperties": false
+            },
+            "content": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/inline"
+              }
             }
           },
           "additionalProperties": false

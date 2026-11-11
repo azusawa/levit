@@ -159,6 +159,12 @@ describe('deleting around cells', () => {
     expect(shape(state.doc)).toEqual(['paragraph:xw']);
   });
 
+  it('selecting every cell of a table, and nothing around it, empties the cells', () => {
+    const sel = { anchor: { blockId: 'a', offset: 0 }, head: { blockId: 'd', offset: 1 }, isCollapsed: false };
+    const state = stateWith([para('p', 'x'), ...grid(), para('q', 'y')], sel).tr.deleteRange().apply();
+    expect(shape(state.doc)).toEqual(['paragraph:x', [['', ''], ['', '']], 'paragraph:y']);
+  });
+
   it('selecting everything in a document that is one table leaves an empty paragraph', () => {
     const state = stateWith(grid()).tr.selectAll().deleteRange().apply();
     expect(shape(state.doc)).toEqual(['paragraph:']);
@@ -329,5 +335,12 @@ describe('changing a table', () => {
     expect(shape(state.doc)).toEqual([[['A'], ['C']]]);
     state = stateWith(blocks, caret('c', 0)).tr.addRow('after').apply();
     expect(shape(state.doc)).toEqual([[['A', 'B'], ['C'], ['', '']]]);
+  });
+});
+
+describe('table cells are built in', () => {
+  it('a plugin cannot define its own table_cell', async () => {
+    const { Schema } = await import('../../src/core/plugin/plugin');
+    expect(() => new Schema([{ name: 'x', blocks: [{ type: 'table_cell' }] }])).toThrow(/built in/);
   });
 });
