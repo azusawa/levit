@@ -557,6 +557,69 @@ a:hover {
   border-color: var(--levit-danger);
 }
 
+/* Table Toolbar: above the table the caret is in */
+.levit-table-toolbar {
+  position: absolute;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  background-color: var(--levit-surface);
+  border: 1px solid var(--levit-border);
+  box-shadow: var(--levit-shadow);
+  border-radius: var(--levit-radius);
+  padding: 3px;
+  gap: 2px;
+  animation: levitFadeIn 0.15s ease-out;
+}
+
+.levit-table-toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--levit-text);
+  cursor: pointer;
+  transition: background-color 0.1s ease;
+}
+
+.levit-table-toolbar-btn svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.levit-table-toolbar-btn .levit-table-toolbar-fill {
+  fill: currentColor;
+  stroke: none;
+}
+
+.levit-table-toolbar-btn:hover {
+  background-color: var(--levit-border);
+}
+
+.levit-table-toolbar-btn[aria-pressed="true"] {
+  color: var(--levit-primary);
+}
+
+.levit-table-toolbar-btn:focus-visible {
+  outline: 2px solid var(--levit-primary);
+  outline-offset: -2px;
+}
+
+.levit-table-toolbar-separator {
+  width: 1px;
+  height: 18px;
+  margin: 0 3px;
+  background-color: var(--levit-border);
+}
+
 /* Slash Command Menu */
 .levit-slash-menu {
   position: absolute;

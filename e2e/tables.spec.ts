@@ -147,3 +147,49 @@ test('the slash menu in a cell adds a column', async ({ page }) => {
   await page.keyboard.press('Enter');
   expect(await shape(page)).toEqual([[['', '', ''], ['', '', '']], 'paragraph:']);
 });
+
+test.describe('table toolbar', () => {
+  const toolbar = (page: Page) => page.getByRole('toolbar', { name: 'Table tools' });
+
+  test('shows above the table while the caret is in it', async ({ page }) => {
+    await insertTable(page);
+    await expect(toolbar(page)).toBeVisible();
+    const bar = (await toolbar(page).boundingBox())!;
+    const table = (await page.locator('#editor .levit-table').boundingBox())!;
+    expect(bar.y + bar.height).toBeLessThanOrEqual(table.y);
+    expect(Math.abs(bar.x - table.x)).toBeLessThan(2);
+    await page.locator('#editor .levit-block-paragraph').last().click();
+    await expect(toolbar(page)).toBeHidden();
+  });
+
+  test('its buttons add and delete rows and columns where the caret is', async ({ page }) => {
+    await insertTable(page);
+    await page.keyboard.type('A');
+    await toolbar(page).getByRole('button', { name: 'Add row below' }).click();
+    await toolbar(page).getByRole('button', { name: 'Add column right' }).click();
+    await expect(page.locator('#editor tr')).toHaveCount(4);
+    await expect(page.locator('#editor tr').first().locator('th, td')).toHaveCount(4);
+    await toolbar(page).getByRole('button', { name: 'Delete column' }).click();
+    await toolbar(page).getByRole('button', { name: 'Delete row' }).click();
+    await expect(page.locator('#editor tr')).toHaveCount(3);
+    await expect(page.locator('#editor tr').first().locator('th, td')).toHaveCount(3);
+    // The caret stays in the table, so typing goes on there.
+    await page.keyboard.type('B');
+    await expect(page.locator('#editor .levit-table')).toContainText('B');
+  });
+
+  test('Alt+F10 reaches it from the keyboard, Escape goes back to the cell', async ({ page }) => {
+    await insertTable(page);
+    await page.keyboard.type('x');
+    await page.keyboard.press('Alt+F10');
+    await expect(toolbar(page).getByRole('button', { name: 'Add row above' })).toBeFocused();
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('Enter');
+    await expect(page.locator('#editor tr')).toHaveCount(4);
+    // Adding a row puts the caret in it; Escape goes back there.
+    await page.keyboard.press('Escape');
+    await page.keyboard.type('y');
+    await expect(page.locator('#editor tr').nth(1).locator('td').first()).toHaveText('y');
+    await expect(page.locator('#editor th').first()).toHaveText('x');
+  });
+});

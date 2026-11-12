@@ -46,3 +46,18 @@ describe('tables', () => {
     expect(css).toMatch(/th\.levit-block-table_cell\s*\{[^}]*background[^;]*var\(--levit-surface\)/);
   });
 });
+
+describe('table toolbar', () => {
+  it('floats over the page in the menu colors', () => {
+    expect(css).toMatch(/\.levit-table-toolbar\s*\{[^}]*position:\s*absolute[^}]*background-color:\s*var\(--levit-surface\)/);
+  });
+
+  it('draws its icons in the text color and marks the header button when on', () => {
+    expect(css).toMatch(/\.levit-table-toolbar-btn svg\s*\{[^}]*stroke:\s*currentColor/);
+    expect(css).toMatch(/\.levit-table-toolbar-btn\[aria-pressed="true"\]\s*\{[^}]*var\(--levit-primary\)/);
+  });
+
+  it('shows which button has keyboard focus', () => {
+    expect(css).toMatch(/\.levit-table-toolbar-btn:focus-visible\s*\{[^}]*outline:[^;]*var\(--levit-primary\)/);
+  });
+});

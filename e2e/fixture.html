@@ -13,7 +13,7 @@
 <body>
   <div id="editor"></div>
   <script type="module">
-    import { createLevitEditor, createBubbleMenu, createSlashMenu } from '/packages/levit/src/index.ts';
+    import { createLevitEditor, createBubbleMenu, createSlashMenu, createTableToolbar } from '/packages/levit/src/index.ts';
 
     const editor = createLevitEditor(document.getElementById('editor'), {
       placeholder: 'Type here',
@@ -26,6 +26,7 @@
     });
     createBubbleMenu(editor);
     createSlashMenu(editor);
+    createTableToolbar(editor);
 
     // Tests read the document model through this handle.
     window.editor = editor;

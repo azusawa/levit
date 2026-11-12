@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createBubbleMenu } from '../../src/plugins/bubble-menu';
 import { createSlashMenu } from '../../src/plugins/slash-menu';
+import { createTableToolbar } from '../../src/plugins/table-toolbar';
 import { ja, ko } from '../../src/i18n/messages';
 import type { LevitEditorElement } from '../../src/ui/web-component';
 import '../../src/ui/web-component';
@@ -19,24 +20,25 @@ function mount(attrs: Record<string, string> = {}): LevitEditorElement {
 const menus = () => ({
   slash: document.querySelectorAll('.levit-slash-menu').length,
   bubble: document.querySelectorAll('.levit-bubble-menu').length,
+  table: document.querySelectorAll('.levit-table-toolbar').length,
 });
 
 describe('<levit-editor>', () => {
-  it('comes with the slash and bubble menus, like the React and Vue components', () => {
+  it('comes with the slash and bubble menus and the table toolbar, like the React and Vue components', () => {
     mount();
-    expect(menus()).toEqual({ slash: 1, bubble: 1 });
+    expect(menus()).toEqual({ slash: 1, bubble: 1, table: 1 });
   });
 
-  it('slash-menu="false" and bubble-menu="false" leave them out', () => {
-    mount({ 'slash-menu': 'false', 'bubble-menu': 'false' });
-    expect(menus()).toEqual({ slash: 0, bubble: 0 });
+  it('slash-menu="false", bubble-menu="false" and table-toolbar="false" leave them out', () => {
+    mount({ 'slash-menu': 'false', 'bubble-menu': 'false', 'table-toolbar': 'false' });
+    expect(menus()).toEqual({ slash: 0, bubble: 0, table: 0 });
   });
 
   it('removes its menus when it is removed', async () => {
     const el = mount();
     el.remove();
     await Promise.resolve();
-    expect(menus()).toEqual({ slash: 0, bubble: 0 });
+    expect(menus()).toEqual({ slash: 0, bubble: 0, table: 0 });
   });
 
   it('follows a later change of lang, keeping the text', () => {
@@ -46,7 +48,7 @@ describe('<levit-editor>', () => {
     expect(el.editor.messages.bold).toBe(ja.bold);
     expect(el.getText()).toBe('Hello');
     expect(el.editor.container.getAttribute('data-placeholder')).toBe(ja.placeholder);
-    expect(menus()).toEqual({ slash: 1, bubble: 1 });
+    expect(menus()).toEqual({ slash: 1, bubble: 1, table: 1 });
   });
 
   it('keeps working, with its text, when it is moved to another place in the page', () => {
@@ -58,7 +60,7 @@ describe('<levit-editor>', () => {
     expect(el.querySelectorAll('.levit-editor-root')).toHaveLength(1);
     el.editor.chain().selectAll().insertText('Still editable').run();
     expect(el.getText()).toBe('Still editable');
-    expect(menus()).toEqual({ slash: 1, bubble: 1 });
+    expect(menus()).toEqual({ slash: 1, bubble: 1, table: 1 });
   });
 
   it('keeps the same editor when moved, with what was attached to it', async () => {
@@ -98,13 +100,15 @@ describe('<levit-editor>', () => {
     const el = mount();
     createBubbleMenu(el.editor);
     createSlashMenu(el.editor);
-    expect(menus()).toEqual({ slash: 1, bubble: 1 });
+    createTableToolbar(el.editor);
+    expect(menus()).toEqual({ slash: 1, bubble: 1, table: 1 });
   });
 
   it('theme="dark" also reaches the menus, which live outside the element', () => {
     mount({ theme: 'dark' });
     expect(document.querySelector('.levit-slash-menu')!.getAttribute('data-theme')).toBe('dark');
     expect(document.querySelector('.levit-bubble-menu')!.getAttribute('data-theme')).toBe('dark');
+    expect(document.querySelector('.levit-table-toolbar')!.getAttribute('data-theme')).toBe('dark');
   });
 
   it('removing placeholder or theme goes back to the defaults', () => {
@@ -119,8 +123,10 @@ describe('<levit-editor>', () => {
   it('turning a menu off or on later takes effect at once', () => {
     const el = mount();
     el.setAttribute('slash-menu', 'false');
-    expect(menus()).toEqual({ slash: 0, bubble: 1 });
+    expect(menus()).toEqual({ slash: 0, bubble: 1, table: 1 });
     el.removeAttribute('slash-menu');
-    expect(menus()).toEqual({ slash: 1, bubble: 1 });
+    expect(menus()).toEqual({ slash: 1, bubble: 1, table: 1 });
+    el.setAttribute('table-toolbar', 'false');
+    expect(menus()).toEqual({ slash: 1, bubble: 1, table: 0 });
   });
 });

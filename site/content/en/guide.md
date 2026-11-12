@@ -86,7 +86,8 @@ Choose **Table** in the slash menu (type `/table`) to add a table with three row
 
 - Click a cell to write in it. **Tab** moves to the next cell and **Shift+Tab** to the previous one. **Tab** in the last cell adds a row.
 - **Enter** starts a new line inside the cell.
-- Type `/` in a cell for the table commands: **Add row above**, **Add row below**, **Add column left**, **Add column right**, **Delete row**, **Delete column**, **Header row** (turns the header row on or off) and **Delete table**.
+- While the caret is in a table, the **table toolbar** shows above it, with buttons to add a row above or below, add a column left or right, delete the row or the column, turn the header row on or off, and delete the table. Point at a button to see what it does. From the keyboard, press **Alt+F10** (Option+F10 on Mac) to reach it, the arrow keys to choose a button, Enter to press it and Escape to go back to the cell.
+- The same commands are in the slash menu: type `/` in a cell for **Add row above**, **Add row below**, **Add column left**, **Add column right**, **Delete row**, **Delete column**, **Header row** (turns the header row on or off) and **Delete table**.
 - Backspace at the start of a cell does nothing, so cells never run into each other. Selecting several cells and pressing Backspace empties them. To remove the whole table, use **Delete table**, or select it together with some text before or after it.
 - A table wider than the editor scrolls sideways.
 - Tables you paste from web pages, spreadsheets, Google Docs or Markdown stay tables.

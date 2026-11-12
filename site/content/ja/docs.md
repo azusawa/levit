@@ -38,14 +38,14 @@ Levit は ESM 専用です。バンドラーか `import` で使ってくださ�
 </script>
 ```
 
-この要素は `placeholder`、`lang`（組み込みメッセージは `ko` か `ja`。後から変えると同じ内容で新しい `editor` を作るので、イベントは付け直してください）、`theme`（`dark` か `light`）、初期値の `value`（ドキュメント JSON）属性を読みます。React・Vue のコンポーネントと同じく、バブルメニューとスラッシュメニューが標準で付き、`bubble-menu="false"` や `slash-menu="false"` で外せます。`getJSON()`、`setJSON()`、`getText()`、`focus()` メソッドと、エディタ本体を持つ `editor` プロパティもあります。要素をページ内の別の場所へ移しても同じエディタのままで、取り除いた後も `getJSON()` でドキュメントを取得できます。
+この要素は `placeholder`、`lang`（組み込みメッセージは `ko` か `ja`。後から変えると同じ内容で新しい `editor` を作るので、イベントは付け直してください）、`theme`（`dark` か `light`）、初期値の `value`（ドキュメント JSON）属性を読みます。React・Vue のコンポーネントと同じく、バブルメニュー、スラッシュメニュー、表ツールバーが標準で付き、`bubble-menu="false"`、`slash-menu="false"`、`table-toolbar="false"` で外せます。`getJSON()`、`setJSON()`、`getText()`、`focus()` メソッドと、エディタ本体を持つ `editor` プロパティもあります。要素をページ内の別の場所へ移しても同じエディタのままで、取り除いた後も `getJSON()` でドキュメントを取得できます。
 
 ### JavaScript / TypeScript
 
-`createLevitEditor` は任意の要素をエディタにします。バブルツールバー（テキスト選択時に表示）とスラッシュメニュー（`/`）は別々に付けるので、使うものだけを読み込めます。
+`createLevitEditor` は任意の要素をエディタにします。バブルツールバー（テキスト選択時に表示）、スラッシュメニュー（`/`）、表ツールバー（キャレットのある表の上に表示）は別々に付けるので、使うものだけを読み込めます。
 
 ```ts
-import { createLevitEditor, createBubbleMenu, createSlashMenu } from '@yonailab/levit';
+import { createLevitEditor, createBubbleMenu, createSlashMenu, createTableToolbar } from '@yonailab/levit';
 import '@yonailab/levit/levit.css';
 
 const editor = createLevitEditor(document.getElementById('editor')!, {
@@ -54,6 +54,7 @@ const editor = createLevitEditor(document.getElementById('editor')!, {
 
 createBubbleMenu(editor);
 createSlashMenu(editor);
+createTableToolbar(editor);
 ```
 
 ### 読み込みと保存
@@ -231,6 +232,8 @@ editor.chain().goToNextCell().run();       // Tab。goToPreviousCell() は Shift
 editor.isInTable();                        // キャレットが表の中なら true
 ```
 
+キャレットが表の中にあると、`createTableToolbar(editor)` で付けた表ツールバーが表の上に出て、同じコマンドをボタンで示します。`<levit-editor>` と React・Vue のコンポーネントはこのツールバーを自動で付けます。
+
 削除はキー操作と同じように動きます。`deleteBackward()`、`deleteForward()`、`deleteWordBackward()`、`deleteWordForward()`、`deleteLineBackward()`、`deleteLineForward()`、`deleteSelection()` があります。
 
 ### エディタのオプション
@@ -324,7 +327,7 @@ export function Note() {
 
 - `value` と `onChange` を併用すると制御コンポーネント、`defaultValue` だけなら非制御コンポーネントです。
 - `onChange` は `(value, editor)` を受け取ります。
-- `bubbleMenu={false}`、`slashMenu={false}` でメニューを無効にします。
+- `bubbleMenu={false}`、`slashMenu={false}`、`tableToolbar={false}` でメニューを無効にします。
 - `ref` か `onReady` でエディタのインスタンスを受け取ります。`className`、`style`、`id` は要素に渡されます。
 - `'use client'` が付いているので、Next.js の App Router でそのまま使えます。
 
@@ -362,7 +365,7 @@ const doc = ref<DocumentData>();
 ```
 
 - props：`placeholder`、`plugins`、`messages`、`uploadImage`、`highlightCode`
-- `:bubble-menu="false"`、`:slash-menu="false"` でメニューを無効にします。
+- `:bubble-menu="false"`、`:slash-menu="false"`、`:table-toolbar="false"` でメニューを無効にします。
 - `@ready` でエディタのインスタンスを、`@error` でアップロード失敗などのエラーを受け取ります。
 - コンポーネントの ref からも `editor` にアクセスできます。
 
@@ -713,6 +716,7 @@ Web Components は `lang` 属性で言語を選びます。`<levit-editor lang="
 - 編集領域は `aria-multiline` と `aria-label` を持つ `role="textbox"` です。ページ側ですでにラベルが付いていればそれを使います。
 - スラッシュメニューは `listbox` で、エディタが `aria-activedescendant` で現在の項目を指します。
 - バブルメニューは `toolbar` です。テキストを選択した状態で `Alt+F10` を押すとフォーカスが移り、矢印キーと Home・End でボタン間を移動し、Enter か Space で押し、Escape でテキストに戻ります。有効な書式は `aria-pressed` で伝えます。
+- 表ツールバーも `toolbar` です。キャレットが表の中にあるとき `Alt+F10` で移り、キーはバブルメニューと同じで、Escape でセルに戻ります。見出し行ボタンは、見出し行があるかを `aria-pressed` で伝えます。
 
 ## テーマ
 

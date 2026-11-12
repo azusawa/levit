@@ -47,7 +47,7 @@
    - **글머리표 / 번호 목록** (Enter로 다음 항목, 빈 항목에서 Enter 또는 맨 앞 Backspace로 목록 종료)
    - **중첩 목록**: `Tab`으로 한 단계 들여쓰고 `Shift+Tab`으로 내어 씁니다. 번호는 단계마다 따로 매깁니다.
    - **체크리스트**: `[] ` 또는 `[ ] `로 시작하고, 상자를 누르거나 `Cmd/Ctrl+Enter`로 체크합니다.
-   - **표**: 슬래시 메뉴의 `/table`로 넣습니다. `Tab`으로 다음 칸, `Shift+Tab`으로 앞 칸으로 가고, 마지막 칸에서 `Tab`을 누르면 행이 늘어납니다. 칸 안에서 `/`를 누르면 행·열 추가와 삭제, 머리글 행 메뉴가 나옵니다. 웹페이지·스프레드시트의 표와 Markdown 표를 붙여 넣어도 표로 들어옵니다.
+   - **표**: 슬래시 메뉴의 `/table`로 넣습니다. `Tab`으로 다음 칸, `Shift+Tab`으로 앞 칸으로 가고, 마지막 칸에서 `Tab`을 누르면 행이 늘어납니다. 커서가 표 안에 있으면 표 위에 **표 도구 막대**가 떠서, 행·열 추가와 삭제, 머리글 행, 표 삭제를 버튼으로 할 수 있습니다(`Alt+F10`으로 키보드 이동). 칸 안에서 `/`를 눌러도 같은 메뉴가 나옵니다. 웹페이지·스프레드시트의 표와 Markdown 표를 붙여 넣어도 표로 들어옵니다.
    - **구분선**(`---`)과 **이미지**: 이미지는 URL로 넣거나, `uploadImage`를 연결하면 붙여넣기·끌어다 놓기로 올립니다.
    - **코드 블록 언어** 지정과 문법 강조 연결 지점(`highlightCode`)
    - `# `, `> `, ` ``` `, `- `, `* `, `1. `, `[ ] `, `---` 실시간 마크다운 단축키 자동 변환
@@ -79,7 +79,7 @@ npm install @yonailab/levit
 
 ### 2. Vanilla JS / TypeScript에서 사용
 ```ts
-import { createLevitEditor, createBubbleMenu, createSlashMenu } from '@yonailab/levit';
+import { createLevitEditor, createBubbleMenu, createSlashMenu, createTableToolbar } from '@yonailab/levit';
 import '@yonailab/levit/levit.css';
 
 const container = document.getElementById('editor');
@@ -96,6 +96,7 @@ const editor = createLevitEditor(container, {
 // 버블 메뉴 및 슬래시 커맨드 활성화
 createBubbleMenu(editor);
 createSlashMenu(editor);   // 줄 첫머리나 띄어쓰기 뒤의 "/"로 열고, 이어서 입력하면 걸러짐
+createTableToolbar(editor);   // 커서가 있는 표 위에 표 도구 막대
 ```
 
 ### 3. 이미지 업로드와 문법 강조 (선택)
@@ -183,7 +184,7 @@ const doc = ref<DocumentData>();
 </script>
 ```
 
-- 버블 메뉴와 슬래시 메뉴가 기본으로 붙습니다. `bubble-menu="false"`, `slash-menu="false"`로 뺄 수 있습니다.
+- 버블 메뉴, 슬래시 메뉴, 표 도구 막대가 기본으로 붙습니다. `bubble-menu="false"`, `slash-menu="false"`, `table-toolbar="false"`로 뺄 수 있습니다. React·Vue 컴포넌트에서는 `tableToolbar` 옵션으로 끕니다.
 - `lang="ko"`/`"ja"`로 메뉴 언어를 정합니다. 나중에 바꾸면 같은 내용으로 새 `editor`를 만듭니다. 요소를 다른 곳으로 옮겨도 같은 에디터가 유지되고, 제거한 뒤에도 `getJSON()`으로 문서를 얻습니다.
 - 에디터 전체 기능은 `editor` 속성으로 씁니다(`el.editor.getJSON()` 등).
 
@@ -390,7 +391,7 @@ createLevitEditor(container, { messages: { bold: 'Gras' } });   // 일부 문구
 
 - 편집 영역은 스크린 리더에 "여러 줄 텍스트 입력란"으로 알려집니다.
 - 슬래시 메뉴는 방향키로 고르는 항목을 읽어 줍니다.
-- 글을 선택하고 `Alt+F10`을 누르면 서식 도구 모음으로 이동합니다. 방향키로 버튼을 고르고, `Enter`로 적용하고, `Esc`로 글로 돌아갑니다. 켜진 서식은 "눌림"으로 읽어 줍니다. 코드 블록 안에서 `Alt+F10`을 누르면 언어 표시로 가고, `Enter`로 언어를 바꿉니다.
+- 글을 선택하고 `Alt+F10`을 누르면 서식 도구 모음으로 이동합니다. 방향키로 버튼을 고르고, `Enter`로 적용하고, `Esc`로 글로 돌아갑니다. 켜진 서식은 "눌림"으로 읽어 줍니다. 코드 블록 안에서 `Alt+F10`을 누르면 언어 표시로 가고, `Enter`로 언어를 바꿉니다. 표 안에서 `Alt+F10`을 누르면 표 도구 막대로 갑니다.
 
 ---
 

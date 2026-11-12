@@ -34,6 +34,22 @@ test.describe('landing page', () => {
     await expect(page.getByRole('option', { name: /見出し1/ })).toBeVisible();
   });
 
+  test('the table toolbar shows over the sample table, in the menu language', async ({ page }) => {
+    await page.goto(SITE + 'ko/');
+    await editor(page, 'write').locator('td').first().click();
+    const bar = page.getByRole('toolbar', { name: '표 도구' });
+    await expect(bar).toBeVisible();
+    await bar.getByRole('button', { name: '아래에 행 추가' }).click();
+    await expect(editor(page, 'write').locator('tr')).toHaveCount(4);
+
+    // One toolbar for each editor on the page, also after the menus are made again.
+    const count = await page.locator('.levit-table-toolbar').count();
+    await page.locator('[data-menus]').selectOption('ja');
+    await editor(page, 'write').locator('td').first().click();
+    await expect(page.getByRole('toolbar', { name: '表ツール' })).toBeVisible();
+    await expect(page.locator('.levit-table-toolbar')).toHaveCount(count);
+  });
+
   test('AI: improving the sample sentence shows a suggestion to accept', async ({ page }) => {
     await page.goto(SITE);
     await page.getByRole('tab', { name: 'AI' }).click();

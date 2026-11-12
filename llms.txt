@@ -21,17 +21,18 @@ Levit is a web editor library designed from scratch using standard Web APIs (DOM
   });
 </script>
 ```
-The element adds the bubble and slash menus (`bubble-menu="false"` /
-`slash-menu="false"` leave them out, also later). Attributes: `placeholder`,
+The element adds the bubble and slash menus and the table toolbar
+(`bubble-menu="false"` / `slash-menu="false"` / `table-toolbar="false"` leave
+them out, also later). Attributes: `placeholder`,
 `lang` (ko/ja; a later change builds a new `el.editor` with the same document),
 `theme` (dark/light, also on the menus), `value` (initial JSON). Methods:
 getJSON(), setJSON(), getText(), focus(); `el.editor` is the full LevitEditor.
 Moving the element keeps the same editor; after removal getJSON() still works.
-createBubbleMenu/createSlashMenu return the editor's existing menu if it has one.
+createBubbleMenu/createSlashMenu/createTableToolbar return the editor's existing menu if it has one.
 
 ### Vanilla JavaScript / TypeScript
 ```ts
-import { createLevitEditor, createBubbleMenu, createSlashMenu } from '@yonailab/levit';
+import { createLevitEditor, createBubbleMenu, createSlashMenu, createTableToolbar } from '@yonailab/levit';
 import '@yonailab/levit/levit.css';
 
 const container = document.getElementById('editor');
@@ -43,6 +44,7 @@ const editor = createLevitEditor(container, {
 // Attach modern menus
 createBubbleMenu(editor);
 createSlashMenu(editor);   // "/" at the start of a line or after a space; typing after it filters
+createTableToolbar(editor);   // buttons above the table the caret is in
 ```
 
 ## 2. Document Data Schema (JSON)
@@ -192,6 +194,7 @@ editor.chain().addRowBefore().run();           // addRowAfter, addColumnBefore, 
 editor.chain().deleteRow().run();              // deleteColumn, deleteTable, toggleHeaderRow
 editor.chain().goToNextCell().run();           // Tab; goToPreviousCell() is Shift+Tab
 editor.isInTable();                            // true when the caret is in a table
+// createTableToolbar(editor) shows these commands as buttons above the caret's table.
 editor.chain().insertImage({ src: 'https://example.com/a.png', alt: 'A' }).run();
 editor.chain().setCodeBlock('ts').run();       // setCodeLanguage('py') changes it, '' clears it
 editor.chain().selectAll().run();
@@ -383,7 +386,9 @@ bubble menu is a `toolbar`: `Alt+F10` moves focus to it from selected text,
 arrows/Home/End move between buttons, Enter or Space presses one, Escape
 returns to the text, and `aria-pressed` says which formats are on. In a code
 block (collapsed caret) `Alt+F10` focuses the language label instead: Enter or
-Space asks for a language, Escape returns to the code.
+Space asks for a language, Escape returns to the code. In a table (collapsed
+caret) `Alt+F10` focuses the table toolbar (`role="toolbar"`, labelled
+"Table tools"), with the same keys; its header row button has `aria-pressed`.
 
 ## 9. Theming
 Every color is a CSS variable (`--levit-bg`, `--levit-surface`, `--levit-border`,
@@ -411,7 +416,8 @@ const { ref, editor } = useLevitEditor({ placeholder: 'Write' });   // <div ref=
 <LevitEditor v-model="doc" :messages="ko" @ready="(editor) => {}" @error="(e) => {}" />
 <!-- const { element, editor } = useLevitEditor(options)  →  <div ref="element" /> -->
 ```
-Both add the bubble and slash menus unless turned off, and a value that comes
+Both add the bubble and slash menus and the table toolbar unless turned off
+(`bubbleMenu`, `slashMenu`, `tableToolbar` set to false), and a value that comes
 back from onChange / v-model does not reset the caret. The React package is
 marked 'use client'.
 

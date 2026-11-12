@@ -13,6 +13,7 @@ import {
   createBubbleMenu,
   createLevitEditor,
   createSlashMenu,
+  createTableToolbar,
   sameContent,
   type DocumentData,
   type EditorOptions,
@@ -21,12 +22,14 @@ import {
 
 export type { Editor };
 
-/** Editor options, plus whether to add the bubble and slash menus. */
+/** Editor options, plus whether to add the bubble and slash menus and the table toolbar. */
 export interface UseLevitEditorOptions extends Omit<EditorOptions, 'element'> {
   /** Show the formatting toolbar on selected text. Default: true. */
   bubbleMenu?: boolean;
   /** Open the block menu with "/". Default: true. */
   slashMenu?: boolean;
+  /** Show the table toolbar above the table the caret is in. Default: true. */
+  tableToolbar?: boolean;
   /** Called once the editor exists. */
   onReady?: (editor: Editor) => void;
 }
@@ -48,7 +51,7 @@ export function useLevitEditor(options: UseLevitEditorOptions = {}): {
 
   useEffect(() => {
     if (!element) return;
-    const { bubbleMenu = true, slashMenu = true, ...editorOptions } = latest.current;
+    const { bubbleMenu = true, slashMenu = true, tableToolbar = true, ...editorOptions } = latest.current;
     const instance = createLevitEditor(element, {
       ...editorOptions,
       onChange: (ed) => latest.current.onChange?.(ed),
@@ -58,7 +61,11 @@ export function useLevitEditor(options: UseLevitEditorOptions = {}): {
         else console.error(error);
       },
     });
-    const menus = [bubbleMenu && createBubbleMenu(instance), slashMenu && createSlashMenu(instance)];
+    const menus = [
+      bubbleMenu && createBubbleMenu(instance),
+      slashMenu && createSlashMenu(instance),
+      tableToolbar && createTableToolbar(instance),
+    ];
     setEditor(instance);
     latest.current.onReady?.(instance);
 

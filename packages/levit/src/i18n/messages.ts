@@ -9,6 +9,7 @@ export const en = {
 
   // Bubble menu
   formattingToolbar: 'Formatting',
+  tableToolbar: 'Table tools',
   bold: 'Bold',
   italic: 'Italic',
   underline: 'Underline',
@@ -91,6 +92,7 @@ export const ko: LevitMessages = {
   placeholder: '내용을 입력하거나 "/" 키로 명령을 여세요...',
 
   formattingToolbar: '서식',
+  tableToolbar: '표 도구',
   bold: '굵게',
   italic: '기울임',
   underline: '밑줄',
@@ -168,6 +170,7 @@ export const ja: LevitMessages = {
   placeholder: '入力するか「/」でコマンドを開きます...',
 
   formattingToolbar: '書式',
+  tableToolbar: '表ツール',
   bold: '太字',
   italic: '斜体',
   underline: '下線',

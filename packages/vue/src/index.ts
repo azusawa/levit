@@ -14,6 +14,7 @@ import {
   createBubbleMenu,
   createLevitEditor,
   createSlashMenu,
+  createTableToolbar,
   sameContent,
   type DocumentData,
   type EditorOptions,
@@ -24,12 +25,14 @@ import {
 
 export type { Editor };
 
-/** Editor options, plus whether to add the bubble and slash menus. */
+/** Editor options, plus whether to add the bubble and slash menus and the table toolbar. */
 export interface UseLevitEditorOptions extends Omit<EditorOptions, 'element'> {
   /** Show the formatting toolbar on selected text. Default: true. */
   bubbleMenu?: boolean;
   /** Open the block menu with "/". Default: true. */
   slashMenu?: boolean;
+  /** Show the table toolbar above the table the caret is in. Default: true. */
+  tableToolbar?: boolean;
   /** Called once the editor exists. */
   onReady?: (editor: Editor) => void;
 }
@@ -50,9 +53,13 @@ export function useLevitEditor(options: UseLevitEditorOptions = {}): {
 
   onMounted(() => {
     if (!element.value) return;
-    const { bubbleMenu = true, slashMenu = true, ...editorOptions } = options;
+    const { bubbleMenu = true, slashMenu = true, tableToolbar = true, ...editorOptions } = options;
     const instance = createLevitEditor(element.value, editorOptions);
-    const menus = [bubbleMenu && createBubbleMenu(instance), slashMenu && createSlashMenu(instance)];
+    const menus = [
+      bubbleMenu && createBubbleMenu(instance),
+      slashMenu && createSlashMenu(instance),
+      tableToolbar && createTableToolbar(instance),
+    ];
     editor.value = instance;
     options.onReady?.(instance);
     cleanup = () => {
@@ -82,6 +89,7 @@ export const LevitEditor = defineComponent({
     highlightCode: { type: Function as PropType<EditorOptions['highlightCode']>, default: undefined },
     bubbleMenu: { type: Boolean, default: true },
     slashMenu: { type: Boolean, default: true },
+    tableToolbar: { type: Boolean, default: true },
     // A prop rather than an emit, so without an @error listener the editor
     // falls back to logging errors to the console.
     onError: { type: Function as PropType<(error: unknown) => void>, default: undefined },
@@ -100,6 +108,7 @@ export const LevitEditor = defineComponent({
       highlightCode: props.highlightCode,
       bubbleMenu: props.bubbleMenu,
       slashMenu: props.slashMenu,
+      tableToolbar: props.tableToolbar,
       onChange: (ed) => emit('update:modelValue', ed.getJSON()),
       onError: props.onError,
       onReady: (ed) => emit('ready', ed),

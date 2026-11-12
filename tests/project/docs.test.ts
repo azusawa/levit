@@ -258,3 +258,25 @@ describe('tables are documented', () => {
     }
   });
 });
+
+describe('the table toolbar is documented', () => {
+  it('README says it shows over the table and how to turn it off', () => {
+    const readme = read('README.md');
+    for (const text of ['표 도구 막대', 'table-toolbar="false"', 'tableToolbar', 'createTableToolbar']) expect(readme, text).toContain(text);
+  });
+
+  it('llms.txt documents it for AI tools', () => {
+    const llms = read('llms.txt');
+    for (const text of ['createTableToolbar', 'table-toolbar="false"', 'tableToolbar', 'Table tools']) expect(llms, text).toContain(text);
+  });
+
+  it('the site guide and docs cover it in every language', () => {
+    const words: Record<string, string> = { en: 'table toolbar', ko: '표 도구 막대', ja: '表ツールバー' };
+    for (const lang of ['en', 'ko', 'ja']) {
+      const guide = read(`site/content/${lang}/guide.md`);
+      const docs = read(`site/content/${lang}/docs.md`);
+      expect(guide, `${lang} guide`).toContain(words[lang]);
+      for (const text of ['createTableToolbar', 'table-toolbar="false"', 'tableToolbar']) expect(docs, `${lang} docs ${text}`).toContain(text);
+    }
+  });
+});

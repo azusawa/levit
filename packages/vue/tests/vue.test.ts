@@ -37,13 +37,15 @@ describe('<LevitEditor>', () => {
     expect(editorEl().getAttribute('data-placeholder')).toBe('Write');
     expect(document.querySelector('.levit-bubble-menu')).not.toBeNull();
     expect(document.querySelector('.levit-slash-menu')).not.toBeNull();
+    expect(document.querySelector('.levit-table-toolbar')).not.toBeNull();
   });
 
   it('can leave out the menus', async () => {
-    mount(() => h(LevitEditor, { bubbleMenu: false, slashMenu: false }));
+    mount(() => h(LevitEditor, { bubbleMenu: false, slashMenu: false, tableToolbar: false }));
     await nextTick();
     expect(document.querySelector('.levit-bubble-menu')).toBeNull();
     expect(document.querySelector('.levit-slash-menu')).toBeNull();
+    expect(document.querySelector('.levit-table-toolbar')).toBeNull();
   });
 
   it('supports v-model and emits ready with the editor', async () => {
@@ -84,6 +86,7 @@ describe('<LevitEditor>', () => {
     app = null;
     expect(document.querySelector('.levit-bubble-menu')).toBeNull();
     expect(document.querySelector('.levit-slash-menu')).toBeNull();
+    expect(document.querySelector('.levit-table-toolbar')).toBeNull();
   });
 });
 

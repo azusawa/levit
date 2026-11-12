@@ -38,14 +38,14 @@ Without a build step, load the script and the stylesheet and use the `<levit-edi
 </script>
 ```
 
-The element reads `placeholder`, `lang` (`ko` or `ja` for built-in messages; changing it later builds a new `editor` with the same text, so attach handlers again), `theme` (`dark` or `light`) and an initial `value` (document JSON). It comes with the bubble and slash menus, like the React and Vue components; `bubble-menu="false"` or `slash-menu="false"` leaves one out. It also has `getJSON()`, `setJSON()`, `getText()`, `focus()`, and an `editor` property with the full editor. Moving the element in the page keeps the same editor, and after removal `getJSON()` still returns the document.
+The element reads `placeholder`, `lang` (`ko` or `ja` for built-in messages; changing it later builds a new `editor` with the same text, so attach handlers again), `theme` (`dark` or `light`) and an initial `value` (document JSON). It comes with the bubble and slash menus and the table toolbar, like the React and Vue components; `bubble-menu="false"`, `slash-menu="false"` or `table-toolbar="false"` leaves one out. It also has `getJSON()`, `setJSON()`, `getText()`, `focus()`, and an `editor` property with the full editor. Moving the element in the page keeps the same editor, and after removal `getJSON()` still returns the document.
 
 ### JavaScript or TypeScript
 
-`createLevitEditor` turns any element into an editor. The bubble toolbar (shown on selected text) and the slash menu (`/`) are separate, so you only load what you use.
+`createLevitEditor` turns any element into an editor. The bubble toolbar (shown on selected text), the slash menu (`/`) and the table toolbar (shown above the table the caret is in) are separate, so you only load what you use.
 
 ```ts
-import { createLevitEditor, createBubbleMenu, createSlashMenu } from '@yonailab/levit';
+import { createLevitEditor, createBubbleMenu, createSlashMenu, createTableToolbar } from '@yonailab/levit';
 import '@yonailab/levit/levit.css';
 
 const editor = createLevitEditor(document.getElementById('editor')!, {
@@ -54,6 +54,7 @@ const editor = createLevitEditor(document.getElementById('editor')!, {
 
 createBubbleMenu(editor);
 createSlashMenu(editor);
+createTableToolbar(editor);
 ```
 
 ### Load and save
@@ -231,6 +232,8 @@ editor.chain().goToNextCell().run();       // Tab; goToPreviousCell() is Shift+T
 editor.isInTable();                        // true when the caret is in a table
 ```
 
+While the caret is in a table, the table toolbar from `createTableToolbar(editor)` shows above it with the same commands as buttons. `<levit-editor>` and the React and Vue components add it for you.
+
 Deleting works like the keys: `deleteBackward()`, `deleteForward()`, `deleteWordBackward()`, `deleteWordForward()`, `deleteLineBackward()`, `deleteLineForward()` and `deleteSelection()`.
 
 ### Editor options
@@ -324,7 +327,7 @@ export function Note() {
 
 - `value` with `onChange` makes a controlled component; `defaultValue` alone an uncontrolled one.
 - `onChange` receives `(value, editor)`.
-- `bubbleMenu={false}` and `slashMenu={false}` turn the menus off.
+- `bubbleMenu={false}`, `slashMenu={false}` and `tableToolbar={false}` turn the menus off.
 - `ref` or `onReady` gives you the editor instance. `className`, `style` and `id` go to the element.
 - The package is marked `'use client'`, so it works in the Next.js App Router.
 
@@ -362,7 +365,7 @@ const doc = ref<DocumentData>();
 ```
 
 - Props: `placeholder`, `plugins`, `messages`, `uploadImage`, `highlightCode`.
-- `:bubble-menu="false"` and `:slash-menu="false"` turn the menus off.
+- `:bubble-menu="false"`, `:slash-menu="false"` and `:table-toolbar="false"` turn the menus off.
 - `@ready` gives you the editor; `@error` receives errors such as a failed upload.
 - The component ref also exposes `editor`.
 
@@ -713,6 +716,7 @@ The web component picks its language from the `lang` attribute: `<levit-editor l
 - The editor is a `role="textbox"` with `aria-multiline` and an `aria-label`, unless the page already labels it.
 - The slash menu is a `listbox` that the editor points at with `aria-activedescendant`.
 - The bubble menu is a `toolbar`. `Alt+F10` moves focus to it from selected text; arrows, Home and End move between buttons; Enter or Space presses one; Escape returns to the text. `aria-pressed` tells which formats are on.
+- The table toolbar is a `toolbar` too. With the caret in a table, `Alt+F10` moves focus to it; the keys are the same as in the bubble menu, and Escape returns to the cell. The header row button tells with `aria-pressed` whether the table has a header row.
 
 ## Theming
 

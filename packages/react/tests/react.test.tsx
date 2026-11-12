@@ -35,12 +35,14 @@ describe('<LevitEditor>', () => {
     expect(editorEl().getAttribute('data-placeholder')).toBe('Write');
     expect(document.querySelector('.levit-bubble-menu')).not.toBeNull();
     expect(document.querySelector('.levit-slash-menu')).not.toBeNull();
+    expect(document.querySelector('.levit-table-toolbar')).not.toBeNull();
   });
 
   it('can leave out the menus', () => {
-    act(() => root.render(<LevitEditor bubbleMenu={false} slashMenu={false} />));
+    act(() => root.render(<LevitEditor bubbleMenu={false} slashMenu={false} tableToolbar={false} />));
     expect(document.querySelector('.levit-bubble-menu')).toBeNull();
     expect(document.querySelector('.levit-slash-menu')).toBeNull();
+    expect(document.querySelector('.levit-table-toolbar')).toBeNull();
   });
 
   it('gives the editor through ref and onReady', () => {
@@ -102,6 +104,7 @@ describe('<LevitEditor>', () => {
     act(() => root.render(<div />));
     expect(document.querySelector('.levit-bubble-menu')).toBeNull();
     expect(document.querySelector('.levit-slash-menu')).toBeNull();
+    expect(document.querySelector('.levit-table-toolbar')).toBeNull();
   });
 
   it('makes exactly one editor and one set of menus under StrictMode', () => {

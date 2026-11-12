@@ -5,6 +5,16 @@ import { getBlockText } from '../core/model/document.js';
 import type { DocumentData } from '../core/model/types.js';
 import { createBubbleMenu } from '../plugins/bubble-menu.js';
 import { createSlashMenu } from '../plugins/slash-menu.js';
+import { createTableToolbar } from '../plugins/table-toolbar.js';
+
+type Menu = { element: HTMLElement; destroy(): void };
+
+/** The menus the element adds, each with the attribute that turns it off. */
+const MENUS: Record<string, (editor: LevitEditor) => Menu> = {
+  'bubble-menu': createBubbleMenu,
+  'slash-menu': createSlashMenu,
+  'table-toolbar': createTableToolbar,
+};
 
 // On the server (SSR) there is no HTMLElement. Fall back to an empty class so
 // importing the package does not throw; the element is only registered in browsers.
@@ -19,12 +29,12 @@ function messagesFor(lang: string | null): LevitMessages {
 export class LevitEditorElement extends BaseElement {
   public editor!: LevitEditor;
   private mountPoint!: HTMLElement;
-  private menus: { bubble?: { element: HTMLElement; destroy(): void }; slash?: { element: HTMLElement; destroy(): void } } = {};
+  private menus: Record<string, Menu | undefined> = {};
   /** The document after the element was removed, to give back and to build with again. */
   private saved: DocumentData | null = null;
 
   static get observedAttributes(): string[] {
-    return ['placeholder', 'theme', 'lang', 'bubble-menu', 'slash-menu'];
+    return ['placeholder', 'theme', 'lang', ...Object.keys(MENUS)];
   }
 
   connectedCallback(): void {
@@ -84,8 +94,7 @@ export class LevitEditorElement extends BaseElement {
   private teardown(): void {
     if (!this.editor) return;
     this.saved = this.editor.getJSON();
-    this.menus.bubble?.destroy();
-    this.menus.slash?.destroy();
+    for (const menu of Object.values(this.menus)) menu?.destroy();
     this.menus = {};
     this.editor.destroy();
     this.mountPoint.remove();
@@ -93,25 +102,21 @@ export class LevitEditorElement extends BaseElement {
   }
 
   /**
-   * Menus, as the React and Vue components add them; bubble-menu="false" or
-   * slash-menu="false" leaves one out. They live in <body>, so they get the
-   * element's theme themselves.
+   * Menus, as the React and Vue components add them; bubble-menu="false",
+   * slash-menu="false" or table-toolbar="false" leaves one out. They live in
+   * <body>, so they get the element's theme themselves.
    */
   private syncMenus(): void {
     if (!this.editor) return;
-    const want = (name: string) => this.getAttribute(name) !== 'false';
-    if (want('bubble-menu') && !this.menus.bubble) this.menus.bubble = createBubbleMenu(this.editor);
-    if (!want('bubble-menu') && this.menus.bubble) {
-      this.menus.bubble.destroy();
-      this.menus.bubble = undefined;
-    }
-    if (want('slash-menu') && !this.menus.slash) this.menus.slash = createSlashMenu(this.editor);
-    if (!want('slash-menu') && this.menus.slash) {
-      this.menus.slash.destroy();
-      this.menus.slash = undefined;
-    }
     const theme = this.getAttribute('theme');
-    for (const menu of [this.menus.bubble, this.menus.slash]) {
+    for (const [name, create] of Object.entries(MENUS)) {
+      const want = this.getAttribute(name) !== 'false';
+      if (want && !this.menus[name]) this.menus[name] = create(this.editor);
+      if (!want && this.menus[name]) {
+        this.menus[name]!.destroy();
+        this.menus[name] = undefined;
+      }
+      const menu = this.menus[name];
       if (!menu) continue;
       if (theme) menu.element.setAttribute('data-theme', theme);
       else menu.element.removeAttribute('data-theme');
@@ -128,7 +133,7 @@ export class LevitEditorElement extends BaseElement {
     if (name === 'placeholder') {
       this.mountPoint.setAttribute('data-placeholder', newVal || this.editor.messages.placeholder);
     }
-    if (name === 'bubble-menu' || name === 'slash-menu') this.syncMenus();
+    if (name in MENUS) this.syncMenus();
     // Other messages: the editor is built again with the same document (a new
     // `editor` object). A lang that maps to the same messages changes nothing.
     if (name === 'lang' && messagesFor(oldVal) !== messagesFor(newVal)) {

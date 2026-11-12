@@ -1,0 +1,179 @@
+import { LevitEditor } from '../core/editor.js';
+import { tableAt } from '../core/model/table.js';
+
+export interface TableToolbarInstance {
+  element: HTMLElement;
+  destroy: () => void;
+}
+
+const SVG = 'http://www.w3.org/2000/svg';
+
+// 16×16 line icons: a row or column with a plus or a cross, a table with a
+// filled top row, and a bin.
+const ICONS: Record<string, string[]> = {
+  addRowAbove: ['M2 8h12v6H2z', 'M8 1v5M5.5 3.5h5'],
+  addRowBelow: ['M2 2h12v6H2z', 'M8 10v5M5.5 12.5h5'],
+  addColumnLeft: ['M8 2h6v12H8z', 'M1 8h5M3.5 5.5v5'],
+  addColumnRight: ['M2 2h6v12H2z', 'M10 8h5M12.5 5.5v5'],
+  deleteRow: ['M1 5h9v6H1z', 'M12 6.5l3 3M15 6.5l-3 3'],
+  deleteColumn: ['M5 1h6v9H5z', 'M6.5 12l3 3M9.5 12l-3 3'],
+  headerRow: ['M2 2h12v12H2z', 'M2 6h12M2 10h12M8 6v8', 'M2 2h12v4H2z'],
+  deleteTable: ['M2.5 4h11M6 4V2.5h4V4', 'M4 4l.8 9.5h6.4L12 4'],
+};
+
+function icon(name: string): SVGSVGElement {
+  const svg = document.createElementNS(SVG, 'svg');
+  svg.setAttribute('viewBox', '0 0 16 16');
+  svg.setAttribute('width', '16');
+  svg.setAttribute('height', '16');
+  svg.setAttribute('aria-hidden', 'true');
+  ICONS[name].forEach((d, i) => {
+    const path = document.createElementNS(SVG, 'path');
+    path.setAttribute('d', d);
+    // The header icon's last path is its filled top row.
+    if (name === 'headerRow' && i === 2) path.setAttribute('class', 'levit-table-toolbar-fill');
+    svg.appendChild(path);
+  });
+  return svg;
+}
+
+const toolbars = new WeakMap<LevitEditor, TableToolbarInstance>();
+
+/**
+ * A toolbar above the table the caret is in, with buttons to add and delete
+ * rows and columns, switch the header row and delete the table. An editor has
+ * one: calling this again returns it.
+ */
+export function createTableToolbar(editor: LevitEditor): TableToolbarInstance {
+  const existing = toolbars.get(editor);
+  if (existing) return existing;
+  const m = editor.messages;
+  const menu = document.createElement('div');
+  menu.className = 'levit-table-toolbar';
+  menu.setAttribute('role', 'toolbar');
+  menu.setAttribute('aria-label', m.tableToolbar);
+  menu.style.display = 'none';
+
+  const buttons: { icon: string; title: string; action: () => void; group?: true }[] = [
+    { icon: 'addRowAbove', title: m.addRowAbove, action: () => editor.chain().addRowBefore().run() },
+    { icon: 'addRowBelow', title: m.addRowBelow, action: () => editor.chain().addRowAfter().run() },
+    { icon: 'addColumnLeft', title: m.addColumnLeft, action: () => editor.chain().addColumnBefore().run() },
+    { icon: 'addColumnRight', title: m.addColumnRight, action: () => editor.chain().addColumnAfter().run() },
+    { icon: 'deleteRow', title: m.deleteRow, action: () => editor.chain().deleteRow().run(), group: true },
+    { icon: 'deleteColumn', title: m.deleteColumn, action: () => editor.chain().deleteColumn().run() },
+    { icon: 'headerRow', title: m.headerRow, action: () => editor.chain().toggleHeaderRow().run(), group: true },
+    { icon: 'deleteTable', title: m.deleteTable, action: () => editor.chain().deleteTable().run(), group: true },
+  ];
+
+  const buttonEls = buttons.map((b, i) => {
+    if (b.group) {
+      const line = document.createElement('span');
+      line.className = 'levit-table-toolbar-separator';
+      line.setAttribute('aria-hidden', 'true');
+      menu.appendChild(line);
+    }
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'levit-table-toolbar-btn';
+    btn.title = b.title;
+    btn.setAttribute('aria-label', b.title);
+    btn.appendChild(icon(b.icon));
+    // One button at a time is reachable with Tab; arrows move between them.
+    btn.tabIndex = i === 0 ? 0 : -1;
+    // The mouse acts on mousedown so the editor keeps its selection.
+    btn.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      b.action();
+      update();
+    });
+    // Enter or Space on a focused button sends a click without a mouse.
+    btn.addEventListener('click', (e) => {
+      if (e.detail !== 0) return;
+      b.action();
+      update();
+    });
+    menu.appendChild(btn);
+    return btn;
+  });
+  const headerButton = buttonEls[buttons.findIndex((b) => b.icon === 'headerRow')];
+
+  function focusButton(index: number) {
+    const i = (index + buttonEls.length) % buttonEls.length;
+    buttonEls.forEach((btn, j) => (btn.tabIndex = j === i ? 0 : -1));
+    buttonEls[i].focus();
+  }
+
+  menu.addEventListener('keydown', (e) => {
+    const current = buttonEls.indexOf(document.activeElement as HTMLButtonElement);
+    if (current === -1) return;
+    const moves: Record<string, number> = {
+      ArrowRight: current + 1,
+      ArrowLeft: current - 1,
+      Home: 0,
+      End: buttonEls.length - 1,
+    };
+    if (e.key in moves) {
+      e.preventDefault();
+      focusButton(moves[e.key]);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      editor.focus();
+    }
+  });
+
+  // Alt+F10 (as in Google Docs and Word) moves focus from the table to the
+  // toolbar. With text selected, it goes to the formatting toolbar instead.
+  function handleEditorKeyDown(e: KeyboardEvent) {
+    if (e.key !== 'F10' || !e.altKey || !editor.state.selection.isCollapsed || !editor.isInTable()) return;
+    e.preventDefault();
+    update(true);
+    focusButton(0);
+  }
+  editor.container.addEventListener('keydown', handleEditorKeyDown);
+
+  const inside = (node: unknown) => node instanceof Node && (editor.container.contains(node) || menu.contains(node));
+
+  /** Shows the toolbar above the caret's table while the editor or the toolbar has focus. */
+  function update(focused = inside(document.activeElement)) {
+    const id = editor.state.selection.head.blockId;
+    const table = focused ? tableAt(editor.state.doc, id) : null;
+    const wrapper = table && editor.container.querySelector(`[data-block-id="${CSS.escape(id)}"]`)?.closest('.levit-table');
+    if (!table || !wrapper) {
+      menu.style.display = 'none';
+      return;
+    }
+    const first = editor.state.doc.blocks[table.rows[0][0]];
+    headerButton.setAttribute('aria-pressed', String(first.attrs?.header === true));
+    menu.style.display = 'flex';
+    const rect = wrapper.getBoundingClientRect();
+    const height = menu.getBoundingClientRect().height;
+    menu.style.top = `${Math.max(10, rect.top + window.scrollY - height - 6)}px`;
+    menu.style.left = `${Math.max(10, rect.left + window.scrollX)}px`;
+  }
+
+  const onFocusOut = (e: FocusEvent) => update(inside(e.relatedTarget));
+  menu.addEventListener('focusout', onFocusOut);
+  const stops = [
+    editor.on('selectionUpdate', () => update()),
+    editor.on('update', () => update()),
+    editor.on('focus', () => update()),
+    editor.on('blur', ({ event }) => update(inside(event.relatedTarget))),
+  ];
+  const onResize = () => update();
+  window.addEventListener('resize', onResize);
+
+  document.body.appendChild(menu);
+
+  const instance: TableToolbarInstance = {
+    element: menu,
+    destroy: () => {
+      toolbars.delete(editor);
+      stops.forEach((stop) => stop());
+      window.removeEventListener('resize', onResize);
+      editor.container.removeEventListener('keydown', handleEditorKeyDown);
+      menu.remove();
+    },
+  };
+  toolbars.set(editor, instance);
+  return instance;
+}

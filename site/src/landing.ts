@@ -6,6 +6,7 @@ import {
   createBubbleMenu,
   createLevitEditor,
   createSlashMenu,
+  createTableToolbar,
   documentToHTML,
   getComments,
   htmlToDocument,
@@ -67,9 +68,14 @@ function editor(name: string, markdown: string, options: Record<string, unknown>
     initialContent: (docs.get(name) as any) ?? markdownToDocument(markdown),
     ...options,
   });
-  createBubbleMenu(ed);
-  createSlashMenu(ed);
-  live.push({ destroy: () => (docs.set(name, ed.getJSON()), ed.destroy()) });
+  const menus = [createBubbleMenu(ed), createSlashMenu(ed), createTableToolbar(ed)];
+  live.push({
+    destroy: () => {
+      docs.set(name, ed.getJSON());
+      for (const menu of menus) menu.destroy();
+      ed.destroy();
+    },
+  });
   return ed;
 }
 

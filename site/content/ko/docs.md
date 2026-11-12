@@ -38,14 +38,14 @@ Levit은 ESM 전용입니다. 번들러나 `import`로 사용하세요. 서버 �
 </script>
 ```
 
-이 요소는 `placeholder`, `lang`(내장 문구는 `ko` 또는 `ja`. 나중에 바꾸면 같은 내용으로 새 `editor`를 만들므로 이벤트는 다시 붙이세요), `theme`(`dark` 또는 `light`), 초기값 `value`(문서 JSON) 속성을 읽습니다. React·Vue 컴포넌트처럼 버블 메뉴와 슬래시 메뉴가 기본으로 붙고, `bubble-menu="false"`나 `slash-menu="false"`로 뺄 수 있습니다. `getJSON()`, `setJSON()`, `getText()`, `focus()` 메서드와, 에디터 인스턴스 전체를 담은 `editor` 속성도 있습니다. 요소를 페이지의 다른 곳으로 옮겨도 같은 에디터가 유지되고, 제거한 뒤에도 `getJSON()`으로 문서를 얻을 수 있습니다.
+이 요소는 `placeholder`, `lang`(내장 문구는 `ko` 또는 `ja`. 나중에 바꾸면 같은 내용으로 새 `editor`를 만들므로 이벤트는 다시 붙이세요), `theme`(`dark` 또는 `light`), 초기값 `value`(문서 JSON) 속성을 읽습니다. React·Vue 컴포넌트처럼 버블 메뉴, 슬래시 메뉴, 표 도구 막대가 기본으로 붙고, `bubble-menu="false"`, `slash-menu="false"`, `table-toolbar="false"`로 뺄 수 있습니다. `getJSON()`, `setJSON()`, `getText()`, `focus()` 메서드와, 에디터 인스턴스 전체를 담은 `editor` 속성도 있습니다. 요소를 페이지의 다른 곳으로 옮겨도 같은 에디터가 유지되고, 제거한 뒤에도 `getJSON()`으로 문서를 얻을 수 있습니다.
 
 ### JavaScript / TypeScript
 
-`createLevitEditor`는 어떤 요소든 에디터로 만듭니다. 버블 툴바(글을 선택하면 표시)와 슬래시 메뉴(`/`)는 따로 붙이므로, 쓰는 것만 불러오면 됩니다.
+`createLevitEditor`는 어떤 요소든 에디터로 만듭니다. 버블 툴바(글을 선택하면 표시), 슬래시 메뉴(`/`), 표 도구 막대(커서가 있는 표 위에 표시)는 따로 붙이므로, 쓰는 것만 불러오면 됩니다.
 
 ```ts
-import { createLevitEditor, createBubbleMenu, createSlashMenu } from '@yonailab/levit';
+import { createLevitEditor, createBubbleMenu, createSlashMenu, createTableToolbar } from '@yonailab/levit';
 import '@yonailab/levit/levit.css';
 
 const editor = createLevitEditor(document.getElementById('editor')!, {
@@ -54,6 +54,7 @@ const editor = createLevitEditor(document.getElementById('editor')!, {
 
 createBubbleMenu(editor);
 createSlashMenu(editor);
+createTableToolbar(editor);
 ```
 
 ### 불러오기와 저장
@@ -231,6 +232,8 @@ editor.chain().goToNextCell().run();       // Tab. goToPreviousCell()은 Shift+T
 editor.isInTable();                        // 캐럿이 표 안에 있으면 true
 ```
 
+커서가 표 안에 있으면 `createTableToolbar(editor)`로 붙인 표 도구 막대가 표 위에 나타나, 같은 명령을 버튼으로 보여 줍니다. `<levit-editor>`와 React·Vue 컴포넌트는 이 막대를 알아서 붙입니다.
+
 삭제는 키 입력과 똑같이 동작합니다. `deleteBackward()`, `deleteForward()`, `deleteWordBackward()`, `deleteWordForward()`, `deleteLineBackward()`, `deleteLineForward()`, `deleteSelection()`이 있습니다.
 
 ### 에디터 옵션
@@ -324,7 +327,7 @@ export function Note() {
 
 - `value`와 `onChange`를 함께 쓰면 제어 컴포넌트, `defaultValue`만 쓰면 비제어 컴포넌트입니다.
 - `onChange`는 `(value, editor)`를 받습니다.
-- `bubbleMenu={false}`, `slashMenu={false}`로 메뉴를 끕니다.
+- `bubbleMenu={false}`, `slashMenu={false}`, `tableToolbar={false}`로 메뉴를 끕니다.
 - `ref`나 `onReady`로 에디터 인스턴스를 받습니다. `className`, `style`, `id`는 요소에 전달됩니다.
 - `'use client'`가 지정되어 있어 Next.js App Router에서 바로 쓸 수 있습니다.
 
@@ -362,7 +365,7 @@ const doc = ref<DocumentData>();
 ```
 
 - props: `placeholder`, `plugins`, `messages`, `uploadImage`, `highlightCode`
-- `:bubble-menu="false"`, `:slash-menu="false"`로 메뉴를 끕니다.
+- `:bubble-menu="false"`, `:slash-menu="false"`, `:table-toolbar="false"`로 메뉴를 끕니다.
 - `@ready`로 에디터 인스턴스를, `@error`로 업로드 실패 같은 오류를 받습니다.
 - 컴포넌트 ref의 `editor`로도 인스턴스에 접근할 수 있습니다.
 
@@ -713,6 +716,7 @@ editor.t('codeLanguageLabel', { language: 'ts' }); // 플레이스홀더를 채�
 - 편집 영역은 `aria-multiline`과 `aria-label`이 붙은 `role="textbox"`입니다. 페이지가 이미 레이블을 붙였다면 그대로 둡니다.
 - 슬래시 메뉴는 `listbox`이며, 에디터가 `aria-activedescendant`로 현재 항목을 가리킵니다.
 - 버블 메뉴는 `toolbar`입니다. 글을 선택한 상태에서 `Alt+F10`으로 들어가고, 방향키와 Home·End로 버튼을 옮기고, Enter나 Space로 누르고, Escape로 글로 돌아옵니다. 켜진 서식은 `aria-pressed`로 알려 줍니다.
+- 표 도구 막대도 `toolbar`입니다. 커서가 표 안에 있을 때 `Alt+F10`으로 들어가고, 키는 버블 메뉴와 같으며, Escape로 칸으로 돌아옵니다. 머리글 행 버튼은 머리글 행이 있는지를 `aria-pressed`로 알려 줍니다.
 
 ## 테마
 
