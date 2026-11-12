@@ -1,5 +1,6 @@
 import { LevitEditor } from '../core/editor.js';
 import { tableAt } from '../core/model/table.js';
+import { rovingToolbar } from './toolbar-keys.js';
 
 export interface TableToolbarInstance {
   element: HTMLElement;
@@ -9,7 +10,7 @@ export interface TableToolbarInstance {
 const SVG = 'http://www.w3.org/2000/svg';
 
 // 16×16 line icons: a row or column with a plus or a cross, a table with a
-// filled top row, and a bin.
+// filled top row, and a bin. Paths starting with "fill:" are filled.
 const ICONS: Record<string, string[]> = {
   addRowAbove: ['M2 8h12v6H2z', 'M8 1v5M5.5 3.5h5'],
   addRowBelow: ['M2 2h12v6H2z', 'M8 10v5M5.5 12.5h5'],
@@ -17,7 +18,7 @@ const ICONS: Record<string, string[]> = {
   addColumnRight: ['M2 2h6v12H2z', 'M10 8h5M12.5 5.5v5'],
   deleteRow: ['M1 5h9v6H1z', 'M12 6.5l3 3M15 6.5l-3 3'],
   deleteColumn: ['M5 1h6v9H5z', 'M6.5 12l3 3M9.5 12l-3 3'],
-  headerRow: ['M2 2h12v12H2z', 'M2 6h12M2 10h12M8 6v8', 'M2 2h12v4H2z'],
+  headerRow: ['M2 2h12v12H2z', 'M2 6h12M2 10h12M8 6v8', 'fill:M2 2h12v4H2z'],
   deleteTable: ['M2.5 4h11M6 4V2.5h4V4', 'M4 4l.8 9.5h6.4L12 4'],
 };
 
@@ -27,13 +28,13 @@ function icon(name: string): SVGSVGElement {
   svg.setAttribute('width', '16');
   svg.setAttribute('height', '16');
   svg.setAttribute('aria-hidden', 'true');
-  ICONS[name].forEach((d, i) => {
+  for (const d of ICONS[name]) {
     const path = document.createElementNS(SVG, 'path');
-    path.setAttribute('d', d);
-    // The header icon's last path is its filled top row.
-    if (name === 'headerRow' && i === 2) path.setAttribute('class', 'levit-table-toolbar-fill');
+    const filled = d.startsWith('fill:');
+    path.setAttribute('d', filled ? d.slice(5) : d);
+    if (filled) path.setAttribute('class', 'levit-table-toolbar-fill');
     svg.appendChild(path);
-  });
+  }
   return svg;
 }
 
@@ -65,7 +66,7 @@ export function createTableToolbar(editor: LevitEditor): TableToolbarInstance {
     { icon: 'deleteTable', title: m.deleteTable, action: () => editor.chain().deleteTable().run(), group: true },
   ];
 
-  const buttonEls = buttons.map((b, i) => {
+  const buttonEls = buttons.map((b) => {
     if (b.group) {
       const line = document.createElement('span');
       line.className = 'levit-table-toolbar-separator';
@@ -78,8 +79,6 @@ export function createTableToolbar(editor: LevitEditor): TableToolbarInstance {
     btn.title = b.title;
     btn.setAttribute('aria-label', b.title);
     btn.appendChild(icon(b.icon));
-    // One button at a time is reachable with Tab; arrows move between them.
-    btn.tabIndex = i === 0 ? 0 : -1;
     // The mouse acts on mousedown so the editor keeps its selection.
     btn.addEventListener('mousedown', (e) => {
       e.preventDefault();
@@ -97,29 +96,7 @@ export function createTableToolbar(editor: LevitEditor): TableToolbarInstance {
   });
   const headerButton = buttonEls[buttons.findIndex((b) => b.icon === 'headerRow')];
 
-  function focusButton(index: number) {
-    const i = (index + buttonEls.length) % buttonEls.length;
-    buttonEls.forEach((btn, j) => (btn.tabIndex = j === i ? 0 : -1));
-    buttonEls[i].focus();
-  }
-
-  menu.addEventListener('keydown', (e) => {
-    const current = buttonEls.indexOf(document.activeElement as HTMLButtonElement);
-    if (current === -1) return;
-    const moves: Record<string, number> = {
-      ArrowRight: current + 1,
-      ArrowLeft: current - 1,
-      Home: 0,
-      End: buttonEls.length - 1,
-    };
-    if (e.key in moves) {
-      e.preventDefault();
-      focusButton(moves[e.key]);
-    } else if (e.key === 'Escape') {
-      e.preventDefault();
-      editor.focus();
-    }
-  });
+  const focusButton = rovingToolbar(menu, buttonEls, () => editor.focus());
 
   // Alt+F10 (as in Google Docs and Word) moves focus from the table to the
   // toolbar. With text selected, it goes to the formatting toolbar instead.
@@ -133,13 +110,21 @@ export function createTableToolbar(editor: LevitEditor): TableToolbarInstance {
 
   const inside = (node: unknown) => node instanceof Node && (editor.container.contains(node) || menu.contains(node));
 
-  /** Shows the toolbar above the caret's table while the editor or the toolbar has focus. */
+  /**
+   * Shows the toolbar above the caret's table (below it when there is no room
+   * above) while the editor or the toolbar has focus, the caret is collapsed
+   * and the editor can be edited.
+   */
   function update(focused = inside(document.activeElement)) {
-    const id = editor.state.selection.head.blockId;
-    const table = focused ? tableAt(editor.state.doc, id) : null;
+    const { selection } = editor.state;
+    const id = selection.head.blockId;
+    const table = focused && selection.isCollapsed && editor.isEditable ? tableAt(editor.state.doc, id) : null;
     const wrapper = table && editor.container.querySelector(`[data-block-id="${CSS.escape(id)}"]`)?.closest('.levit-table');
     if (!table || !wrapper) {
+      // A keyboard user on a button that goes away goes back to the text.
+      const hadFocus = focused && menu.contains(document.activeElement);
       menu.style.display = 'none';
+      if (hadFocus) editor.focus();
       return;
     }
     const first = editor.state.doc.blocks[table.rows[0][0]];
@@ -147,8 +132,10 @@ export function createTableToolbar(editor: LevitEditor): TableToolbarInstance {
     menu.style.display = 'flex';
     const rect = wrapper.getBoundingClientRect();
     const height = menu.getBoundingClientRect().height;
-    menu.style.top = `${Math.max(10, rect.top + window.scrollY - height - 6)}px`;
-    menu.style.left = `${Math.max(10, rect.left + window.scrollX)}px`;
+    const above = rect.top - height - 6;
+    const top = above >= 10 ? above : rect.bottom + 6;
+    menu.style.top = `${top + window.scrollY}px`;
+    menu.style.left = `${Math.max(10, rect.left) + window.scrollX}px`;
   }
 
   const onFocusOut = (e: FocusEvent) => update(inside(e.relatedTarget));
@@ -159,8 +146,12 @@ export function createTableToolbar(editor: LevitEditor): TableToolbarInstance {
     editor.on('focus', () => update()),
     editor.on('blur', ({ event }) => update(inside(event.relatedTarget))),
   ];
-  const onResize = () => update();
-  window.addEventListener('resize', onResize);
+  // Scrolling anywhere (the page or a box around the editor) moves the table.
+  const onMove = () => {
+    if (menu.style.display !== 'none') update();
+  };
+  window.addEventListener('resize', onMove);
+  document.addEventListener('scroll', onMove, true);
 
   document.body.appendChild(menu);
 
@@ -169,7 +160,8 @@ export function createTableToolbar(editor: LevitEditor): TableToolbarInstance {
     destroy: () => {
       toolbars.delete(editor);
       stops.forEach((stop) => stop());
-      window.removeEventListener('resize', onResize);
+      window.removeEventListener('resize', onMove);
+      document.removeEventListener('scroll', onMove, true);
       editor.container.removeEventListener('keydown', handleEditorKeyDown);
       menu.remove();
     },

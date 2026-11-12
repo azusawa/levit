@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { LevitEditor } from '../../src/core/editor';
 import { createBlock, createTextNode } from '../../src/core/model/document';
 import { createTableToolbar, type TableToolbarInstance } from '../../src/plugins/table-toolbar';
@@ -169,4 +169,51 @@ describe('table toolbar', () => {
     expect(createTableToolbar(editor)).not.toBe(toolbar);
     createTableToolbar(editor).destroy();
   });
+
+  it('deleting the table from the keyboard gives focus back to the editor', () => {
+    make();
+    place('c', 1);
+    key(editor.container, 'F10', { altKey: true });
+    key(document.activeElement as HTMLElement, 'End');
+    expect(document.activeElement).toBe(button('Delete table'));
+    (document.activeElement as HTMLElement).dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 0 }));
+    expect(isShown()).toBe(false);
+    expect(document.activeElement).toBe(editor.container);
+  });
+
+  it('hides while text is selected, so it does not cover the formatting toolbar', () => {
+    make();
+    editor.focus();
+    editor.dispatch(editor.state.tr.setSelection({ anchor: { blockId: 'c', offset: 0 }, head: { blockId: 'c', offset: 1 }, isCollapsed: false }));
+    expect(isShown()).toBe(false);
+  });
+
+  it('hides in an editor that cannot be edited', () => {
+    make();
+    place('c', 1);
+    editor.setEditable(false);
+    place('d', 1);
+    expect(isShown()).toBe(false);
+  });
+
+  it('goes below the table when there is no room above it', () => {
+    make();
+    const wrapper = element.querySelector('.levit-table')!;
+    vi.spyOn(wrapper, 'getBoundingClientRect').mockReturnValue(new DOMRect(40, 5, 300, 100));
+    vi.spyOn(toolbar.element, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 200, 30));
+    place('c', 1);
+    expect(toolbar.element.style.top).toBe(`${5 + 100 + 6 + window.scrollY}px`);
+    expect(toolbar.element.style.left).toBe(`${40 + window.scrollX}px`);
+  });
+
+  it('follows the table when a box around the editor scrolls', () => {
+    make();
+    place('c', 1);
+    const wrapper = element.querySelector('.levit-table')!;
+    vi.spyOn(toolbar.element, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 200, 30));
+    vi.spyOn(wrapper, 'getBoundingClientRect').mockReturnValue(new DOMRect(40, 300, 300, 100));
+    element.dispatchEvent(new Event('scroll'));
+    expect(toolbar.element.style.top).toBe(`${300 - 30 - 6 + window.scrollY}px`);
+  });
 });
+

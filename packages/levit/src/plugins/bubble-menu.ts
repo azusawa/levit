@@ -1,6 +1,7 @@
 import { LevitEditor } from '../core/editor.js';
 import { normalizeLinkInput } from '../core/model/sanitize.js';
 import type { EditorSelection } from '../core/model/types.js';
+import { rovingToolbar } from './toolbar-keys.js';
 
 export interface BubbleMenuInstance {
   element: HTMLElement;
@@ -69,8 +70,6 @@ export function createBubbleMenu(editor: LevitEditor): BubbleMenuInstance {
     btn.textContent = b.label;
     btn.title = b.title;
     btn.setAttribute('aria-label', b.title);
-    // One button at a time is reachable with Tab; arrows move between them.
-    btn.tabIndex = buttonEls.length === 0 ? 0 : -1;
     // The mouse acts on mousedown so the editor keeps its selection.
     btn.addEventListener('mousedown', (e) => {
       e.preventDefault();
@@ -98,29 +97,7 @@ export function createBubbleMenu(editor: LevitEditor): BubbleMenuInstance {
     });
   }
 
-  function focusButton(index: number) {
-    const i = (index + buttonEls.length) % buttonEls.length;
-    buttonEls.forEach((btn, j) => (btn.tabIndex = j === i ? 0 : -1));
-    buttonEls[i].focus();
-  }
-
-  buttonRow.addEventListener('keydown', (e) => {
-    const current = buttonEls.indexOf(document.activeElement as HTMLButtonElement);
-    if (current === -1) return;
-    const moves: Record<string, number> = {
-      ArrowRight: current + 1,
-      ArrowLeft: current - 1,
-      Home: 0,
-      End: buttonEls.length - 1,
-    };
-    if (e.key in moves) {
-      e.preventDefault();
-      focusButton(moves[e.key]);
-    } else if (e.key === 'Escape') {
-      e.preventDefault();
-      editor.focus();
-    }
-  });
+  const focusButton = rovingToolbar(buttonRow, buttonEls, () => editor.focus());
 
   // Alt+F10 (as in Google Docs and Word) moves focus from the text to the toolbar.
   function handleEditorKeyDown(e: KeyboardEvent) {

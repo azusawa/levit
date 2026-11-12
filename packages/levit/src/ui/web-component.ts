@@ -133,7 +133,7 @@ export class LevitEditorElement extends BaseElement {
     if (name === 'placeholder') {
       this.mountPoint.setAttribute('data-placeholder', newVal || this.editor.messages.placeholder);
     }
-    if (name in MENUS) this.syncMenus();
+    if (Object.hasOwn(MENUS, name)) this.syncMenus();
     // Other messages: the editor is built again with the same document (a new
     // `editor` object). A lang that maps to the same messages changes nothing.
     if (name === 'lang' && messagesFor(oldVal) !== messagesFor(newVal)) {
