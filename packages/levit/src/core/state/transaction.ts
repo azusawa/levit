@@ -31,7 +31,7 @@ import {
   previousWordOffset,
 } from '../model/text.js';
 import { BlockNode } from '../model/types.js';
-import { cellContent, createCell, createTable, isTableCell, markdownTableRow, tableAtIndex, tableIdOf, rowIdOf, type TablePosition } from '../model/table.js';
+import { cellContent, createCell, createTable, isTableCell, markdownRowCells, tableAtIndex, tableIdOf, rowIdOf, type TablePosition } from '../model/table.js';
 import { EditorState } from './state.js';
 
 export function cloneDocument(doc: DocumentData): DocumentData {
@@ -701,11 +701,13 @@ export class Transaction {
    */
   convertToTable(): this {
     const { from, to } = orderedSelection(this.doc, this.selection);
-    const first = findBlockIndex(this.doc, from.blockId);
+    let first = findBlockIndex(this.doc, from.blockId);
     let last = findBlockIndex(this.doc, to.blockId);
     if (first === -1 || last === -1) return this;
-    // A selection that ends at the start of a line does not take that line.
+    // A selection that ends at the start of a line, or starts at the end of
+    // one, does not take that line.
     if (last > first && to.offset === 0) last -= 1;
+    if (last > first && from.offset === getBlockText(this.doc.blocks[first]).length) first += 1;
     const blocks = this.doc.blocks.slice(first, last + 1);
     if (blocks.some((b) => isTableCell(b.type) || b.type === 'code_block' || this.isAtom(b.type))) return this;
 
@@ -725,28 +727,15 @@ export class Transaction {
     // Each row as the content of its cells, without the spaces around them.
     const rows = lines.map((l) => {
       const [block, start] = l;
-      const text = lineText(l);
       const cells: InlineNode[][] = [];
-      let cellStart = 0;
-      for (const part of text.split(separator)) {
-        const lead = part.length - part.trimStart().length;
-        const a = start + cellStart + lead;
-        const b = start + cellStart + part.trimEnd().length;
-        cells.push(b > a ? sliceBlockContent(block, a, b) : []);
+      let cellStart = start;
+      for (const part of lineText(l).split(separator)) {
+        cells.push(this.trimmedSlice(block, cellStart, cellStart + part.length));
         cellStart += part.length + 1;
       }
       return cells;
     });
-    const cols = Math.max(...rows.map((r) => r.length));
-    const table = generateBlockId('t');
-    const cells = rows.flatMap((row, r) => {
-      const rowId = generateBlockId('r');
-      return Array.from({ length: cols }, (_, c) => {
-        const cell = createCell(table, rowId, r === 0);
-        if (row[c]?.length) cell.content = row[c];
-        return cell;
-      });
-    });
+    const cells = this.tableOf(rows);
 
     const replaced: BlockNode[] = [...cells];
     // A table never touches another table: a paragraph stays between them.
@@ -758,6 +747,24 @@ export class Transaction {
     this.setCaret(cells[0].id, 0);
     this.docChanged = true;
     return this;
+  }
+
+  /** A block's content from start to end, without the spaces around it. */
+  private trimmedSlice(block: BlockNode, start: number, end: number): InlineNode[] {
+    const text = getBlockText(block);
+    while (start < end && /\s/.test(text[start])) start += 1;
+    while (end > start && /\s/.test(text[end - 1])) end -= 1;
+    return end > start ? sliceBlockContent(block, start, end) : [];
+  }
+
+  /** A new table with this content in its cells, row by row. Short rows are filled with empty cells. */
+  private tableOf(rows: InlineNode[][][]): BlockNode[] {
+    const cols = Math.max(...rows.map((row) => row.length));
+    const cells = createTable(rows.length, cols);
+    rows.forEach((row, r) => row.forEach((content, c) => {
+      if (content.length > 0) cells[r * cols + c].content = content;
+    }));
+    return cells;
   }
 
   /** The table at the caret, with the caret's block index. */
@@ -972,11 +979,11 @@ export class Transaction {
     // Enter after a Markdown table row ("| Name | Price |") makes a table:
     // the row is its header, and the caret goes to an empty row below.
     const row = type === undefined && block.type === 'paragraph' && offset === getBlockText(block).length
-      ? markdownTableRow(getBlockText(block))
+      ? markdownRowCells(getBlockText(block))
       : null;
     if (row) {
-      const cells = createTable(2, row.length);
-      row.forEach((text, i) => (cells[i].content = [createTextNode(text)]));
+      const unescape = (nodes: InlineNode[]) => nodes.map((n) => ({ ...n, text: n.text.replace(/\\\|/g, '|') }));
+      const cells = this.tableOf([row.map(([a, b]) => unescape(this.trimmedSlice(block, a, b))), []]);
       block.content = [createTextNode('')];
       this.setCaret(block.id, 0);
       this.placeAlone(cells);

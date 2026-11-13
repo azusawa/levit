@@ -41,14 +41,22 @@ const GRID_ROWS = 8;
 /** The biggest table a typed size ("/table 4x3") makes. */
 const MAX_TYPED_SIZE = 20;
 
-/** A query that ends in a table size, columns first: "table 4x3", "4×3". */
-function sizedQuery(query: string): { name: string; cols: number; rows: number } | null {
-  const match = /^(.*?)\s*(\d+)\s*[x×]\s*(\d+)$/i.exec(query);
-  return match && { name: match[1], cols: Number(match[2]), rows: Number(match[3]) };
+/**
+ * A query for a table of some size, columns first: "table 4x3", "표 4x3" or
+ * "4x3". While it is typed ("table ", "table 4", "4x"), size is null. Null
+ * when the query is not one: "heading", "2024", "a1".
+ */
+function tableQuery(query: string): { name: string; size: { cols: number; rows: number } | null } | null {
+  const match = /^(\D*?)(\s*)(\d*)\s*([x×]?)\s*(\d*)\s*$/i.exec(query);
+  if (!match) return null;
+  const [, name, space, cols, x, rows] = match;
+  if (!cols && (x || rows)) return null;
+  if (!cols && !space) return null;
+  if ([cols, rows].some((n) => n && (n.length > 2 || Number(n) < 1 || Number(n) > MAX_TYPED_SIZE))) return null;
+  // After a name the size needs a space ("table 4"); alone it needs the x ("4x").
+  if (name ? !space : !x) return null;
+  return { name, size: cols && rows ? { cols: Number(cols), rows: Number(rows) } : null };
 }
-
-/** The query without a size being typed at its end: "table 4x" is "table". */
-const withoutPartialSize = (query: string) => /^(.*?)\s*(\d+\s*[x×]?)?\s*$/i.exec(query)![1];
 
 const slashMenus = new WeakMap<LevitEditor, SlashMenuInstance>();
 
@@ -202,17 +210,16 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
   function itemsFor(q: string): SlashMenuItem[] {
     const list = available();
     if (!list.includes(tableItem)) return list.filter((item) => matches(item, q));
-    const sized = sizedQuery(q);
-    if (sized) {
-      const { name, cols, rows } = sized;
-      const fits = cols >= 1 && rows >= 1 && cols <= MAX_TYPED_SIZE && rows <= MAX_TYPED_SIZE;
-      if (!fits || !matches(tableItem, name)) return [];
-      return [{ ...tableItem, title: `${tableItem.title} ${cols}×${rows}`, action: (ed) => ed.chain().insertTable(rows, cols).run() }];
+    const sized = tableQuery(q);
+    const name = (sized ? sized.name : q).toLowerCase();
+    const isTable = !!sized && [tableItem.title, tableItem.id].some((t) => t.toLowerCase().startsWith(name));
+    if (sized?.size) {
+      const { cols, rows } = sized.size;
+      return isTable ? [{ ...tableItem, title: `${tableItem.title} ${cols}×${rows}`, action: (ed) => ed.chain().insertTable(rows, cols).run() }] : [];
     }
     // While a size is being typed ("table 4"), the table entry stays.
-    const found = list.filter((item) => matches(item, q) || (item === tableItem && matches(item, withoutPartialSize(q))));
+    const found = list.filter((item) => matches(item, q) || (item === tableItem && isTable));
     // Names that start with the query first: "/표" is Table before Bulleted List (글머리표 목록).
-    const name = withoutPartialSize(q).toLowerCase();
     const starts = (item: SlashMenuItem) => (name && item.title.toLowerCase().startsWith(name) ? 0 : 1);
     return found.sort((a, b) => starts(a) - starts(b));
   }
@@ -302,6 +309,7 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
   picker.style.display = 'none';
   const grid = part('div', 'levit-table-picker-grid');
   grid.setAttribute('aria-hidden', 'true');
+  grid.style.gridTemplateColumns = `repeat(${GRID_COLS}, auto)`;
   const sizeText = part('div', 'levit-table-picker-size');
   sizeText.setAttribute('role', 'status');
   picker.append(grid, sizeText);
@@ -324,6 +332,8 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
 
   let pickerOpen = false;
   let size = { cols: 3, rows: 3 };
+  // Where the caret was when the grid opened: it closes when the caret moves.
+  let pickerAt: { blockId: string; offset: number } | null = null;
 
   function setSize(cols: number, rows: number) {
     size = { cols: Math.min(Math.max(cols, 1), GRID_COLS), rows: Math.min(Math.max(rows, 1), GRID_ROWS) };
@@ -340,12 +350,24 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
     const id = editor.state.selection.head.blockId;
     const line = editor.container.querySelector(`[data-block-id="${CSS.escape(id)}"]`);
     const rect = (line ?? editor.container).getBoundingClientRect();
-    picker.style.top = `${rect.bottom + 6 + window.scrollY}px`;
-    picker.style.left = `${rect.left + window.scrollX}px`;
     picker.style.display = 'block';
+    pickerAt = { ...editor.state.selection.head };
+    // Keep it inside the window, like the menu.
+    const width = picker.getBoundingClientRect().width;
+    const left = Math.max(10, Math.min(rect.left, window.innerWidth - width - 10));
+    picker.style.top = `${rect.bottom + 6 + window.scrollY}px`;
+    picker.style.left = `${left + window.scrollX}px`;
+  }
+
+  /** Closes the grid when the document changes or the caret moves. */
+  function followEditor() {
+    if (!pickerOpen) return;
+    const { head } = editor.state.selection;
+    if (head.blockId !== pickerAt?.blockId || head.offset !== pickerAt.offset) closePicker();
   }
 
   function closePicker() {
+    if (!pickerOpen) return;
     pickerOpen = false;
     picker.style.display = 'none';
   }
@@ -355,6 +377,7 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
     editor.chain().insertTable(size.rows, size.cols).run();
   }
 
+  const MODIFIER_KEYS = new Set(['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'AltGraph']);
   const PICKER_MOVES: Record<string, [number, number]> = {
     ArrowRight: [1, 0],
     ArrowLeft: [-1, 0],
@@ -365,7 +388,9 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
   /** Keys while the grid is open. Returns true when the key was for the grid. */
   function handlePickerKey(e: KeyboardEvent): boolean {
     if (e.isComposing || editor.isComposing) return false;
-    const move = PICKER_MOVES[e.key];
+    // A modifier pressed alone does nothing yet.
+    if (MODIFIER_KEYS.has(e.key)) return false;
+    const move = !e.shiftKey && !e.altKey && !e.ctrlKey && !e.metaKey && PICKER_MOVES[e.key];
     if (move) {
       setSize(size.cols + move[0], size.rows + move[1]);
     } else if (e.key === 'Enter') {
@@ -461,6 +486,8 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
   const offTransaction = editor.on('transaction', sync);
   const offUpdate = editor.on('update', sync);
   const offSelection = editor.on('selectionUpdate', sync);
+  const offPickerUpdate = editor.on('update', closePicker);
+  const offPickerSelection = editor.on('selectionUpdate', followEditor);
   const offBlur = editor.on('blur', () => {
     close();
     closePicker();
@@ -482,6 +509,8 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
       offUpdate();
       offSelection();
       offBlur();
+      offPickerUpdate();
+      offPickerSelection();
       document.removeEventListener('mousedown', onPointerDown, true);
       editor.container.removeEventListener('keydown', handleKeyDown, true);
       menu.remove();

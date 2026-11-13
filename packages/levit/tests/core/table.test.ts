@@ -135,6 +135,25 @@ describe('a Markdown table row and Enter', () => {
     expect(shape(middle.doc)).toEqual(['paragraph:| a', 'paragraph: | b |']);
   });
 
+  it('not with only empty cells, or with several lines in the paragraph', () => {
+    expect(types(enterAtEnd([para('a', '|||')]).doc)).toEqual(['paragraph', 'paragraph']);
+    expect(types(enterAtEnd([para('a', '| | |')]).doc)).toEqual(['paragraph', 'paragraph']);
+    expect(types(enterAtEnd([para('a', '| a |\n| b | c |')]).doc)).toEqual(['paragraph', 'paragraph']);
+  });
+
+  it('keeps bold, links and other marks in the cells', () => {
+    const row = createBlock('paragraph', {}, [
+      createTextNode('| '),
+      createTextNode('Name', [{ type: 'bold' }]),
+      createTextNode(' | '),
+      createTextNode('a \\| b', [{ type: 'link', attrs: { href: 'https://example.com/' } }]),
+      createTextNode(' |'),
+    ], 'a');
+    const state = enterAtEnd([row]);
+    expect(state.doc.blocks[0].content).toEqual([createTextNode('Name', [{ type: 'bold' }])]);
+    expect(state.doc.blocks[1].content).toEqual([createTextNode('a | b', [{ type: 'link', attrs: { href: 'https://example.com/' } }])]);
+  });
+
   it('only in a paragraph', () => {
     const heading = createBlock('heading', { level: 2 }, [createTextNode('| a | b |')], 'h');
     expect(types(enterAtEnd([heading]).doc)).toEqual(['heading', 'paragraph']);
@@ -182,6 +201,12 @@ describe('turning lines into a table', () => {
     const bold = createBlock('paragraph', {}, [createTextNode('Name', [{ type: 'bold' }]), createTextNode('\tPrice')], 'a');
     const state = stateWith([bold], select(['a', 0], ['a', 10])).tr.convertToTable().apply();
     expect(state.doc.blocks[0].content).toEqual([createTextNode('Name', [{ type: 'bold' }])]);
+  });
+
+  it('leaves out the line the selection starts at the end of', () => {
+    const blocks = [para('a', 'a,b'), para('b', 'c,d'), para('c', 'e,f')];
+    const state = stateWith(blocks, select(['a', 3], ['c', 3])).tr.convertToTable().apply();
+    expect(shape(state.doc)).toEqual(['paragraph:a,b', [['c', 'd'], ['e', 'f']], 'paragraph:']);
   });
 
   it('leaves out the line the selection ends at the start of', () => {

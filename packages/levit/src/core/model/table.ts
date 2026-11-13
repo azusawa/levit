@@ -109,14 +109,27 @@ export function splitTableRow(line: string): string[] {
 }
 
 /**
- * The cells of a Markdown table row such as "| Name | Price |": bars at
- * both ends and at least two cells. Null when the text is not such a row.
+ * Where the cells of a Markdown table row such as "| Name | Price |" are in
+ * the text, as [start, end] without the bars. The row needs bars at both
+ * ends, two cells or more and some text in a cell; "\|" is a bar inside a
+ * cell. Null when the text is not such a row, or has more than one line.
  */
-export function markdownTableRow(text: string): string[] | null {
-  const line = text.trim();
-  if (line.length < 2 || !line.startsWith('|') || !line.endsWith('|') || line.endsWith('\\|')) return null;
-  const cells = splitTableRow(line);
-  return cells.length >= 2 ? cells : null;
+export function markdownRowCells(text: string): [number, number][] | null {
+  const from = text.length - text.trimStart().length;
+  const to = text.trimEnd().length;
+  const line = text.slice(from, to);
+  if (text.includes('\n') || line.length < 2 || !line.startsWith('|') || !line.endsWith('|') || line.endsWith('\\|')) return null;
+  const cells: [number, number][] = [];
+  let start = from + 1;
+  for (let i = from + 1; i < to; i++) {
+    if (text[i] === '\\' && text[i + 1] === '|') i += 1;
+    else if (text[i] === '|') {
+      cells.push([start, i]);
+      start = i + 1;
+    }
+  }
+  const empty = cells.every(([a, b]) => text.slice(a, b).trim() === '');
+  return cells.length >= 2 && !empty ? cells : null;
 }
 
 /**

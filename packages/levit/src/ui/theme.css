@@ -690,7 +690,6 @@ a:hover {
 
 .levit-table-picker-grid {
   display: grid;
-  grid-template-columns: repeat(10, 18px);
   gap: 3px;
 }
 

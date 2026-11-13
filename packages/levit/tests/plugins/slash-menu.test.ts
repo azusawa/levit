@@ -342,6 +342,49 @@ describe('slash menu: choosing a table size', () => {
     expect(pickerOpen()).toBe(false);
   });
 
+  it('stays open for Shift and other keys alone, and leaves arrows with a modifier to the editor', () => {
+    setup();
+    caret('p', 0);
+    type('/table');
+    press('Enter');
+    for (const k of ['Shift', 'Control', 'Alt', 'Meta']) press(k);
+    expect(pickerOpen()).toBe(true);
+    const e = new KeyboardEvent('keydown', { key: 'ArrowRight', shiftKey: true, bubbles: true, cancelable: true });
+    container.dispatchEvent(e);
+    expect(e.defaultPrevented).toBe(false);
+    expect(pickerOpen()).toBe(false);
+  });
+
+  it('closes when the document changes or the caret moves', () => {
+    setup([createBlock('paragraph', {}, [], 'p'), createBlock('paragraph', {}, [createTextNode('x')], 'q')]);
+    caret('p', 0);
+    type('/table');
+    press('Enter');
+    caret('q', 1);
+    expect(pickerOpen()).toBe(false);
+    caret('p', 0);
+    type('/table');
+    press('Enter');
+    editor.dispatch(editor.state.tr.setSelection({ anchor: { blockId: 'q', offset: 0 }, head: { blockId: 'q', offset: 0 }, isCollapsed: true }).insertText('y'));
+    expect(pickerOpen()).toBe(false);
+  });
+
+  it('stays inside the window', () => {
+    setup();
+    caret('p', 0);
+    const line = container.querySelector('[data-block-id="p"]')!;
+    vi.spyOn(line, 'getBoundingClientRect').mockReturnValue(new DOMRect(window.innerWidth - 50, 100, 40, 24));
+    vi.spyOn(picker(), 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 240, 200));
+    type('/table');
+    press('Enter');
+    expect(picker().style.left).toBe(`${window.innerWidth - 240 - 10 + window.scrollX}px`);
+  });
+
+  it('lays the grid out from its column count', () => {
+    setup();
+    expect(picker().querySelector<HTMLElement>('.levit-table-picker-grid')!.style.gridTemplateColumns).toBe('repeat(10, auto)');
+  });
+
   it('closes on other keys, which type as usual, and when the editor loses focus', () => {
     setup();
     caret('p', 0);
@@ -374,6 +417,29 @@ describe('slash menu: choosing a table size', () => {
     expect(shown()).toEqual(['Table 2×3']);
     press('Enter');
     expect(tableSize()).toEqual([2, 3]);
+  });
+
+  it('numbers that are not a table size still close the menu, so Enter keeps the text', () => {
+    for (const text of ['/2024', '/a1', '/tab1', '/table 30x2']) {
+      setup([createBlock('paragraph', {}, [], 'p')]);
+      caret('p', 0);
+      type(text);
+      expect(isOpen(), text).toBe(false);
+      press('Enter');
+      expect(blockText(0), text).toBe(text);
+      menu.destroy();
+      editor.destroy();
+    }
+  });
+
+  it('keeps the table entry while a size is typed', () => {
+    setup();
+    caret('p', 0);
+    for (const ch of '/table 4x') {
+      type(ch);
+      expect(isOpen()).toBe(true);
+    }
+    expect(shown()).toEqual(['Table']);
   });
 
   it('a size too big for a table matches nothing', () => {
