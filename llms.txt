@@ -143,6 +143,9 @@ list, `1. ` numbered list, `[] ` / `[ ] ` / `[x] ` task (also after `- `),
   20) inserts that size at once. A paragraph like "| Name | Price |" and Enter
   becomes a table with that header row. The bubble menu's "Convert to table"
   button runs convertToTable() on the selected lines.
+- Table shortcuts, with the caret in a cell: Mod+Enter adds a row below,
+  Mod+Alt+Enter a column right, Mod+Shift+Backspace deletes the row (open AI
+  suggestions are rejected first) and Mod+Alt+Backspace the column.
 - Backspace at the start of the block after an image or divider removes it;
   Delete at the end of the block before one does too.
 - `Cmd/Ctrl+A` selects the whole document.

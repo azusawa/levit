@@ -303,3 +303,67 @@ describe('Firefox cell selection', () => {
     expect(tables()).toEqual([[['th:A', 'th:B'], ['td:', 'td:']]]);
   });
 });
+
+describe('table shortcuts', () => {
+  const press = (key: string, mods: KeyboardEventInit = {}) => {
+    const e = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...mods });
+    editor.container.dispatchEvent(e);
+    return e;
+  };
+
+  it('Mod+Enter adds a row below and puts the caret in it', () => {
+    make();
+    editor.focus();
+    place('a', 1);
+    expect(press('Enter', { ctrlKey: true }).defaultPrevented).toBe(true);
+    expect(tables()).toEqual([[['th:A', 'th:B'], ['td:', 'td:'], ['td:C', 'td:D']]]);
+    expect(editor.state.doc.blocks.findIndex((b) => b.id === editor.state.selection.head.blockId)).toBe(3);
+    press('Enter', { metaKey: true });
+    expect(tables()[0]).toHaveLength(4);
+  });
+
+  it('Mod+Alt+Enter adds a column right and puts the caret in it', () => {
+    make();
+    editor.focus();
+    place('c', 1);
+    expect(press('Enter', { ctrlKey: true, altKey: true }).defaultPrevented).toBe(true);
+    expect(tables()).toEqual([[['th:A', 'th:', 'th:B'], ['td:C', 'td:', 'td:D']]]);
+    expect(editor.state.doc.blocks.findIndex((b) => b.id === editor.state.selection.head.blockId)).toBe(5);
+  });
+
+  it('Mod+Shift+Backspace deletes the row', () => {
+    make();
+    editor.focus();
+    place('c', 1);
+    expect(press('Backspace', { ctrlKey: true, shiftKey: true }).defaultPrevented).toBe(true);
+    expect(tables()).toEqual([[['th:A', 'th:B']]]);
+  });
+
+  it('Mod+Alt+Backspace deletes the column', () => {
+    make();
+    editor.focus();
+    place('c', 1);
+    expect(press('Backspace', { ctrlKey: true, altKey: true }).defaultPrevented).toBe(true);
+    expect(tables()).toEqual([[['th:B'], ['td:D']]]);
+  });
+
+  it('outside a table the keys do what they did before', () => {
+    make();
+    editor.focus();
+    place('p', 1);
+    expect(press('Backspace', { ctrlKey: true, shiftKey: true }).defaultPrevented).toBe(false);
+    expect(press('Backspace', { ctrlKey: true, altKey: true }).defaultPrevented).toBe(false);
+    press('Enter', { ctrlKey: true, altKey: true });
+    press('Enter', { ctrlKey: true });
+    expect(tables()).toEqual([[['th:A', 'th:B'], ['td:C', 'td:D']]]);
+    expect(editor.state.doc.blocks.map((b) => b.type)).toEqual(['paragraph', 'table_cell', 'table_cell', 'table_cell', 'table_cell', 'paragraph']);
+  });
+
+  it('with text selected across cells the keys do nothing to the table', () => {
+    make();
+    editor.focus();
+    editor.dispatch(editor.state.tr.setSelection({ anchor: { blockId: 'a', offset: 0 }, head: { blockId: 'd', offset: 1 }, isCollapsed: false }));
+    press('Backspace', { ctrlKey: true, shiftKey: true });
+    expect(tables()).toEqual([[['th:A', 'th:B'], ['td:C', 'td:D']]]);
+  });
+});

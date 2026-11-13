@@ -301,3 +301,21 @@ describe('the ways to make a table are documented', () => {
     }
   });
 });
+
+describe('the table shortcuts are documented', () => {
+  const keys = ['Mod+Enter', 'Mod+Alt+Enter', 'Mod+Shift+Backspace', 'Mod+Alt+Backspace'];
+
+  it('README and llms.txt list them', () => {
+    for (const file of ['README.md', 'llms.txt']) {
+      const text = read(file);
+      for (const key of keys) expect(text, `${file} ${key}`).toContain(key);
+    }
+  });
+
+  it('the site guide lists them in every language, in the table section and the shortcut list', () => {
+    for (const lang of ['en', 'ko', 'ja']) {
+      const guide = read(`site/content/${lang}/guide.md`);
+      for (const key of keys) expect(guide.split(`**${key}**`).length - 1, `${lang} guide ${key}`).toBeGreaterThanOrEqual(2);
+    }
+  });
+});

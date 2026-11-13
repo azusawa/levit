@@ -91,6 +91,7 @@ You can also type a Markdown table row, such as `| Name | Price |`, and press En
 - Click a cell to write in it. **Tab** moves to the next cell and **Shift+Tab** to the previous one. **Tab** in the last cell adds a row.
 - **Enter** starts a new line inside the cell.
 - While the caret is in a table, the **table toolbar** shows above it, with buttons to add a row above or below, add a column left or right, delete the row or the column, turn the header row on or off, and delete the table. Point at a button to see what it does. From the keyboard, press **Alt+F10** (Option+F10 on Mac) to reach it, the arrow keys to choose a button, Enter to press it and Escape to go back to the cell.
+- Shortcuts in a cell: **Mod+Enter** adds a row below, **Mod+Alt+Enter** adds a column right, **Mod+Shift+Backspace** deletes the row and **Mod+Alt+Backspace** deletes the column.
 - The same commands are in the slash menu: type `/` in a cell for **Add row above**, **Add row below**, **Add column left**, **Add column right**, **Delete row**, **Delete column**, **Header row** (turns the header row on or off) and **Delete table**.
 - Backspace at the start of a cell does nothing, so cells never run into each other. Selecting several cells and pressing Backspace empties them. To remove the whole table, use **Delete table**, or select it together with some text before or after it.
 - A table wider than the editor scrolls sideways.
@@ -192,11 +193,14 @@ You can use the editor without a mouse, and screen readers announce the editor, 
 - **Mod+Shift+H** — Highlight
 - **Tab** — Indent a list item; in a table, go to the next cell
 - **Shift+Tab** — Outdent a list item; in a table, go to the previous cell
-- **Mod+Enter** — Check or uncheck a task
+- **Mod+Enter** — Check or uncheck a task; in a table, add a row below
+- **Mod+Alt+Enter** — In a table, add a column right
+- **Mod+Shift+Backspace** — In a table, delete the row
+- **Mod+Alt+Backspace** — In a table, delete the column
 - **Mod+Z** — Undo
 - **Mod+Shift+Z** or **Mod+Y** — Redo
 - **Mod+A** — Select all
 - **Alt+F10** — Move to the formatting toolbar (in a code block: to the language label)
 - **Escape** — Close a menu, leave the toolbar, or stop the AI
 - **Mod+Shift+Enter** — Accept AI suggestions
-- **Mod+Shift+Backspace** — Reject AI suggestions
+- **Mod+Shift+Backspace** — Reject AI suggestions (while there are some; this comes before deleting a table row)

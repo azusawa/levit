@@ -61,7 +61,30 @@ describe('table toolbar', () => {
       'Add row above', 'Add row below', 'Add column left', 'Add column right',
       'Delete row', 'Delete column', 'Header row', 'Delete table',
     ]);
-    for (const b of toolbar.element.querySelectorAll('button')) expect(b.title).toBe(b.getAttribute('aria-label'));
+    for (const b of toolbar.element.querySelectorAll('button')) expect(b.title.startsWith(b.getAttribute('aria-label')!)).toBe(true);
+  });
+
+  it('shows the shortcuts of the buttons that have one', () => {
+    make();
+    expect(button('Add row below').title).toBe('Add row below (Ctrl+Enter)');
+    expect(button('Add column right').title).toBe('Add column right (Ctrl+Alt+Enter)');
+    expect(button('Delete row').title).toBe('Delete row (Ctrl+Shift+Backspace)');
+    expect(button('Delete column').title).toBe('Delete column (Ctrl+Alt+Backspace)');
+    expect(button('Add row below').getAttribute('aria-keyshortcuts')).toBe('Control+Enter');
+    expect(button('Delete row').getAttribute('aria-keyshortcuts')).toBe('Control+Shift+Backspace');
+    expect(button('Add row above').title).toBe('Add row above');
+    expect(button('Add row above').hasAttribute('aria-keyshortcuts')).toBe(false);
+  });
+
+  it('shows the shortcuts with Mac key symbols on a Mac', () => {
+    vi.spyOn(navigator, 'platform', 'get').mockReturnValue('MacIntel');
+    make();
+    expect(button('Add row below').title).toBe('Add row below (⌘↩)');
+    expect(button('Add column right').title).toBe('Add column right (⌥⌘↩)');
+    expect(button('Delete row').title).toBe('Delete row (⇧⌘⌫)');
+    expect(button('Delete column').title).toBe('Delete column (⌥⌘⌫)');
+    expect(button('Add row below').getAttribute('aria-keyshortcuts')).toBe('Meta+Enter');
+    vi.restoreAllMocks();
   });
 
   it('uses the editor language', () => {

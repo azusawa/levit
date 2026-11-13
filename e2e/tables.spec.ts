@@ -209,6 +209,20 @@ test.describe('making a table', () => {
   });
 });
 
+test('shortcuts add and delete rows and columns', async ({ page }) => {
+  await insertTable(page);
+  await page.keyboard.type('A');
+  await page.keyboard.press('ControlOrMeta+Enter');
+  await page.keyboard.type('B');
+  expect(await shape(page)).toEqual([[['A', '', ''], ['B', '', ''], ['', '', ''], ['', '', '']], 'paragraph:']);
+  await page.keyboard.press('ControlOrMeta+Alt+Enter');
+  await page.keyboard.type('C');
+  expect(await shape(page)).toEqual([[['A', '', '', ''], ['B', 'C', '', ''], ['', '', '', ''], ['', '', '', '']], 'paragraph:']);
+  await page.keyboard.press('ControlOrMeta+Alt+Backspace');
+  await page.keyboard.press('ControlOrMeta+Shift+Backspace');
+  expect(await shape(page)).toEqual([[['A', '', ''], ['', '', ''], ['', '', '']], 'paragraph:']);
+});
+
 test.describe('table toolbar', () => {
   const toolbar = (page: Page) => page.getByRole('toolbar', { name: 'Table tools' });
 

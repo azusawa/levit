@@ -222,6 +222,16 @@ export class InputController {
       return;
     }
 
+    // Table shortcuts, with the caret in one cell: Mod+Enter adds a row below
+    // and Mod+Alt+Enter a column right; Mod+Shift+Backspace deletes the row
+    // and Mod+Alt+Backspace the column.
+    const tableCommand = isMod && !e.defaultPrevented ? this.tableShortcut(e) : null;
+    if (tableCommand) {
+      e.preventDefault();
+      tableCommand();
+      return;
+    }
+
     // Tab moves between table cells (adding a row after the last one).
     // Shift+Tab in the first cell is left to the browser, so keyboard users
     // can still leave the editor.
@@ -318,6 +328,20 @@ export class InputController {
    * and on the label Enter or Space asks for a language and Escape goes back
    * to the text. True when the key was one of these.
    */
+  /** The table command for a table shortcut, or null when the key is not one here. */
+  private tableShortcut(e: KeyboardEvent): (() => void) | null {
+    const { selection } = this.editor.state;
+    if (selection.anchor.blockId !== selection.head.blockId || !this.editor.isInTable()) return null;
+    const chain = () => this.editor.chain();
+    if (e.key === 'Enter' && !e.shiftKey) {
+      return e.altKey ? () => chain().addColumnAfter().run() : () => chain().addRowAfter().run();
+    }
+    if (e.key === 'Backspace' && e.shiftKey !== e.altKey) {
+      return e.shiftKey ? () => chain().deleteRow().run() : () => chain().deleteColumn().run();
+    }
+    return null;
+  }
+
   private languageLabelKey(e: KeyboardEvent): boolean {
     const label = this.languageLabel(e.target);
     if (label) {

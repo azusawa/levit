@@ -38,6 +38,22 @@ function icon(name: string): SVGSVGElement {
   return svg;
 }
 
+/** Modifier keys of a shortcut, as ARIA names them; the key comes last. */
+type Shortcut = ('Mod' | 'Alt' | 'Shift' | 'Enter' | 'Backspace')[];
+
+const MAC_SYMBOLS: Record<string, string> = { Mod: '⌘', Alt: '⌥', Shift: '⇧', Enter: '↩', Backspace: '⌫' };
+const PC_NAMES: Record<string, string> = { Mod: 'Ctrl', Alt: 'Alt', Shift: 'Shift', Enter: 'Enter', Backspace: 'Backspace' };
+
+/** The shortcut as shown in a tooltip ("Ctrl+Alt+Enter", or "⌥⌘↩" on a Mac) and as aria-keyshortcuts. */
+function describeShortcut(keys: Shortcut, mac: boolean): { text: string; aria: string } {
+  const aria = keys.map((k) => (k === 'Mod' ? (mac ? 'Meta' : 'Control') : k)).join('+');
+  if (!mac) return { text: keys.map((k) => PC_NAMES[k]).join('+'), aria };
+  // Mac order: Option, Shift, Command, then the key.
+  const order = ['Alt', 'Shift', 'Mod'];
+  const sorted = [...keys].sort((a, b) => (order.indexOf(a) + 1 || 9) - (order.indexOf(b) + 1 || 9));
+  return { text: sorted.map((k) => MAC_SYMBOLS[k]).join(''), aria };
+}
+
 const toolbars = new WeakMap<LevitEditor, TableToolbarInstance>();
 
 /**
@@ -55,13 +71,15 @@ export function createTableToolbar(editor: LevitEditor): TableToolbarInstance {
   menu.setAttribute('aria-label', m.tableToolbar);
   menu.style.display = 'none';
 
-  const buttons: { icon: string; title: string; action: () => void; group?: true }[] = [
+  const mac = /Mac|iPhone|iPad|iPod/.test(navigator.platform);
+  // The shortcuts are handled in the editor (view/controller.ts).
+  const buttons: { icon: string; title: string; action: () => void; group?: true; keys?: Shortcut }[] = [
     { icon: 'addRowAbove', title: m.addRowAbove, action: () => editor.chain().addRowBefore().run() },
-    { icon: 'addRowBelow', title: m.addRowBelow, action: () => editor.chain().addRowAfter().run() },
+    { icon: 'addRowBelow', title: m.addRowBelow, action: () => editor.chain().addRowAfter().run(), keys: ['Mod', 'Enter'] },
     { icon: 'addColumnLeft', title: m.addColumnLeft, action: () => editor.chain().addColumnBefore().run() },
-    { icon: 'addColumnRight', title: m.addColumnRight, action: () => editor.chain().addColumnAfter().run() },
-    { icon: 'deleteRow', title: m.deleteRow, action: () => editor.chain().deleteRow().run(), group: true },
-    { icon: 'deleteColumn', title: m.deleteColumn, action: () => editor.chain().deleteColumn().run() },
+    { icon: 'addColumnRight', title: m.addColumnRight, action: () => editor.chain().addColumnAfter().run(), keys: ['Mod', 'Alt', 'Enter'] },
+    { icon: 'deleteRow', title: m.deleteRow, action: () => editor.chain().deleteRow().run(), group: true, keys: ['Mod', 'Shift', 'Backspace'] },
+    { icon: 'deleteColumn', title: m.deleteColumn, action: () => editor.chain().deleteColumn().run(), keys: ['Mod', 'Alt', 'Backspace'] },
     { icon: 'headerRow', title: m.headerRow, action: () => editor.chain().toggleHeaderRow().run(), group: true },
     { icon: 'deleteTable', title: m.deleteTable, action: () => editor.chain().deleteTable().run(), group: true },
   ];
@@ -76,8 +94,13 @@ export function createTableToolbar(editor: LevitEditor): TableToolbarInstance {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'levit-table-toolbar-btn';
-    btn.title = b.title;
     btn.setAttribute('aria-label', b.title);
+    btn.title = b.title;
+    if (b.keys) {
+      const shortcut = describeShortcut(b.keys, mac);
+      btn.title = `${b.title} (${shortcut.text})`;
+      btn.setAttribute('aria-keyshortcuts', shortcut.aria);
+    }
     btn.appendChild(icon(b.icon));
     // The mouse acts on mousedown so the editor keeps its selection.
     btn.addEventListener('mousedown', (e) => {
