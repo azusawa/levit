@@ -319,3 +319,12 @@ describe('the table shortcuts are documented', () => {
     }
   });
 });
+
+describe('the + bars of a table are documented', () => {
+  it('in README, llms.txt and the guide in every language', () => {
+    expect(read('README.md')).toContain('맨 아래에 행 추가');
+    expect(read('llms.txt')).toContain('Add a row at the end');
+    const names: Record<string, string> = { en: 'Add a row at the end', ko: '맨 아래에 행 추가', ja: '最後に行を追加' };
+    for (const lang of ['en', 'ko', 'ja']) expect(read(`site/content/${lang}/guide.md`), lang).toContain(names[lang]);
+  });
+});

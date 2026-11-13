@@ -126,7 +126,42 @@ export function createTableToolbar(editor: LevitEditor): TableToolbarInstance {
   }
   editor.container.addEventListener('keydown', handleEditorKeyDown);
 
-  const inside = (node: unknown) => node instanceof Node && (editor.container.contains(node) || menu.contains(node));
+  // Thin "+" bars below and right of the table add a row or a column at the
+  // end. They show with the toolbar, not on hover. Keyboard users have Tab in
+  // the last cell and the toolbar, so the bars stay out of the Tab order.
+  const caretAt = (index: number) => {
+    const blockId = editor.state.doc.blocks[index].id;
+    return { anchor: { blockId, offset: 0 }, head: { blockId, offset: 0 }, isCollapsed: true };
+  };
+  function addAtEnd(what: 'row' | 'column') {
+    const t = tableAt(editor.state.doc, editor.state.selection.head.blockId);
+    if (!t || !editor.isEditable) return;
+    const tr = editor.state.tr;
+    if (what === 'row') tr.setSelection(caretAt(t.rows[t.rows.length - 1][0])).addRow('after', t.col);
+    else tr.setSelection(caretAt(t.rows[t.row][t.rows[t.row].length - 1])).addColumn('after');
+    editor.dispatch(tr);
+  }
+  const addButton = (what: 'row' | 'column', label: string) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = `levit-table-add-${what}`;
+    btn.textContent = '+';
+    btn.title = label;
+    btn.setAttribute('aria-label', label);
+    btn.tabIndex = -1;
+    btn.style.display = 'none';
+    btn.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      addAtEnd(what);
+      update();
+    });
+    return btn;
+  };
+  const addRowButton = addButton('row', m.addRowAtEnd);
+  const addColumnButton = addButton('column', m.addColumnAtEnd);
+  const floating = [menu, addRowButton, addColumnButton];
+
+  const inside = (node: unknown) => node instanceof Node && (editor.container.contains(node) || floating.some((el) => el.contains(node)));
 
   /**
    * Shows the toolbar above the caret's table (below it when there is no room
@@ -141,7 +176,7 @@ export function createTableToolbar(editor: LevitEditor): TableToolbarInstance {
     if (!table || !wrapper) {
       // A keyboard user on a button that goes away goes back to the text.
       const hadFocus = focused && menu.contains(document.activeElement);
-      menu.style.display = 'none';
+      for (const el of floating) el.style.display = 'none';
       if (hadFocus) editor.focus();
       return;
     }
@@ -157,6 +192,14 @@ export function createTableToolbar(editor: LevitEditor): TableToolbarInstance {
     const top = above >= 10 ? above : rect.bottom - height >= 10 ? 10 : rect.bottom + 6;
     menu.style.top = `${top + window.scrollY}px`;
     menu.style.left = `${Math.max(10, rect.left) + window.scrollX}px`;
+
+    addRowButton.style.display = addColumnButton.style.display = 'block';
+    addRowButton.style.top = `${rect.bottom + 2 + window.scrollY}px`;
+    addRowButton.style.left = `${rect.left + window.scrollX}px`;
+    addRowButton.style.width = `${rect.width}px`;
+    addColumnButton.style.top = `${rect.top + window.scrollY}px`;
+    addColumnButton.style.left = `${rect.right + 2 + window.scrollX}px`;
+    addColumnButton.style.height = `${rect.height}px`;
   }
 
   const onFocusOut = (e: FocusEvent) => update(inside(e.relatedTarget));
@@ -174,7 +217,7 @@ export function createTableToolbar(editor: LevitEditor): TableToolbarInstance {
   window.addEventListener('resize', onMove);
   document.addEventListener('scroll', onMove, true);
 
-  document.body.appendChild(menu);
+  document.body.append(...floating);
   // Tables keep room above them for the toolbar (theme.css), so it covers no text.
   const addedClass = !editor.container.classList.contains('levit-has-table-toolbar');
   editor.container.classList.add('levit-has-table-toolbar');
@@ -189,7 +232,7 @@ export function createTableToolbar(editor: LevitEditor): TableToolbarInstance {
       document.removeEventListener('scroll', onMove, true);
       editor.container.removeEventListener('keydown', handleEditorKeyDown);
       if (addedClass) editor.container.classList.remove('levit-has-table-toolbar');
-      menu.remove();
+      for (const el of floating) el.remove();
     },
   };
   stops.push(editor.on('destroy', () => instance.destroy()));

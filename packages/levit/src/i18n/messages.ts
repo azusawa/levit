@@ -66,6 +66,8 @@ export const en = {
   headerRowDescription: 'Turn the first row into headings, or back',
   deleteTable: 'Delete table',
   deleteTableDescription: 'Remove the whole table',
+  addRowAtEnd: 'Add a row at the end',
+  addColumnAtEnd: 'Add a column at the end',
 
   // Blocks
   markDone: 'Mark as done',
@@ -151,6 +153,8 @@ export const ko: LevitMessages = {
   headerRowDescription: '첫 행을 머리글로 바꾸거나 되돌리기',
   deleteTable: '표 삭제',
   deleteTableDescription: '표 전체 지우기',
+  addRowAtEnd: '맨 아래에 행 추가',
+  addColumnAtEnd: '맨 오른쪽에 열 추가',
 
   markDone: '완료로 표시',
   markNotDone: '미완료로 표시',
@@ -232,6 +236,8 @@ export const ja: LevitMessages = {
   headerRowDescription: '最初の行を見出しにする、または戻す',
   deleteTable: '表を削除',
   deleteTableDescription: '表全体を消す',
+  addRowAtEnd: '最後に行を追加',
+  addColumnAtEnd: '最後に列を追加',
 
   markDone: '完了にする',
   markNotDone: '未完了にする',

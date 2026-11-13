@@ -223,6 +223,24 @@ test('shortcuts add and delete rows and columns', async ({ page }) => {
   expect(await shape(page)).toEqual([[['A', '', ''], ['', '', ''], ['', '', '']], 'paragraph:']);
 });
 
+test('the + bars add a row and a column at the end, and cover no text', async ({ page }) => {
+  await insertTable(page);
+  await page.keyboard.type('A');
+  const addRow = page.getByRole('button', { name: 'Add a row at the end' });
+  const addColumn = page.getByRole('button', { name: 'Add a column at the end' });
+  await expect(addRow).toBeVisible();
+  const table = (await page.locator('#editor .levit-table').boundingBox())!;
+  const below = (await page.locator('#editor .levit-block-paragraph').last().boundingBox())!;
+  const bar = (await addRow.boundingBox())!;
+  expect(bar.y).toBeGreaterThanOrEqual(table.y + table.height);
+  expect(bar.y + bar.height).toBeLessThanOrEqual(below.y);
+  await addRow.click();
+  await page.keyboard.type('B');
+  await addColumn.click();
+  await page.keyboard.type('C');
+  expect(await shape(page)).toEqual([[['A', '', '', ''], ['', '', '', ''], ['', '', '', ''], ['B', '', '', 'C']], 'paragraph:']);
+});
+
 test.describe('table toolbar', () => {
   const toolbar = (page: Page) => page.getByRole('toolbar', { name: 'Table tools' });
 

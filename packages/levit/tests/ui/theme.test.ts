@@ -88,3 +88,15 @@ describe('table toolbar room', () => {
     expect(room).toBeGreaterThanOrEqual(button + 2 * padding + 2 * border + 6);
   });
 });
+
+describe('table add buttons', () => {
+  it('are thin bars that float like the toolbar', () => {
+    expect(css).toMatch(/\.levit-table-add-row,\s*\.levit-table-add-column\s*\{[^}]*position:\s*absolute/);
+    expect(css).toMatch(/\.levit-table-add-row\s*\{[^}]*height:\s*14px/);
+    expect(css).toMatch(/\.levit-table-add-column\s*\{[^}]*width:\s*14px/);
+  });
+
+  it('tables keep room below for the row button', () => {
+    expect(css).toMatch(/:where\(\.levit-has-table-toolbar\[contenteditable="true"\]\)\s+\.levit-table\s*\{[^}]*margin-bottom:\s*16px/);
+  });
+});

@@ -270,3 +270,73 @@ describe('table toolbar', () => {
   });
 });
 
+describe('add buttons at the end of a table', () => {
+  const addRow = () => document.querySelector<HTMLButtonElement>('.levit-table-add-row')!;
+  const addColumn = () => document.querySelector<HTMLButtonElement>('.levit-table-add-column')!;
+  const shown = (el: HTMLElement) => el.style.display !== 'none';
+  const caretIndex = () => editor.state.doc.blocks.findIndex((b) => b.id === editor.state.selection.head.blockId);
+
+  it('show below and right of the table with the toolbar, and hide with it', () => {
+    make();
+    place('p');
+    expect(shown(addRow())).toBe(false);
+    expect(shown(addColumn())).toBe(false);
+    place('c', 1);
+    expect(shown(addRow())).toBe(true);
+    expect(shown(addColumn())).toBe(true);
+    place('q');
+    expect(shown(addRow())).toBe(false);
+  });
+
+  it('are labelled in the editor language and stay out of the Tab order', () => {
+    make({ messages: ko });
+    expect(addRow().getAttribute('aria-label')).toBe(ko.addRowAtEnd);
+    expect(addColumn().getAttribute('aria-label')).toBe(ko.addColumnAtEnd);
+    expect(addRow().title).toBe(ko.addRowAtEnd);
+    expect(addRow().tabIndex).toBe(-1);
+    expect(addColumn().tabIndex).toBe(-1);
+    expect(addRow().textContent).toBe('+');
+  });
+
+  it('the row button adds a row at the end, with the caret in the caret column', () => {
+    make();
+    place('b', 1);
+    const e = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+    addRow().dispatchEvent(e);
+    expect(e.defaultPrevented).toBe(true);
+    expect(rows()).toEqual([2, 2, 2]);
+    expect(caretIndex()).toBe(6);
+    expect(shown(addRow())).toBe(true);
+  });
+
+  it('the column button adds a column at the end, with the caret in the caret row', () => {
+    make();
+    place('c', 1);
+    press(addColumn());
+    expect(rows()).toEqual([3, 3]);
+    expect(element.querySelectorAll('th').length).toBe(3);
+    expect(caretIndex()).toBe(6);
+  });
+
+  it('sit just below and just right of the table', () => {
+    make();
+    const wrapper = element.querySelector('.levit-table')!;
+    vi.spyOn(wrapper, 'getBoundingClientRect').mockReturnValue(new DOMRect(40, 300, 500, 100));
+    vi.spyOn(toolbar.element, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 200, 30));
+    place('c', 1);
+    expect(addRow().style.top).toBe(`${300 + 100 + 2 + window.scrollY}px`);
+    expect(addRow().style.left).toBe(`${40 + window.scrollX}px`);
+    expect(addRow().style.width).toBe('500px');
+    expect(addColumn().style.top).toBe(`${300 + window.scrollY}px`);
+    expect(addColumn().style.left).toBe(`${40 + 500 + 2 + window.scrollX}px`);
+    expect(addColumn().style.height).toBe('100px');
+  });
+
+  it('destroy removes them', () => {
+    make();
+    toolbar.destroy();
+    expect(document.querySelector('.levit-table-add-row')).toBeNull();
+    expect(document.querySelector('.levit-table-add-column')).toBeNull();
+  });
+});
+
