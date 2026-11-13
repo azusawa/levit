@@ -61,3 +61,14 @@ describe('table toolbar', () => {
     expect(css).toMatch(/\.levit-table-toolbar-btn:focus-visible\s*\{[^}]*outline:[^;]*var\(--levit-primary\)/);
   });
 });
+
+describe('table size grid', () => {
+  it('floats like the menus', () => {
+    expect(css).toMatch(/\.levit-table-picker\s*\{[^}]*position:\s*absolute[^}]*background-color:\s*var\(--levit-surface\)/);
+  });
+
+  it('lays the cells out in ten columns and fills the chosen ones', () => {
+    expect(css).toMatch(/\.levit-table-picker-grid\s*\{[^}]*grid-template-columns:\s*repeat\(10,/);
+    expect(css).toMatch(/\.levit-table-picker-cell\.is-on\s*\{[^}]*var\(--levit-primary\)/);
+  });
+});

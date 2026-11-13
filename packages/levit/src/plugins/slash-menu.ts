@@ -1,5 +1,6 @@
 import { LevitEditor } from '../core/editor.js';
 import { getBlockText } from '../core/model/document.js';
+import { format } from '../i18n/messages.js';
 
 export interface SlashMenuItem {
   id: string;
@@ -33,6 +34,21 @@ function chooseImage(editor: LevitEditor): void {
 }
 
 let menuCount = 0;
+
+/** The size grid: up to this many columns and rows. */
+const GRID_COLS = 10;
+const GRID_ROWS = 8;
+/** The biggest table a typed size ("/table 4x3") makes. */
+const MAX_TYPED_SIZE = 20;
+
+/** A query that ends in a table size, columns first: "table 4x3", "4×3". */
+function sizedQuery(query: string): { name: string; cols: number; rows: number } | null {
+  const match = /^(.*?)\s*(\d+)\s*[x×]\s*(\d+)$/i.exec(query);
+  return match && { name: match[1], cols: Number(match[2]), rows: Number(match[3]) };
+}
+
+/** The query without a size being typed at its end: "table 4x" is "table". */
+const withoutPartialSize = (query: string) => /^(.*?)\s*(\d+\s*[x×]?)?\s*$/i.exec(query)![1];
 
 const slashMenus = new WeakMap<LevitEditor, SlashMenuInstance>();
 
@@ -136,9 +152,10 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
       title: m.table,
       description: m.tableDescription,
       icon: '▦',
-      action: (ed) => ed.chain().insertTable(3, 3).run(),
+      action: () => openPicker(),
     },
   ];
+  const tableItem = items[items.length - 1];
 
   // In a table, the menu changes the table instead: block types do not apply to cells.
   const tableItems: SlashMenuItem[] = [
@@ -180,6 +197,21 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
     const needle = q.toLowerCase();
     return !needle || item.title.toLowerCase().includes(needle) || item.id.toLowerCase().includes(needle);
   };
+
+  /** The entries for a query. A size at its end ("table 4x3") leaves only a table of that size. */
+  function itemsFor(q: string): SlashMenuItem[] {
+    const list = available();
+    if (!list.includes(tableItem)) return list.filter((item) => matches(item, q));
+    const sized = sizedQuery(q);
+    if (sized) {
+      const { name, cols, rows } = sized;
+      const fits = cols >= 1 && rows >= 1 && cols <= MAX_TYPED_SIZE && rows <= MAX_TYPED_SIZE;
+      if (!fits || !matches(tableItem, name)) return [];
+      return [{ ...tableItem, title: `${tableItem.title} ${cols}×${rows}`, action: (ed) => ed.chain().insertTable(rows, cols).run() }];
+    }
+    // While a size is being typed ("table 4"), the table entry stays.
+    return list.filter((item) => matches(item, q) || (item === tableItem && matches(item, withoutPartialSize(q))));
+  }
 
   function renderList() {
     menu.replaceChildren();
@@ -239,7 +271,7 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
     if (/^\s/.test(next)) return close();
     if (next !== query) {
       query = next;
-      shownItems = available().filter((item) => matches(item, query));
+      shownItems = itemsFor(query);
       if (shownItems.length === 0) return close();
       activeIndex = 0;
       renderList();
@@ -255,6 +287,94 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
     const offset = selection.head.offset;
     const before = getBlockText(block)[offset - 1];
     return offset === 0 || /\s/.test(before) ? { blockId: block.id, offset } : null;
+  }
+
+  // The size grid that choosing "Table" opens. Focus stays in the text, as
+  // with the menu: the arrows change the size, Enter inserts the table and
+  // Escape closes the grid. The size is read out as it changes.
+  const picker = part('div', 'levit-table-picker');
+  picker.setAttribute('role', 'group');
+  picker.setAttribute('aria-label', m.tableSizeLabel);
+  picker.style.display = 'none';
+  const grid = part('div', 'levit-table-picker-grid');
+  grid.setAttribute('aria-hidden', 'true');
+  const sizeText = part('div', 'levit-table-picker-size');
+  sizeText.setAttribute('role', 'status');
+  picker.append(grid, sizeText);
+  const gridCells: HTMLElement[] = [];
+  for (let r = 1; r <= GRID_ROWS; r++) {
+    for (let c = 1; c <= GRID_COLS; c++) {
+      const el = part('span', 'levit-table-picker-cell');
+      el.dataset.cols = String(c);
+      el.dataset.rows = String(r);
+      el.addEventListener('mouseover', () => setSize(c, r));
+      el.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        setSize(c, r);
+        insertPicked();
+      });
+      gridCells.push(el);
+    }
+  }
+  grid.append(...gridCells);
+
+  let pickerOpen = false;
+  let size = { cols: 3, rows: 3 };
+
+  function setSize(cols: number, rows: number) {
+    size = { cols: Math.min(Math.max(cols, 1), GRID_COLS), rows: Math.min(Math.max(rows, 1), GRID_ROWS) };
+    for (const el of gridCells) {
+      el.classList.toggle('is-on', Number(el.dataset.cols) <= size.cols && Number(el.dataset.rows) <= size.rows);
+    }
+    sizeText.textContent = format(m.tableSize, { cols: String(size.cols), rows: String(size.rows) });
+  }
+
+  /** Opens the grid under the caret's line, where the table will go. */
+  function openPicker() {
+    pickerOpen = true;
+    setSize(3, 3);
+    const id = editor.state.selection.head.blockId;
+    const line = editor.container.querySelector(`[data-block-id="${CSS.escape(id)}"]`);
+    const rect = (line ?? editor.container).getBoundingClientRect();
+    picker.style.top = `${rect.bottom + 6 + window.scrollY}px`;
+    picker.style.left = `${rect.left + window.scrollX}px`;
+    picker.style.display = 'block';
+  }
+
+  function closePicker() {
+    pickerOpen = false;
+    picker.style.display = 'none';
+  }
+
+  function insertPicked() {
+    closePicker();
+    editor.chain().insertTable(size.rows, size.cols).run();
+  }
+
+  const PICKER_MOVES: Record<string, [number, number]> = {
+    ArrowRight: [1, 0],
+    ArrowLeft: [-1, 0],
+    ArrowDown: [0, 1],
+    ArrowUp: [0, -1],
+  };
+
+  /** Keys while the grid is open. Returns true when the key was for the grid. */
+  function handlePickerKey(e: KeyboardEvent): boolean {
+    if (e.isComposing || editor.isComposing) return false;
+    const move = PICKER_MOVES[e.key];
+    if (move) {
+      setSize(size.cols + move[0], size.rows + move[1]);
+    } else if (e.key === 'Enter') {
+      insertPicked();
+    } else if (e.key === 'Escape') {
+      closePicker();
+    } else {
+      // Any other key closes the grid and does what it always does.
+      closePicker();
+      return false;
+    }
+    e.preventDefault();
+    return true;
   }
 
   let positionTimer: ReturnType<typeof setTimeout> | undefined;
@@ -299,6 +419,7 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
   }
 
   function handleKeyDown(e: KeyboardEvent) {
+    if (pickerOpen && handlePickerKey(e)) return;
     if (!isOpen) {
       // Mod+/ and other shortcuts type nothing.
       if (e.key === '/' && !e.metaKey && !e.ctrlKey && !e.altKey) {
@@ -330,18 +451,22 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
   // A click anywhere but the menu closes it.
   const onPointerDown = (e: MouseEvent) => {
     if (isOpen && !menu.contains(e.target as Node)) close();
+    if (pickerOpen && !picker.contains(e.target as Node)) closePicker();
   };
   // Every change and every caret move, including undo and quiet selection moves.
   const offTransaction = editor.on('transaction', sync);
   const offUpdate = editor.on('update', sync);
   const offSelection = editor.on('selectionUpdate', sync);
-  const offBlur = editor.on('blur', close);
+  const offBlur = editor.on('blur', () => {
+    close();
+    closePicker();
+  });
   document.addEventListener('mousedown', onPointerDown, true);
 
   // Capture phase: run before the editor's own keydown handler, so Enter picks
   // the menu item instead of splitting the block.
   editor.container.addEventListener('keydown', handleKeyDown, true);
-  document.body.appendChild(menu);
+  document.body.append(menu, picker);
 
   const instance: SlashMenuInstance = {
     element: menu,
@@ -356,6 +481,7 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
       document.removeEventListener('mousedown', onPointerDown, true);
       editor.container.removeEventListener('keydown', handleKeyDown, true);
       menu.remove();
+      picker.remove();
     },
   };
   slashMenus.set(editor, instance);

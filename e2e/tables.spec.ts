@@ -36,10 +36,12 @@ test.beforeEach(async ({ page }) => {
   await editorRoot(page).click();
 });
 
-/** Inserts a table with the slash menu: "/table" and Enter. */
+/** Inserts a 3 by 3 table with the slash menu: "/table", Enter, and Enter on the size grid. */
 async function insertTable(page: Page) {
   await page.keyboard.type('/table');
   await expect(page.locator('.levit-slash-menu')).toBeVisible();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.levit-table-picker')).toBeVisible();
   await page.keyboard.press('Enter');
 }
 
@@ -146,6 +148,53 @@ test('the slash menu in a cell adds a column', async ({ page }) => {
   await page.keyboard.type('/column right');
   await page.keyboard.press('Enter');
   expect(await shape(page)).toEqual([[['', '', ''], ['', '', '']], 'paragraph:']);
+});
+
+test.describe('making a table', () => {
+  test('a Markdown row and Enter', async ({ page }) => {
+    await page.keyboard.type('| Name | Price |');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('Tea');
+    expect(await shape(page)).toEqual([[['Name', 'Price'], ['Tea', '']], 'paragraph:']);
+    await expect(page.locator('#editor th')).toHaveCount(2);
+  });
+
+  test('the size grid, with the arrows', async ({ page }) => {
+    await page.keyboard.type('/table');
+    await page.keyboard.press('Enter');
+    const grid = page.getByRole('group', { name: 'Table size' });
+    await expect(grid).toBeVisible();
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowUp');
+    await expect(grid.getByRole('status')).toHaveText('4 columns, 2 rows');
+    await page.keyboard.press('Enter');
+    await expect(grid).toBeHidden();
+    await expect(page.locator('#editor tr')).toHaveCount(2);
+    await expect(page.locator('#editor th')).toHaveCount(4);
+    await page.keyboard.type('x');
+    await expect(page.locator('#editor th').first()).toHaveText('x');
+  });
+
+  test('the size grid, with the mouse', async ({ page }) => {
+    await page.keyboard.type('/table');
+    await page.keyboard.press('Enter');
+    const cell = page.locator('.levit-table-picker-cell[data-cols="2"][data-rows="4"]');
+    await cell.hover();
+    await expect(page.getByRole('group', { name: 'Table size' }).getByRole('status')).toHaveText('2 columns, 4 rows');
+    await cell.click();
+    await expect(page.locator('#editor tr')).toHaveCount(4);
+    await expect(page.locator('#editor tr').first().locator('th')).toHaveCount(2);
+    await page.keyboard.type('x');
+    await expect(page.locator('#editor th').first()).toHaveText('x');
+  });
+
+  test('a size typed in the slash menu', async ({ page }) => {
+    await page.keyboard.type('/table 5x2');
+    await expect(page.locator('.levit-slash-title')).toHaveText(['Table 5×2']);
+    await page.keyboard.press('Enter');
+    await expect(page.locator('#editor tr')).toHaveCount(2);
+    await expect(page.locator('#editor th')).toHaveCount(5);
+  });
 });
 
 test.describe('table toolbar', () => {

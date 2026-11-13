@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { LevitEditor } from '../../src/core/editor';
 import { createSlashMenu, type SlashMenuInstance } from '../../src/plugins/slash-menu';
 import { createBlock, createDocument, createTextNode, getBlockText } from '../../src/core/model/document';
@@ -225,6 +225,7 @@ describe('slash menu: tables', () => {
     type('/table');
     expect(shown()).toEqual(['Table']);
     press('Enter');
+    press('Enter');
     expect(rows()).toEqual([['', '', ''], ['', '', ''], ['', '', '']]);
     expect(editor.state.doc.blocks.slice(0, 3).every((b) => b.attrs!.header)).toBe(true);
     expect(editor.isInTable()).toBe(true);
@@ -257,5 +258,155 @@ describe('slash menu: tables', () => {
     caret('a', 0);
     expect(menu.getItems().map((i) => i.id)).toContain('delete-table');
     expect(menu.getItems().map((i) => i.id)).not.toContain('heading-1');
+  });
+});
+
+describe('slash menu: choosing a table size', () => {
+  const picker = () => document.querySelector<HTMLElement>('.levit-table-picker')!;
+  const pickerOpen = () => picker().style.display !== 'none';
+  const size = () => picker().querySelector('[role="status"]')!.textContent;
+  const on = () => picker().querySelectorAll('.levit-table-picker-cell.is-on').length;
+  const pickerCell = (cols: number, rows: number) =>
+    picker().querySelector<HTMLElement>(`.levit-table-picker-cell[data-cols="${cols}"][data-rows="${rows}"]`)!;
+  const tableSize = () => {
+    const cells = editor.state.doc.blocks.filter((b) => b.type === 'table_cell');
+    const rowCount = new Set(cells.map((b) => b.attrs!.row)).size;
+    return rowCount ? [cells.length / rowCount, rowCount] : null;
+  };
+
+  it('choosing Table opens a size grid at 3 by 3, and inserts nothing yet', () => {
+    setup();
+    caret('p', 0);
+    type('/table');
+    press('Enter');
+    expect(pickerOpen()).toBe(true);
+    expect(size()).toBe('3 columns, 3 rows');
+    expect(on()).toBe(9);
+    expect(tableSize()).toBeNull();
+    expect(blockText()).toBe('');
+    expect(isOpen()).toBe(false);
+  });
+
+  it('the arrows change the size, and Enter inserts it', () => {
+    setup();
+    caret('p', 0);
+    type('/table');
+    press('Enter');
+    press('ArrowRight');
+    press('ArrowRight');
+    press('ArrowUp');
+    expect(size()).toBe('5 columns, 2 rows');
+    press('Enter');
+    expect(tableSize()).toEqual([5, 2]);
+    expect(pickerOpen()).toBe(false);
+    expect(editor.isInTable()).toBe(true);
+  });
+
+  it('the size stays inside the grid', () => {
+    setup();
+    caret('p', 0);
+    type('/table');
+    press('Enter');
+    for (let i = 0; i < 5; i++) press('ArrowLeft');
+    for (let i = 0; i < 5; i++) press('ArrowUp');
+    expect(size()).toBe('1 columns, 1 rows');
+    for (let i = 0; i < 20; i++) press('ArrowRight');
+    for (let i = 0; i < 20; i++) press('ArrowDown');
+    expect(size()).toBe('10 columns, 8 rows');
+  });
+
+  it('Escape closes it without a table', () => {
+    setup();
+    caret('p', 0);
+    type('/table');
+    press('Enter');
+    press('Escape');
+    expect(pickerOpen()).toBe(false);
+    expect(tableSize()).toBeNull();
+    press('Enter');
+    expect(editor.state.doc.blocks).toHaveLength(2);
+  });
+
+  it('the mouse picks a size by pointing and inserts it on a click', () => {
+    setup();
+    caret('p', 0);
+    type('/table');
+    press('Enter');
+    pickerCell(4, 2).dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+    expect(size()).toBe('4 columns, 2 rows');
+    expect(on()).toBe(8);
+    const click = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+    pickerCell(4, 2).dispatchEvent(click);
+    expect(click.defaultPrevented).toBe(true);
+    expect(tableSize()).toEqual([4, 2]);
+    expect(pickerOpen()).toBe(false);
+  });
+
+  it('closes on other keys, which type as usual, and when the editor loses focus', () => {
+    setup();
+    caret('p', 0);
+    type('/table');
+    press('Enter');
+    press('a');
+    expect(pickerOpen()).toBe(false);
+    expect(blockText()).toBe('a');
+    type(' /table');
+    press('Enter');
+    container.dispatchEvent(new FocusEvent('blur'));
+    expect(pickerOpen()).toBe(false);
+  });
+
+  it('a size typed after the name inserts that size right away', () => {
+    setup();
+    caret('p', 0);
+    type('/table 4x2');
+    expect(shown()).toEqual(['Table 4×2']);
+    press('Enter');
+    expect(pickerOpen()).toBe(false);
+    expect(tableSize()).toEqual([4, 2]);
+    expect(blockText(0)).toBe('');
+  });
+
+  it('a size alone, with × or X, also works', () => {
+    setup();
+    caret('p', 0);
+    type('/2×3');
+    expect(shown()).toEqual(['Table 2×3']);
+    press('Enter');
+    expect(tableSize()).toEqual([2, 3]);
+  });
+
+  it('a size too big for a table matches nothing', () => {
+    setup();
+    caret('p', 0);
+    type('/table 30x2');
+    expect(isOpen()).toBe(false);
+  });
+
+  it('works with the name in the editor language', async () => {
+    const { ko } = await import('../../src/i18n/messages');
+    editor = new LevitEditor({ element: container, messages: ko, initialContent: createDocument([createBlock('paragraph', {}, [], 'p')]) });
+    menu = createSlashMenu(editor);
+    caret('p', 0);
+    type('/표 3X2');
+    expect(shown()).toEqual(['표 3×2']);
+  });
+
+  it('opens under the line the table goes in', () => {
+    setup();
+    caret('p', 0);
+    const line = container.querySelector('[data-block-id="p"]')!;
+    vi.spyOn(line, 'getBoundingClientRect').mockReturnValue(new DOMRect(30, 100, 400, 24));
+    type('/table');
+    press('Enter');
+    expect(picker().style.top).toBe(`${124 + 6 + window.scrollY}px`);
+    expect(picker().style.left).toBe(`${30 + window.scrollX}px`);
+  });
+
+  it('the grid is labelled and goes away with the menu', () => {
+    setup();
+    expect(picker().getAttribute('aria-label')).toBe('Table size');
+    menu.destroy();
+    expect(document.querySelector('.levit-table-picker')).toBeNull();
   });
 });

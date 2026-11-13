@@ -676,6 +676,45 @@ a:hover {
   color: var(--levit-text-muted);
 }
 
+/* Table size grid, opened from the slash menu */
+.levit-table-picker {
+  position: absolute;
+  z-index: 1000;
+  background-color: var(--levit-surface);
+  border: 1px solid var(--levit-border);
+  box-shadow: var(--levit-shadow);
+  border-radius: var(--levit-radius);
+  padding: 8px;
+  animation: levitFadeIn 0.15s ease-out;
+}
+
+.levit-table-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(10, 18px);
+  gap: 3px;
+}
+
+.levit-table-picker-cell {
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--levit-border);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.levit-table-picker-cell.is-on {
+  background-color: var(--levit-primary);
+  border-color: var(--levit-primary);
+  opacity: 0.85;
+}
+
+.levit-table-picker-size {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--levit-text-muted);
+  text-align: center;
+}
+
 @keyframes levitFadeIn {
   from {
     opacity: 0;
