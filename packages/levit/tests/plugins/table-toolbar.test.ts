@@ -196,14 +196,23 @@ describe('table toolbar', () => {
     expect(isShown()).toBe(false);
   });
 
-  it('goes below the table when there is no room above it', () => {
+  it('stays at the top of the window over a table scrolled partly out of view, covering no text below it', () => {
     make();
     const wrapper = element.querySelector('.levit-table')!;
     vi.spyOn(wrapper, 'getBoundingClientRect').mockReturnValue(new DOMRect(40, 5, 300, 100));
     vi.spyOn(toolbar.element, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 200, 30));
     place('c', 1);
-    expect(toolbar.element.style.top).toBe(`${5 + 100 + 6 + window.scrollY}px`);
+    expect(toolbar.element.style.top).toBe(`${10 + window.scrollY}px`);
     expect(toolbar.element.style.left).toBe(`${40 + window.scrollX}px`);
+  });
+
+  it('goes below the table when almost all of it is out of view', () => {
+    make();
+    const wrapper = element.querySelector('.levit-table')!;
+    vi.spyOn(wrapper, 'getBoundingClientRect').mockReturnValue(new DOMRect(40, -80, 300, 100));
+    vi.spyOn(toolbar.element, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 200, 30));
+    place('c', 1);
+    expect(toolbar.element.style.top).toBe(`${-80 + 100 + 6 + window.scrollY}px`);
   });
 
   it('marks the editor so its tables keep room for the toolbar above them', () => {
@@ -211,6 +220,20 @@ describe('table toolbar', () => {
     expect(editor.container.classList.contains('levit-has-table-toolbar')).toBe(true);
     toolbar.destroy();
     expect(editor.container.classList.contains('levit-has-table-toolbar')).toBe(false);
+  });
+
+  it('leaves the class on an element that had it before', () => {
+    element.classList.add('levit-has-table-toolbar');
+    make();
+    toolbar.destroy();
+    expect(element.classList.contains('levit-has-table-toolbar')).toBe(true);
+  });
+
+  it('goes away with the editor', () => {
+    make();
+    editor.destroy();
+    expect(element.classList.contains('levit-has-table-toolbar')).toBe(false);
+    expect(document.body.contains(toolbar.element)).toBe(false);
   });
 
   it('follows the table when a box around the editor scrolls', () => {

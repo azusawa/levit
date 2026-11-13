@@ -74,8 +74,17 @@ describe('table size grid', () => {
 });
 
 describe('table toolbar room', () => {
-  it('tables in an editable editor with the toolbar keep room above for it, so it covers no text', () => {
-    // The toolbar is 36px tall and sits 6px above the table.
-    expect(css).toMatch(/\.levit-has-table-toolbar\[contenteditable="true"\]\s+\.levit-table\s*\{[^}]*margin-top:\s*44px/);
+  const px = (re: RegExp) => Number(re.exec(css)![1]);
+
+  it('tables in an editable editor with the toolbar keep room above for it, set by a variable', () => {
+    expect(css).toMatch(/:where\(\.levit-has-table-toolbar\[contenteditable="true"\]\)\s+\.levit-table\s*\{[^}]*margin-top:\s*var\(--levit-table-toolbar-room\)/);
+  });
+
+  it('the room fits the toolbar and the 6px gap under it', () => {
+    const button = px(/\.levit-table-toolbar-btn\s*\{[^}]*height:\s*(\d+)px/);
+    const padding = px(/\.levit-table-toolbar\s*\{[^}]*padding:\s*(\d+)px/);
+    const border = px(/\.levit-table-toolbar\s*\{[^}]*border:\s*(\d+)px/);
+    const room = parseFloat(light.get('--levit-table-toolbar-room')!);
+    expect(room).toBeGreaterThanOrEqual(button + 2 * padding + 2 * border + 6);
   });
 });

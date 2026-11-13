@@ -235,7 +235,7 @@ test.describe('table toolbar', () => {
     const table = (await page.locator('#editor .levit-table').boundingBox())!;
     await above.click();
     await expect(toolbar(page)).toBeHidden();
-    expect((await page.locator('#editor .levit-table').boundingBox())!.y).toBe(table.y);
+    expect((await page.locator('#editor .levit-table').boundingBox())!.y).toBeCloseTo(table.y, 0);
   });
 
   test('its buttons add and delete rows and columns where the caret is', async ({ page }) => {

@@ -132,8 +132,11 @@ export function createTableToolbar(editor: LevitEditor): TableToolbarInstance {
     menu.style.display = 'flex';
     const rect = wrapper.getBoundingClientRect();
     const height = menu.getBoundingClientRect().height;
+    // Above the table, in the room theme.css keeps there. With the table's top
+    // scrolled out of view, at the top of the window over the table, and below
+    // it once the table is almost gone.
     const above = rect.top - height - 6;
-    const top = above >= 10 ? above : rect.bottom + 6;
+    const top = above >= 10 ? above : rect.bottom - height >= 10 ? 10 : rect.bottom + 6;
     menu.style.top = `${top + window.scrollY}px`;
     menu.style.left = `${Math.max(10, rect.left) + window.scrollX}px`;
   }
@@ -155,20 +158,23 @@ export function createTableToolbar(editor: LevitEditor): TableToolbarInstance {
 
   document.body.appendChild(menu);
   // Tables keep room above them for the toolbar (theme.css), so it covers no text.
+  const addedClass = !editor.container.classList.contains('levit-has-table-toolbar');
   editor.container.classList.add('levit-has-table-toolbar');
 
   const instance: TableToolbarInstance = {
     element: menu,
     destroy: () => {
+      if (toolbars.get(editor) !== instance) return;
       toolbars.delete(editor);
       stops.forEach((stop) => stop());
       window.removeEventListener('resize', onMove);
       document.removeEventListener('scroll', onMove, true);
       editor.container.removeEventListener('keydown', handleEditorKeyDown);
-      editor.container.classList.remove('levit-has-table-toolbar');
+      if (addedClass) editor.container.classList.remove('levit-has-table-toolbar');
       menu.remove();
     },
   };
+  stops.push(editor.on('destroy', () => instance.destroy()));
   toolbars.set(editor, instance);
   return instance;
 }
