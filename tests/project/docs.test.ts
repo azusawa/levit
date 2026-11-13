@@ -280,3 +280,24 @@ describe('the table toolbar is documented', () => {
     }
   });
 });
+
+describe('the ways to make a table are documented', () => {
+  it('README and llms.txt list the size grid, a typed size, a Markdown row and converting lines', () => {
+    for (const file of ['README.md', 'llms.txt']) {
+      const text = read(file);
+      for (const part of ['/table 4x3', '| Name | Price |', 'convertToTable']) expect(text, `${file} ${part}`).toContain(part);
+    }
+    expect(read('README.md')).toContain('표로 바꾸기');
+    expect(read('llms.txt')).toContain('Convert to table');
+  });
+
+  it('the site guide and docs cover them in every language', () => {
+    const convert: Record<string, string> = { en: 'Convert to table', ko: '표로 바꾸기', ja: '表に変換' };
+    for (const lang of ['en', 'ko', 'ja']) {
+      const guide = read(`site/content/${lang}/guide.md`);
+      for (const part of ['4x3', convert[lang]]) expect(guide, `${lang} guide ${part}`).toContain(part);
+      expect(guide, `${lang} guide Markdown row`).toMatch(/`\| \S+ \| \S+ \|`/);
+      expect(read(`site/content/${lang}/docs.md`), `${lang} docs`).toContain('convertToTable');
+    }
+  });
+});

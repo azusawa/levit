@@ -225,6 +225,7 @@ editor.chain().selectAll().run();
 
 ```ts
 editor.chain().insertTable(3, 3).run();    // 행, 열. 머리글 행이 없으면 { header: false }
+editor.chain().convertToTable().run();     // 선택한 줄들을 표로. 칸은 탭, 없으면 쉼표로 나눕니다
 editor.chain().addRowBefore().run();       // addRowAfter, addColumnBefore, addColumnAfter도 있습니다
 editor.chain().deleteRow().run();          // deleteColumn, deleteTable도 있습니다
 editor.chain().toggleHeaderRow().run();    // 첫 행을 머리글로, 또는 되돌리기

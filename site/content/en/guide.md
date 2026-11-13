@@ -40,6 +40,7 @@ If you know Markdown, you can type these at the start of an empty line. The line
 - `1. ` — Numbered List.
 - `[] ` or `[ ] ` — To-do List. `[x] ` makes a task that is already checked. They also work right after `- `.
 - `---` — Divider.
+- A table row such as `| Name | Price |`, then **Enter** — a table with those cells as its header row, and the caret in an empty row below.
 
 Shortcuts do not apply inside a code block: there, what you type stays as it is.
 
@@ -53,6 +54,7 @@ Select some text and a small toolbar, the bubble menu, appears above it. Its but
 - **Link** — adds or edits a link (see below).
 - **Heading 1**, **Heading 2** — turn the whole line into a heading.
 - **Quote** — turns the whole line into a quote.
+- **Convert to table** — turns the selected lines into a table, one row per line. Cells are split at tabs, or at commas when no line has a tab, so `Name, Price` becomes two cells.
 
 A button is shown as pressed when all the selected text already has that format; press it again to remove the format. To turn a heading or quote back into normal text, type `/` and choose **Text**.
 
@@ -82,7 +84,9 @@ In a to-do list, click the box to check or uncheck a task, or press **Mod+Enter*
 
 ## Tables
 
-Choose **Table** in the slash menu (type `/table`) to add a table with three rows and three columns. The first row is a header row, shown in bold.
+Choose **Table** in the slash menu (type `/table`) and a grid opens to choose the size, at three columns by three rows. Point at the grid and click, or use the arrow keys and press Enter; Escape closes it. To skip the grid, type the size after the name, columns first: `/table 4x3` adds four columns and three rows. The first row is a header row, shown in bold.
+
+You can also type a Markdown table row, such as `| Name | Price |`, and press Enter, or select lines like `Name, Price` and press **Convert to table** in the bubble menu.
 
 - Click a cell to write in it. **Tab** moves to the next cell and **Shift+Tab** to the previous one. **Tab** in the last cell adds a row.
 - **Enter** starts a new line inside the cell.

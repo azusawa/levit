@@ -138,6 +138,11 @@ list, `1. ` numbered list, `[] ` / `[ ] ` / `[x] ` task (also after `- `),
   `Enter` starts a new line in the cell. Cells are never split or merged:
   Backspace at the start of a cell does nothing, and a selection over several
   cells empties them. "/" in a cell lists the table commands.
+- Making a table: "/table" in the slash menu opens a size grid (arrows or
+  mouse, Enter inserts, Escape closes); "/table 4x3" (columns x rows, up to
+  20) inserts that size at once. A paragraph like "| Name | Price |" and Enter
+  becomes a table with that header row. The bubble menu's "Convert to table"
+  button runs convertToTable() on the selected lines.
 - Backspace at the start of the block after an image or divider removes it;
   Delete at the end of the block before one does too.
 - `Cmd/Ctrl+A` selects the whole document.
@@ -190,6 +195,7 @@ editor.chain().toggleStrike().run();
 editor.chain().toggleHighlight().run();
 editor.chain().insertHorizontalRule().run();
 editor.chain().insertTable(3, 3).run();       // rows, cols; { header: false } for no header row
+editor.chain().convertToTable().run();        // selected lines to rows; cells split at tabs, or commas if none
 editor.chain().addRowBefore().run();           // addRowAfter, addColumnBefore, addColumnAfter
 editor.chain().deleteRow().run();              // deleteColumn, deleteTable, toggleHeaderRow
 editor.chain().goToNextCell().run();           // Tab; goToPreviousCell() is Shift+Tab

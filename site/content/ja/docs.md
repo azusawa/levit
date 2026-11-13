@@ -225,6 +225,7 @@ editor.chain().selectAll().run();
 
 ```ts
 editor.chain().insertTable(3, 3).run();    // 行、列。見出し行なしは { header: false }
+editor.chain().convertToTable().run();     // 選んだ行を表に。セルはタブ、なければカンマで分けます
 editor.chain().addRowBefore().run();       // addRowAfter、addColumnBefore、addColumnAfter もあります
 editor.chain().deleteRow().run();          // deleteColumn、deleteTable もあります
 editor.chain().toggleHeaderRow().run();    // 最初の行を見出しに、または戻す

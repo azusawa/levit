@@ -225,6 +225,7 @@ Tables:
 
 ```ts
 editor.chain().insertTable(3, 3).run();    // rows, columns; { header: false } for no header row
+editor.chain().convertToTable().run();     // the selected lines; cells split at tabs, or commas
 editor.chain().addRowBefore().run();       // also addRowAfter, addColumnBefore, addColumnAfter
 editor.chain().deleteRow().run();          // also deleteColumn, deleteTable
 editor.chain().toggleHeaderRow().run();    // the first row as a header, or back
