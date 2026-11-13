@@ -693,6 +693,73 @@ export class Transaction {
     return this;
   }
 
+  /**
+   * Turns the selected lines into a table: each line is a row, split into
+   * cells at tabs, or at commas when no line has a tab. The first row is the
+   * header, and marks stay. Headings, quotes and list items count as lines;
+   * with a cell, code or an image in the selection, nothing happens.
+   */
+  convertToTable(): this {
+    const { from, to } = orderedSelection(this.doc, this.selection);
+    const first = findBlockIndex(this.doc, from.blockId);
+    let last = findBlockIndex(this.doc, to.blockId);
+    if (first === -1 || last === -1) return this;
+    // A selection that ends at the start of a line does not take that line.
+    if (last > first && to.offset === 0) last -= 1;
+    const blocks = this.doc.blocks.slice(first, last + 1);
+    if (blocks.some((b) => isTableCell(b.type) || b.type === 'code_block' || this.isAtom(b.type))) return this;
+
+    // Each line as [block, start, end] in the block's text.
+    const lines: [BlockNode, number, number][] = [];
+    for (const block of blocks) {
+      let start = 0;
+      for (const line of getBlockText(block).split('\n')) {
+        if (line.trim() !== '') lines.push([block, start, start + line.length]);
+        start += line.length + 1;
+      }
+    }
+    if (lines.length === 0) return this;
+    const lineText = ([block, start, end]: [BlockNode, number, number]) => getBlockText(block).slice(start, end);
+    const separator = lines.some((l) => lineText(l).includes('\t')) ? '\t' : ',';
+
+    // Each row as the content of its cells, without the spaces around them.
+    const rows = lines.map((l) => {
+      const [block, start] = l;
+      const text = lineText(l);
+      const cells: InlineNode[][] = [];
+      let cellStart = 0;
+      for (const part of text.split(separator)) {
+        const lead = part.length - part.trimStart().length;
+        const a = start + cellStart + lead;
+        const b = start + cellStart + part.trimEnd().length;
+        cells.push(b > a ? sliceBlockContent(block, a, b) : []);
+        cellStart += part.length + 1;
+      }
+      return cells;
+    });
+    const cols = Math.max(...rows.map((r) => r.length));
+    const table = generateBlockId('t');
+    const cells = rows.flatMap((row, r) => {
+      const rowId = generateBlockId('r');
+      return Array.from({ length: cols }, (_, c) => {
+        const cell = createCell(table, rowId, r === 0);
+        if (row[c]?.length) cell.content = row[c];
+        return cell;
+      });
+    });
+
+    const replaced: BlockNode[] = [...cells];
+    // A table never touches another table: a paragraph stays between them.
+    const prev = this.doc.blocks[first - 1];
+    if (prev && isTableCell(prev.type)) replaced.unshift(createBlock('paragraph'));
+    const next = this.doc.blocks[last + 1];
+    if (!next || isTableCell(next.type) || this.isAtom(next.type)) replaced.push(createBlock('paragraph'));
+    this.doc.blocks.splice(first, last - first + 1, ...replaced);
+    this.setCaret(cells[0].id, 0);
+    this.docChanged = true;
+    return this;
+  }
+
   /** The table at the caret, with the caret's block index. */
   private tableAtCaret(): (TablePosition & { index: number }) | null {
     const index = findBlockIndex(this.doc, this.selection.head.blockId);

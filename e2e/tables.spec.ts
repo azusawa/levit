@@ -188,6 +188,18 @@ test.describe('making a table', () => {
     await expect(page.locator('#editor th').first()).toHaveText('x');
   });
 
+  test('selected lines turned into a table from the bubble menu', async ({ page }) => {
+    await page.keyboard.type('Name, Price');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('Tea, 3');
+    await page.keyboard.press('Shift+ArrowUp');
+    await page.keyboard.press('Shift+Home');
+    await page.locator('.levit-bubble-menu').getByRole('button', { name: 'Convert to table' }).click();
+    expect(await shape(page)).toEqual([[['Name', 'Price'], ['Tea', '3']], 'paragraph:']);
+    await page.keyboard.type('x');
+    await expect(page.locator('#editor th').first()).toHaveText('xName');
+  });
+
   test('a size typed in the slash menu', async ({ page }) => {
     await page.keyboard.type('/table 5x2');
     await expect(page.locator('.levit-slash-title')).toHaveText(['Table 5×2']);

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { LevitEditor } from '../../src/core/editor';
 import { createBubbleMenu } from '../../src/plugins/bubble-menu';
 import { createSlashMenu } from '../../src/plugins/slash-menu';
+import { createBlock, createDocument, createTextNode } from '../../src/core/model/document';
 
 describe('Floating Menus (Bubble Menu & Slash Menu)', () => {
   let container: HTMLDivElement;
@@ -22,6 +23,26 @@ describe('Floating Menus (Bubble Menu & Slash Menu)', () => {
     expect(bubbleMenu.element).toBeDefined();
     expect(bubbleMenu.element.classList.contains('levit-bubble-menu')).toBe(true);
 
+    bubbleMenu.destroy();
+    editor.destroy();
+  });
+
+  it('the bubble menu turns the selected lines into a table', () => {
+    const editor = new LevitEditor({
+      element: container,
+      initialContent: createDocument([
+        createBlock('paragraph', {}, [createTextNode('Name\tPrice')], 'a'),
+        createBlock('paragraph', {}, [createTextNode('Tea\t3')], 'b'),
+      ]),
+    });
+    const bubbleMenu = createBubbleMenu(editor);
+    editor.focus();
+    editor.dispatch(editor.state.tr.setSelection({ anchor: { blockId: 'a', offset: 0 }, head: { blockId: 'b', offset: 5 }, isCollapsed: false }));
+    const button = bubbleMenu.element.querySelector('button[aria-label="Convert to table"]')!;
+    expect(button.getAttribute('title')).toBe('Convert to table');
+    button.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+    expect(editor.getJSON().blocks.map((b) => b.content.map((c) => c.text).join(''))).toEqual(['Name', 'Price', 'Tea', '3', '']);
+    expect(editor.isInTable()).toBe(true);
     bubbleMenu.destroy();
     editor.destroy();
   });

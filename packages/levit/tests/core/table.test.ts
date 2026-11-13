@@ -148,6 +148,73 @@ describe('a Markdown table row and Enter', () => {
   });
 });
 
+describe('turning lines into a table', () => {
+  const select = (from: [string, number], to: [string, number]) => ({
+    anchor: { blockId: from[0], offset: from[1] },
+    head: { blockId: to[0], offset: to[1] },
+    isCollapsed: false,
+  });
+
+  it('makes each selected line a row, its cells split at tabs', () => {
+    const blocks = [para('x', 'before'), para('a', 'Name\tPrice'), para('b', 'Tea\t3'), para('y', 'after')];
+    const state = stateWith(blocks, select(['a', 2], ['b', 1])).tr.convertToTable().apply();
+    expect(shape(state.doc)).toEqual(['paragraph:before', [['Name', 'Price'], ['Tea', '3']], 'paragraph:after']);
+    const cells = state.doc.blocks.slice(1, 5);
+    expect(cells.slice(0, 2).every((b) => b.attrs!.header === true)).toBe(true);
+    expect(cells.slice(2).some((b) => b.attrs!.header)).toBe(false);
+    expect(state.selection.anchor).toEqual({ blockId: cells[0].id, offset: 0 });
+    expect(state.selection.isCollapsed).toBe(true);
+  });
+
+  it('splits at commas when no line has a tab, and trims the cells', () => {
+    const blocks = [para('a', 'Name, Price'), para('b', 'Tea,  3 ')];
+    const state = stateWith(blocks, select(['a', 0], ['b', 8])).tr.convertToTable().apply();
+    expect(shape(state.doc)).toEqual([[['Name', 'Price'], ['Tea', '3']], 'paragraph:']);
+  });
+
+  it('fills short rows, skips empty lines and reads lines inside a block', () => {
+    const blocks = [para('a', 'a\tb\tc\nd'), para('e', ''), para('b', 'e\tf')];
+    const state = stateWith(blocks, select(['a', 0], ['b', 3])).tr.convertToTable().apply();
+    expect(shape(state.doc)).toEqual([[['a', 'b', 'c'], ['d', '', ''], ['e', 'f', '']], 'paragraph:']);
+  });
+
+  it('keeps bold and other marks in the cells', () => {
+    const bold = createBlock('paragraph', {}, [createTextNode('Name', [{ type: 'bold' }]), createTextNode('\tPrice')], 'a');
+    const state = stateWith([bold], select(['a', 0], ['a', 10])).tr.convertToTable().apply();
+    expect(state.doc.blocks[0].content).toEqual([createTextNode('Name', [{ type: 'bold' }])]);
+  });
+
+  it('leaves out the line the selection ends at the start of', () => {
+    const blocks = [para('a', 'a,b'), para('b', 'c,d'), para('c', 'next')];
+    const state = stateWith(blocks, select(['a', 0], ['c', 0])).tr.convertToTable().apply();
+    expect(shape(state.doc)).toEqual([[['a', 'b'], ['c', 'd']], 'paragraph:next']);
+  });
+
+  it('turns headings, quotes and list items into rows too', () => {
+    const blocks = [createBlock('heading', { level: 2 }, [createTextNode('a,b')], 'a'), createBlock('bullet_list_item', {}, [createTextNode('c,d')], 'b')];
+    const state = stateWith(blocks, select(['a', 0], ['b', 3])).tr.convertToTable().apply();
+    expect(shape(state.doc)).toEqual([[['a', 'b'], ['c', 'd']], 'paragraph:']);
+  });
+
+  it('keeps a paragraph between it and a table before it', () => {
+    const blocks = [...grid(), para('p', 'x,y')];
+    const state = stateWith(blocks, select(['p', 0], ['p', 3])).tr.convertToTable().apply();
+    expect(shape(state.doc)).toEqual([[['A', 'B'], ['C', 'D']], 'paragraph:', [['x', 'y']], 'paragraph:']);
+  });
+
+  it('does nothing with a cell, code, an image or only empty lines in the selection', () => {
+    const check = (blocks: BlockNode[]) => {
+      const last = blocks[blocks.length - 1];
+      const state = stateWith(blocks, select([blocks[0].id, 0], [last.id, getBlockText(last).length]));
+      expect(state.tr.convertToTable().apply().doc.blocks).toEqual(state.doc.blocks);
+    };
+    check([para('a', 'a,b'), cell('c', 'r1', 'C')]);
+    check([para('a', 'a,b'), createBlock('code_block', {}, [createTextNode('x,y')], 'k')]);
+    check([para('a', 'a,b'), createBlock('image', { src: 'https://example.com/a.png' }, [], 'i'), para('b', 'c,d')]);
+    check([para('a', ''), para('b', ' ')]);
+  });
+});
+
 describe('typing in a cell', () => {
   it('Enter makes a new line in the cell', () => {
     const state = stateWith(grid(), caret('a', 1)).tr.splitBlock().apply();

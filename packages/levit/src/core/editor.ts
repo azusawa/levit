@@ -178,6 +178,12 @@ export class ChainedCommands {
     return this;
   }
 
+  /** Turns the selected lines into a table, split at tabs or commas. */
+  convertToTable(): this {
+    this.tr.convertToTable();
+    return this;
+  }
+
   /** Adds a row above the caret's row. */
   addRowBefore(): this {
     this.tr.addRow('before');
