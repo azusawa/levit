@@ -206,6 +206,13 @@ describe('table toolbar', () => {
     expect(toolbar.element.style.left).toBe(`${40 + window.scrollX}px`);
   });
 
+  it('marks the editor so its tables keep room for the toolbar above them', () => {
+    make();
+    expect(editor.container.classList.contains('levit-has-table-toolbar')).toBe(true);
+    toolbar.destroy();
+    expect(editor.container.classList.contains('levit-has-table-toolbar')).toBe(false);
+  });
+
   it('follows the table when a box around the editor scrolls', () => {
     make();
     place('c', 1);

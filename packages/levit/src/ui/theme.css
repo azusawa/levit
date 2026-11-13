@@ -167,6 +167,12 @@ levit-editor {
   overflow-x: auto;
 }
 
+/* Room for the table toolbar above a table: 36px tall, 6px above the table.
+   Always kept, so the text does not move when the caret enters a table. */
+.levit-has-table-toolbar[contenteditable="true"] .levit-table {
+  margin-top: 44px;
+}
+
 .levit-table:last-child {
   margin-bottom: 0;
 }

@@ -223,6 +223,21 @@ test.describe('table toolbar', () => {
     await expect(toolbar(page)).toBeHidden();
   });
 
+  test('covers no text of the line above the table, and the text does not move', async ({ page }) => {
+    await page.keyboard.type('Above');
+    await page.keyboard.press('Enter');
+    await insertTable(page);
+    await expect(toolbar(page)).toBeVisible();
+    const above = page.locator('#editor .levit-block-paragraph').first();
+    const line = (await above.boundingBox())!;
+    const bar = (await toolbar(page).boundingBox())!;
+    expect(bar.y).toBeGreaterThanOrEqual(line.y + line.height);
+    const table = (await page.locator('#editor .levit-table').boundingBox())!;
+    await above.click();
+    await expect(toolbar(page)).toBeHidden();
+    expect((await page.locator('#editor .levit-table').boundingBox())!.y).toBe(table.y);
+  });
+
   test('its buttons add and delete rows and columns where the caret is', async ({ page }) => {
     await insertTable(page);
     await page.keyboard.type('A');

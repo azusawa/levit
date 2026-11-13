@@ -72,3 +72,10 @@ describe('table size grid', () => {
     expect(css).toMatch(/\.levit-table-picker-cell\.is-on\s*\{[^}]*var\(--levit-primary\)/);
   });
 });
+
+describe('table toolbar room', () => {
+  it('tables in an editable editor with the toolbar keep room above for it, so it covers no text', () => {
+    // The toolbar is 36px tall and sits 6px above the table.
+    expect(css).toMatch(/\.levit-has-table-toolbar\[contenteditable="true"\]\s+\.levit-table\s*\{[^}]*margin-top:\s*44px/);
+  });
+});

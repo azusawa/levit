@@ -154,6 +154,8 @@ export function createTableToolbar(editor: LevitEditor): TableToolbarInstance {
   document.addEventListener('scroll', onMove, true);
 
   document.body.appendChild(menu);
+  // Tables keep room above them for the toolbar (theme.css), so it covers no text.
+  editor.container.classList.add('levit-has-table-toolbar');
 
   const instance: TableToolbarInstance = {
     element: menu,
@@ -163,6 +165,7 @@ export function createTableToolbar(editor: LevitEditor): TableToolbarInstance {
       window.removeEventListener('resize', onMove);
       document.removeEventListener('scroll', onMove, true);
       editor.container.removeEventListener('keydown', handleEditorKeyDown);
+      editor.container.classList.remove('levit-has-table-toolbar');
       menu.remove();
     },
   };
