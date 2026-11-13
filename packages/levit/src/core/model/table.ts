@@ -84,14 +84,38 @@ export function createTable(rows: number, cols: number, { header = true }: { hea
 }
 
 /**
+ * Splits a table row at pipes that are not escaped, without the outer pipes.
+ * "\\|" in a cell is a pipe.
+ */
+export function splitTableRow(line: string): string[] {
+  let text = line.trim();
+  if (text.startsWith('|')) text = text.slice(1);
+  if (text.endsWith('|') && !text.endsWith('\\|')) text = text.slice(0, -1);
+  const cells: string[] = [];
+  let current = '';
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === '\\' && text[i + 1] === '|') {
+      current += '|';
+      i += 1;
+    } else if (text[i] === '|') {
+      cells.push(current.trim());
+      current = '';
+    } else {
+      current += text[i];
+    }
+  }
+  cells.push(current.trim());
+  return cells;
+}
+
+/**
  * The cells of a Markdown table row such as "| Name | Price |": bars at
- * both ends and at least two cells. "\|" is a bar inside a cell. Null when
- * the text is not such a row.
+ * both ends and at least two cells. Null when the text is not such a row.
  */
 export function markdownTableRow(text: string): string[] | null {
   const line = text.trim();
   if (line.length < 2 || !line.startsWith('|') || !line.endsWith('|') || line.endsWith('\\|')) return null;
-  const cells = line.slice(1, -1).split(/(?<!\\)\|/).map((c) => c.replace(/\\\|/g, '|').trim());
+  const cells = splitTableRow(line);
   return cells.length >= 2 ? cells : null;
 }
 

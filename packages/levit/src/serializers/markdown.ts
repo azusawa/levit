@@ -10,7 +10,7 @@ import {
   listIndent,
 } from '../core/model/document.js';
 import { schemaFor, type Schema, type SerializerOptions } from '../core/plugin/plugin.js';
-import { createCell, tableAtIndex, type TablePosition } from '../core/model/table.js';
+import { createCell, splitTableRow, tableAtIndex, type TablePosition } from '../core/model/table.js';
 import { normalizeCodeLanguage, normalizeHeadingLevel, sanitizeHref, sanitizeImageSrc } from '../core/model/sanitize.js';
 
 const BUILT_IN_MARKDOWN_BLOCKS = new Set(BUILT_IN_BLOCK_TYPES);
@@ -147,31 +147,6 @@ function tableMarkdown(blocks: readonly BlockNode[], table: TablePosition, inlin
   const head = hasHeader ? rows[0] : Array(cols).fill('');
   const body = hasHeader ? rows.slice(1) : rows;
   return [line(head), line(Array(cols).fill('---')), ...body.map(line)].join('\n');
-}
-
-/**
- * Splits a table row at pipes that are not escaped, without the outer pipes.
- * "\\|" in a cell is a pipe.
- */
-function splitTableRow(line: string): string[] {
-  let text = line.trim();
-  if (text.startsWith('|')) text = text.slice(1);
-  if (text.endsWith('|') && !text.endsWith('\\|')) text = text.slice(0, -1);
-  const cells: string[] = [];
-  let current = '';
-  for (let i = 0; i < text.length; i++) {
-    if (text[i] === '\\' && text[i + 1] === '|') {
-      current += '|';
-      i += 1;
-    } else if (text[i] === '|') {
-      cells.push(current.trim());
-      current = '';
-    } else {
-      current += text[i];
-    }
-  }
-  cells.push(current.trim());
-  return cells;
 }
 
 /** True when lines[k] and lines[k + 1] start a GitHub table: a header row, then a delimiter row like "| --- | :-: |". */
