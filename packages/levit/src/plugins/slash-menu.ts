@@ -210,7 +210,11 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
       return [{ ...tableItem, title: `${tableItem.title} ${cols}×${rows}`, action: (ed) => ed.chain().insertTable(rows, cols).run() }];
     }
     // While a size is being typed ("table 4"), the table entry stays.
-    return list.filter((item) => matches(item, q) || (item === tableItem && matches(item, withoutPartialSize(q))));
+    const found = list.filter((item) => matches(item, q) || (item === tableItem && matches(item, withoutPartialSize(q))));
+    // Names that start with the query first: "/표" is Table before Bulleted List (글머리표 목록).
+    const name = withoutPartialSize(q).toLowerCase();
+    const starts = (item: SlashMenuItem) => (name && item.title.toLowerCase().startsWith(name) ? 0 : 1);
+    return found.sort((a, b) => starts(a) - starts(b));
   }
 
   function renderList() {

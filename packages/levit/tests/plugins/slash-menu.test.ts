@@ -383,6 +383,15 @@ describe('slash menu: choosing a table size', () => {
     expect(isOpen()).toBe(false);
   });
 
+  it('an entry whose name starts with the query comes first', async () => {
+    const { ko } = await import('../../src/i18n/messages');
+    editor = new LevitEditor({ element: container, messages: ko, initialContent: createDocument([createBlock('paragraph', {}, [], 'p')]) });
+    menu = createSlashMenu(editor);
+    caret('p', 0);
+    type('/표');
+    expect(shown()).toEqual(['표', '글머리표 목록']);
+  });
+
   it('works with the name in the editor language', async () => {
     const { ko } = await import('../../src/i18n/messages');
     editor = new LevitEditor({ element: container, messages: ko, initialContent: createDocument([createBlock('paragraph', {}, [], 'p')]) });
