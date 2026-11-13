@@ -129,16 +129,11 @@ export function createTableToolbar(editor: LevitEditor): TableToolbarInstance {
   // Thin "+" bars below and right of the table add a row or a column at the
   // end. They show with the toolbar, not on hover. Keyboard users have Tab in
   // the last cell and the toolbar, so the bars stay out of the Tab order.
-  const caretAt = (index: number) => {
-    const blockId = editor.state.doc.blocks[index].id;
-    return { anchor: { blockId, offset: 0 }, head: { blockId, offset: 0 }, isCollapsed: true };
-  };
   function addAtEnd(what: 'row' | 'column') {
-    const t = tableAt(editor.state.doc, editor.state.selection.head.blockId);
-    if (!t || !editor.isEditable) return;
+    if (!editor.isEditable || !editor.isInTable()) return;
     const tr = editor.state.tr;
-    if (what === 'row') tr.setSelection(caretAt(t.rows[t.rows.length - 1][0])).addRow('after', t.col);
-    else tr.setSelection(caretAt(t.rows[t.row][t.rows[t.row].length - 1])).addColumn('after');
+    if (what === 'row') tr.addRow('end');
+    else tr.addColumn('end');
     editor.dispatch(tr);
   }
   const addButton = (what: 'row' | 'column', label: string) => {
@@ -150,10 +145,14 @@ export function createTableToolbar(editor: LevitEditor): TableToolbarInstance {
     btn.setAttribute('aria-label', label);
     btn.tabIndex = -1;
     btn.style.display = 'none';
+    // The mouse acts on mousedown so the editor keeps focus; a click without
+    // a mouse (a screen reader, voice control) acts on click.
     btn.addEventListener('mousedown', (e) => {
       e.preventDefault();
       addAtEnd(what);
-      update();
+    });
+    btn.addEventListener('click', (e) => {
+      if (e.detail === 0) addAtEnd(what);
     });
     return btn;
   };
@@ -189,7 +188,8 @@ export function createTableToolbar(editor: LevitEditor): TableToolbarInstance {
     // scrolled out of view, at the top of the window over the table, and below
     // it once the table is almost gone.
     const above = rect.top - height - 6;
-    const top = above >= 10 ? above : rect.bottom - height >= 10 ? 10 : rect.bottom + 6;
+    // Below, it goes under the "+" bar that adds a row (2px below, 14px tall).
+    const top = above >= 10 ? above : rect.bottom - height >= 10 ? 10 : rect.bottom + 20;
     menu.style.top = `${top + window.scrollY}px`;
     menu.style.left = `${Math.max(10, rect.left) + window.scrollX}px`;
 
@@ -197,9 +197,11 @@ export function createTableToolbar(editor: LevitEditor): TableToolbarInstance {
     addRowButton.style.top = `${rect.bottom + 2 + window.scrollY}px`;
     addRowButton.style.left = `${rect.left + window.scrollX}px`;
     addRowButton.style.width = `${rect.width}px`;
-    addColumnButton.style.top = `${rect.top + window.scrollY}px`;
+    // The column bar covers the part of the table in the window.
+    const columnTop = Math.max(rect.top, 0);
+    addColumnButton.style.top = `${columnTop + window.scrollY}px`;
     addColumnButton.style.left = `${rect.right + 2 + window.scrollX}px`;
-    addColumnButton.style.height = `${rect.height}px`;
+    addColumnButton.style.height = `${Math.max(0, Math.min(rect.bottom, window.innerHeight) - columnTop)}px`;
   }
 
   const onFocusOut = (e: FocusEvent) => update(inside(e.relatedTarget));

@@ -798,11 +798,11 @@ export class Transaction {
     return this;
   }
 
-  /** Adds an empty row before or after the caret's row, and puts the caret in it. */
-  addRow(where: 'before' | 'after', column?: number): this {
+  /** Adds an empty row before or after the caret's row, or at the end of the table, and puts the caret in it. */
+  addRow(where: 'before' | 'after' | 'end', column?: number): this {
     const t = this.tableAtCaret();
     if (!t) return this;
-    const current = t.rows[t.row];
+    const current = where === 'end' ? t.rows[t.rows.length - 1] : t.rows[t.row];
     const table = tableIdOf(this.doc.blocks[t.index]);
     const row = generateBlockId('r');
     const cols = Math.max(...t.rows.map((r) => r.length));
@@ -816,12 +816,15 @@ export class Transaction {
     return this;
   }
 
-  /** Adds an empty column left (before) or right (after) of the caret's column, and puts the caret in it. */
-  addColumn(where: 'before' | 'after'): this {
+  /**
+   * Adds an empty column left (before) or right (after) of the caret's column,
+   * or after the last cell of every row (end), and puts the caret in it.
+   */
+  addColumn(where: 'before' | 'after' | 'end'): this {
     const t = this.tableAtCaret();
     if (!t) return this;
     const table = tableIdOf(this.doc.blocks[t.index]);
-    const position = where === 'before' ? t.col : t.col + 1;
+    const position = where === 'before' ? t.col : where === 'after' ? t.col + 1 : Infinity;
     const inserts = t.rows.map((row) => {
       const first = this.doc.blocks[row[0]];
       const cell = createCell(table, rowIdOf(first), first.attrs?.header === true);

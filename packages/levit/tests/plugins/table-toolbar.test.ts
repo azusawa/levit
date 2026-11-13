@@ -235,7 +235,8 @@ describe('table toolbar', () => {
     vi.spyOn(wrapper, 'getBoundingClientRect').mockReturnValue(new DOMRect(40, -80, 300, 100));
     vi.spyOn(toolbar.element, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 200, 30));
     place('c', 1);
-    expect(toolbar.element.style.top).toBe(`${-80 + 100 + 6 + window.scrollY}px`);
+    // Below the "+" bar that adds a row (2px below the table, 14px tall).
+    expect(toolbar.element.style.top).toBe(`${-80 + 100 + 20 + window.scrollY}px`);
   });
 
   it('marks the editor so its tables keep room for the toolbar above them', () => {
@@ -330,6 +331,24 @@ describe('add buttons at the end of a table', () => {
     expect(addColumn().style.top).toBe(`${300 + window.scrollY}px`);
     expect(addColumn().style.left).toBe(`${40 + 500 + 2 + window.scrollX}px`);
     expect(addColumn().style.height).toBe('100px');
+  });
+
+  it('a click without a mouse, as from a screen reader, works too', () => {
+    make();
+    place('c', 1);
+    addRow().dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 0 }));
+    expect(rows()).toEqual([2, 2, 2]);
+  });
+
+  it('the column bar stays in the window when the table is taller than the part in view', () => {
+    make();
+    const wrapper = element.querySelector('.levit-table')!;
+    vi.spyOn(wrapper, 'getBoundingClientRect').mockReturnValue(new DOMRect(40, -50, 500, 300));
+    vi.spyOn(toolbar.element, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 200, 30));
+    vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(200);
+    place('c', 1);
+    expect(addColumn().style.top).toBe(`${0 + window.scrollY}px`);
+    expect(addColumn().style.height).toBe('200px');
   });
 
   it('destroy removes them', () => {

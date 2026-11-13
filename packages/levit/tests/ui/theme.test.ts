@@ -96,7 +96,11 @@ describe('table add buttons', () => {
     expect(css).toMatch(/\.levit-table-add-column\s*\{[^}]*width:\s*14px/);
   });
 
-  it('tables keep room below for the row button', () => {
+  it('tables keep room below for the row button, the last table too, and right for the column button', () => {
     expect(css).toMatch(/:where\(\.levit-has-table-toolbar\[contenteditable="true"\]\)\s+\.levit-table\s*\{[^}]*margin-bottom:\s*16px/);
+    expect(css).toMatch(/:where\(\.levit-has-table-toolbar\[contenteditable="true"\]\)\s+\.levit-table\s*\{[^}]*margin-right:\s*16px/);
+    const last = css.indexOf('.levit-table:last-child');
+    const lastRoom = css.search(/:where\(\.levit-has-table-toolbar\[contenteditable="true"\]\)\s+\.levit-table:last-child\s*\{[^}]*margin-bottom:\s*16px/);
+    expect(lastRoom).toBeGreaterThan(last);
   });
 });

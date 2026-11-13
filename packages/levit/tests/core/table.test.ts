@@ -403,6 +403,19 @@ describe('changing a table', () => {
     expect(shape(state.doc)).toEqual([[['A', '', 'B'], ['C', '', 'D']]]);
   });
 
+  it('adds a row at the end, with the caret in the caret column', () => {
+    const state = stateWith(grid(), caret('b', 0)).tr.addRow('end').apply();
+    expect(shape(state.doc)).toEqual([[['A', 'B'], ['C', 'D'], ['', '']]]);
+    expect(state.selection.anchor).toEqual({ blockId: state.doc.blocks[5].id, offset: 0 });
+  });
+
+  it('adds a column at the end of every row, even rows of different lengths, with the caret in the caret row', () => {
+    const blocks = [cell('a', 'r1', 'A'), cell('b', 'r1', 'B'), cell('x', 'r1', 'X'), cell('c', 'r2', 'C'), cell('d', 'r2', 'D')];
+    const state = stateWith(blocks, caret('c', 0)).tr.addColumn('end').apply();
+    expect(shape(state.doc)).toEqual([[['A', 'B', 'X', ''], ['C', 'D', '']]]);
+    expect(state.selection.anchor).toEqual({ blockId: state.doc.blocks[6].id, offset: 0 });
+  });
+
   it('a new column cell in a header row is a header', () => {
     const blocks = [cell('a', 'r1', 'A', 't', true), cell('c', 'r2', 'C')];
     const state = stateWith(blocks, caret('a', 0)).tr.addColumn('after').apply();

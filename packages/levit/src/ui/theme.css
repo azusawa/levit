@@ -174,12 +174,17 @@ levit-editor {
    rule as easy to override as .levit-table. */
 :where(.levit-has-table-toolbar[contenteditable="true"]) .levit-table {
   margin-top: var(--levit-table-toolbar-room);
-  /* Room for the "+" bar that adds a row: 14px tall, 2px below the table. */
+  /* Room for the "+" bars that add a row and a column: 14px, 2px from the table. */
   margin-bottom: 16px;
+  margin-right: 16px;
 }
 
 .levit-table:last-child {
   margin-bottom: 0;
+}
+
+:where(.levit-has-table-toolbar[contenteditable="true"]) .levit-table:last-child {
+  margin-bottom: 16px;
 }
 
 .levit-table table {
