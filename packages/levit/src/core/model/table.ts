@@ -84,6 +84,18 @@ export function createTable(rows: number, cols: number, { header = true }: { hea
 }
 
 /**
+ * The cells of a Markdown table row such as "| Name | Price |": bars at
+ * both ends and at least two cells. "\|" is a bar inside a cell. Null when
+ * the text is not such a row.
+ */
+export function markdownTableRow(text: string): string[] | null {
+  const line = text.trim();
+  if (line.length < 2 || !line.startsWith('|') || !line.endsWith('|') || line.endsWith('\\|')) return null;
+  const cells = line.slice(1, -1).split(/(?<!\\)\|/).map((c) => c.replace(/\\\|/g, '|').trim());
+  return cells.length >= 2 ? cells : null;
+}
+
+/**
  * The text of some blocks as the lines of one cell: images and other blocks
  * without text are left out. Null when nothing with text is left.
  */

@@ -103,6 +103,51 @@ describe('inserting a table', () => {
   });
 });
 
+describe('a Markdown table row and Enter', () => {
+  const enterAtEnd = (blocks: BlockNode[]) => {
+    const last = blocks[0];
+    return stateWith(blocks, caret(last.id, getBlockText(last).length)).tr.splitBlock().apply();
+  };
+
+  it('turns the row into a table: its cells as the header, an empty row below', () => {
+    const state = enterAtEnd([para('a', '| Name | Price |')]);
+    expect(shape(state.doc)).toEqual([[['Name', 'Price'], ['', '']], 'paragraph:']);
+    expect(state.doc.blocks.slice(0, 2).every((b) => b.attrs!.header === true)).toBe(true);
+    expect(state.doc.blocks.slice(2, 4).some((b) => b.attrs!.header)).toBe(false);
+    expect(state.selection.anchor).toEqual({ blockId: state.doc.blocks[2].id, offset: 0 });
+  });
+
+  it('keeps the text after it', () => {
+    const state = enterAtEnd([para('a', '|a|b|c|'), para('z', 'after')]);
+    expect(shape(state.doc)).toEqual([[['a', 'b', 'c'], ['', '', '']], 'paragraph:after']);
+  });
+
+  it('keeps empty cells and escaped bars', () => {
+    const state = enterAtEnd([para('a', '| | a \\| b |')]);
+    expect(shape(state.doc)).toEqual([[['', 'a | b'], ['', '']], 'paragraph:']);
+  });
+
+  it('needs two cells, bars at both ends and the caret at the end', () => {
+    expect(shape(enterAtEnd([para('a', '| one |')]).doc)).toEqual(['paragraph:| one |', 'paragraph:']);
+    expect(shape(enterAtEnd([para('a', 'a | b |')]).doc)).toEqual(['paragraph:a | b |', 'paragraph:']);
+    expect(shape(enterAtEnd([para('a', '| a | b')]).doc)).toEqual(['paragraph:| a | b', 'paragraph:']);
+    const middle = stateWith([para('a', '| a | b |')], caret('a', 3)).tr.splitBlock().apply();
+    expect(shape(middle.doc)).toEqual(['paragraph:| a', 'paragraph: | b |']);
+  });
+
+  it('only in a paragraph', () => {
+    const heading = createBlock('heading', { level: 2 }, [createTextNode('| a | b |')], 'h');
+    expect(types(enterAtEnd([heading]).doc)).toEqual(['heading', 'paragraph']);
+    const item = createBlock('bullet_list_item', {}, [createTextNode('| a | b |')], 'l');
+    expect(types(enterAtEnd([item]).doc)).toEqual(['bullet_list_item', 'bullet_list_item']);
+  });
+
+  it('not when a block type is asked for', () => {
+    const state = stateWith([para('a', '| a | b |')], caret('a', 9)).tr.splitBlock('heading', { level: 1 }).apply();
+    expect(types(state.doc)).toEqual(['paragraph', 'heading']);
+  });
+});
+
 describe('typing in a cell', () => {
   it('Enter makes a new line in the cell', () => {
     const state = stateWith(grid(), caret('a', 1)).tr.splitBlock().apply();

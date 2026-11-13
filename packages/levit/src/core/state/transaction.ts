@@ -7,6 +7,7 @@ import {
 } from '../model/types.js';
 import {
   createBlock,
+  createTextNode,
   findBlockIndex,
   generateBlockId,
   getBlockText,
@@ -30,7 +31,7 @@ import {
   previousWordOffset,
 } from '../model/text.js';
 import { BlockNode } from '../model/types.js';
-import { cellContent, createCell, createTable, isTableCell, tableAtIndex, tableIdOf, rowIdOf, type TablePosition } from '../model/table.js';
+import { cellContent, createCell, createTable, isTableCell, markdownTableRow, tableAtIndex, tableIdOf, rowIdOf, type TablePosition } from '../model/table.js';
 import { EditorState } from './state.js';
 
 export function cloneDocument(doc: DocumentData): DocumentData {
@@ -900,6 +901,22 @@ export class Transaction {
 
     const block = this.edit(blockIdx);
     const offset = this.selection.anchor.offset;
+
+    // Enter after a Markdown table row ("| Name | Price |") makes a table:
+    // the row is its header, and the caret goes to an empty row below.
+    const row = type === undefined && block.type === 'paragraph' && offset === getBlockText(block).length
+      ? markdownTableRow(getBlockText(block))
+      : null;
+    if (row) {
+      const cells = createTable(2, row.length);
+      row.forEach((text, i) => (cells[i].content = [createTextNode(text)]));
+      block.content = [createTextNode('')];
+      this.setCaret(block.id, 0);
+      this.placeAlone(cells);
+      this.setCaret(cells[row.length].id, 0);
+      this.docChanged = true;
+      return this;
+    }
 
     if (type === undefined && isListItem(block.type)) {
       if (getBlockText(block) === '' && listIndent(block) > 0) {
