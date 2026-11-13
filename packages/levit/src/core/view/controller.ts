@@ -3,6 +3,7 @@ import { findBlockIndex, isListItem, sliceDocument } from '../model/document.js'
 import { readClipboard, writeClipboard } from './clipboard.js';
 import { tableAt } from '../model/table.js';
 import { matchesShortcut } from '../plugin/plugin.js';
+import { TABLE_SHORTCUTS, type TableShortcutCommand } from './table-shortcuts.js';
 import {
   domRangeToEditorSelection,
   domSelectionToEditorSelection,
@@ -324,24 +325,26 @@ export class InputController {
   }
 
   /**
-   * Keys for the language label: Alt+F10 in a code block moves focus to it,
-   * and on the label Enter or Space asks for a language and Escape goes back
-   * to the text. True when the key was one of these.
+   * The command for a table shortcut (TABLE_SHORTCUTS) with the caret in one
+   * cell of an editable editor, or null. A held delete key deletes only once:
+   * its repeats do nothing.
    */
-  /** The table command for a table shortcut, or null when the key is not one here. */
   private tableShortcut(e: KeyboardEvent): (() => void) | null {
     const { selection } = this.editor.state;
-    if (selection.anchor.blockId !== selection.head.blockId || !this.editor.isInTable()) return null;
-    const chain = () => this.editor.chain();
-    if (e.key === 'Enter' && !e.shiftKey) {
-      return e.altKey ? () => chain().addColumnAfter().run() : () => chain().addRowAfter().run();
-    }
-    if (e.key === 'Backspace' && e.shiftKey !== e.altKey) {
-      return e.shiftKey ? () => chain().deleteRow().run() : () => chain().deleteColumn().run();
+    if (!this.editor.isEditable || selection.anchor.blockId !== selection.head.blockId || !this.editor.isInTable()) return null;
+    for (const [command, shortcut] of Object.entries(TABLE_SHORTCUTS) as [TableShortcutCommand, string][]) {
+      if (!matchesShortcut(e, shortcut)) continue;
+      if (e.repeat && command.startsWith('delete')) return () => {};
+      return () => this.editor.chain()[command]().run();
     }
     return null;
   }
 
+  /**
+   * Keys for the language label: Alt+F10 in a code block moves focus to it,
+   * and on the label Enter or Space asks for a language and Escape goes back
+   * to the text. True when the key was one of these.
+   */
   private languageLabelKey(e: KeyboardEvent): boolean {
     const label = this.languageLabel(e.target);
     if (label) {

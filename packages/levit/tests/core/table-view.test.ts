@@ -359,6 +359,27 @@ describe('table shortcuts', () => {
     expect(editor.state.doc.blocks.map((b) => b.type)).toEqual(['paragraph', 'table_cell', 'table_cell', 'table_cell', 'table_cell', 'paragraph']);
   });
 
+  it('do nothing while the editor is locked, as during an AI answer', () => {
+    make();
+    editor.focus();
+    place('c', 1);
+    editor.setEditable(false);
+    press('Enter', { ctrlKey: true });
+    press('Backspace', { ctrlKey: true, shiftKey: true });
+    press('Backspace', { ctrlKey: true, altKey: true });
+    expect(tables()).toEqual([[['th:A', 'th:B'], ['td:C', 'td:D']]]);
+  });
+
+  it('a held delete key deletes once, not again with each repeat', () => {
+    make([cell('a', 'r1', 'A'), cell('b', 'r2', 'B'), cell('c', 'r3', 'C'), para('q', 'after')]);
+    editor.focus();
+    place('a', 1);
+    press('Backspace', { ctrlKey: true, shiftKey: true });
+    expect(press('Backspace', { ctrlKey: true, shiftKey: true, repeat: true }).defaultPrevented).toBe(true);
+    press('Backspace', { ctrlKey: true, shiftKey: true, repeat: true });
+    expect(tables()).toEqual([[['td:B'], ['td:C']]]);
+  });
+
   it('with text selected across cells the keys do nothing to the table', () => {
     make();
     editor.focus();
