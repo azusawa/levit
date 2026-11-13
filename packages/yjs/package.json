@@ -1,6 +1,6 @@
 {
   "name": "@yonailab/levit-yjs",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "description": "Real-time collaboration for the Levit editor with Yjs: shared editing, cursors and undo.",
   "type": "module",
   "main": "./dist/index.js",
@@ -24,7 +24,7 @@
     "prepublishOnly": "npm run typecheck && npm test && npm run build && npm run check:package"
   },
   "peerDependencies": {
-    "@yonailab/levit": "^0.7.1",
+    "@yonailab/levit": "^0.7.2",
     "yjs": "^13.6.0"
   },
   "keywords": [
