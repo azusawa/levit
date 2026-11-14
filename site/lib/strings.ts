@@ -24,7 +24,7 @@ const en = {
   },
   hero: {
     title: 'Easy to write. Light to develop.',
-    lead: 'A web editor with a slash menu, Markdown, AI suggestions, comments and live collaboration. The core is 30 kB and installs nothing else. Try every part of it right here.',
+    lead: 'A web editor with a slash menu, Markdown, AI suggestions, comments and live collaboration. The core is 30 kB and brings no other packages with it. Try every part of it right here.',
     copy: 'Copy',
     copied: 'Copied',
     copyLabel: 'Copy the install command',
@@ -70,7 +70,7 @@ const en = {
       tested: 'Tested on every change',
     },
     items: [
-      { sentence: 'Levit is the only thing you install.', detail: '0 runtime dependencies: no other packages to trust, no version clashes · core 30 kB gzip · AI 7.5 kB · Yjs binding 5 kB' },
+      { sentence: 'The core brings nothing along.', detail: '0 runtime dependencies: no other packages to trust · core 30 kB gzip · AI 7.5 kB · Yjs binding 5 kB, used with yjs you install' },
       { sentence: 'Long documents stay quick.', detail: '20,000 blocks · about 5 ms of script per key, near a plain contenteditable' },
       { sentence: 'Menus speak three languages.', detail: 'English, Korean and Japanese built in · screen-reader labels · Alt+F10 to the toolbar' },
       { sentence: 'Pasted HTML is cleaned up.', detail: 'Scripts, event handlers and javascript: links are dropped · validateDocument() for the server' },
@@ -156,7 +156,7 @@ const ko: SiteStrings = {
   },
   hero: {
     title: '쓰기는 편하게, 개발은 가볍게',
-    lead: '슬래시 메뉴, Markdown, AI 제안, 댓글, 실시간 공동 편집을 갖춘 웹 에디터입니다. 본체는 30 kB이고 함께 설치되는 패키지가 없습니다. 모든 기능을 여기서 바로 써 보세요.',
+    lead: '슬래시 메뉴, Markdown, AI 제안, 댓글, 실시간 공동 편집을 갖춘 웹 에디터입니다. 본체는 30 kB이고, 딸려 오는 패키지가 없습니다. 모든 기능을 여기서 바로 써 보세요.',
     copy: '복사',
     copied: '복사됨',
     copyLabel: '설치 명령 복사',
@@ -202,7 +202,7 @@ const ko: SiteStrings = {
       tested: '바뀔 때마다 자동 테스트',
     },
     items: [
-      { sentence: '설치하는 것은 Levit 하나뿐입니다.', detail: '런타임 의존성 0개: 믿어야 할 다른 패키지도, 버전 충돌도 없음 · 본체 30 kB(gzip) · AI 7.5 kB · Yjs 연결 5 kB' },
+      { sentence: '본체에 딸려 오는 것이 없습니다.', detail: '런타임 의존성 0개: 믿어야 할 다른 패키지가 없음 · 본체 30 kB(gzip) · AI 7.5 kB · Yjs 연결 5 kB(yjs는 따로 설치)' },
       { sentence: '긴 문서에서도 빠릅니다.', detail: '블록 2만 개 · 키 입력당 스크립트 약 5 ms, 일반 contenteditable과 비슷' },
       { sentence: '메뉴가 세 언어로 나옵니다.', detail: '영어·한국어·일본어 기본 제공 · 스크린 리더 레이블 · Alt+F10으로 도구 모음' },
       { sentence: '붙여 넣은 HTML은 걸러 냅니다.', detail: '스크립트, 이벤트 핸들러, javascript: 링크 제거 · 서버용 validateDocument()' },
@@ -268,7 +268,7 @@ const ko: SiteStrings = {
 const ja: SiteStrings = {
   langName: '日本語',
   meta: {
-    landingTitle: 'Levit — 書きやすく、開発も軽いリッチテキストエディター',
+    landingTitle: 'Levit — 書き心地がよく、開発は軽いリッチテキストエディター',
     landingDescription:
       'スラッシュメニュー、Markdown、AIの提案、コメント、リアルタイム共同編集を備えたTypeScript製リッチテキストエディター。本体30 kB、ランタイム依存0個。ページ上で試せます。',
     guideTitle: 'エディターの使い方 — Levit',
@@ -286,7 +286,7 @@ const ja: SiteStrings = {
   },
   hero: {
     title: '書くのは心地よく、開発は軽く。',
-    lead: 'スラッシュメニュー、Markdown、AIの提案、コメント、リアルタイム共同編集を備えたWebエディターです。本体は30 kBで、ほかに何もインストールされません。すべてこの場で試せます。',
+    lead: 'スラッシュメニュー、Markdown、AIの提案、コメント、リアルタイム共同編集を備えたWebエディターです。本体は30 kBで、一緒に入ってくるパッケージはありません。すべてこの場で試せます。',
     copy: 'コピー',
     copied: 'コピーしました',
     copyLabel: 'インストールコマンドをコピー',
@@ -332,7 +332,7 @@ const ja: SiteStrings = {
       tested: '変更のたびに自動テスト',
     },
     items: [
-      { sentence: 'インストールするのはLevitだけ。', detail: 'ランタイム依存0個：信頼すべきほかのパッケージもバージョン衝突もなし · 本体30 kB（gzip） · AI 7.5 kB · Yjs連携5 kB' },
+      { sentence: '本体に付いてくるものはありません。', detail: 'ランタイム依存0個：信頼すべきほかのパッケージなし · 本体30 kB（gzip） · AI 7.5 kB · Yjs連携5 kB（yjsは別途インストール）' },
       { sentence: '長い文書でも速いままです。', detail: '2万ブロック · キー入力あたりのスクリプト約5 ms、通常のcontenteditableとほぼ同じ' },
       { sentence: 'メニューは三つの言語で。', detail: '英語・韓国語・日本語を標準搭載 · スクリーンリーダー用ラベル · Alt+F10でツールバーへ' },
       { sentence: '貼り付けたHTMLはきれいに。', detail: 'スクリプト、イベントハンドラー、javascript:リンクを除去 · サーバー用のvalidateDocument()' },

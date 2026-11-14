@@ -61,7 +61,7 @@ writeFileSync(
   await render(
     `<div style="box-sizing:border-box;width:1280px;height:640px;padding:0 120px;display:flex;flex-direction:column;justify-content:center;gap:44px;font-family:'General Sans',sans-serif">
       <div style="width:560px;height:197px">${logo}</div>
-      <p style="margin:0;color:#c9c9cc;font-size:44px;line-height:1.3;letter-spacing:-0.01em">Rich text editor with zero dependencies</p>
+      <p style="margin:0;color:#c9c9cc;font-size:44px;line-height:1.3;letter-spacing:-0.01em">Easy to write. Light to develop.</p>
     </div>`,
     1280,
     640,

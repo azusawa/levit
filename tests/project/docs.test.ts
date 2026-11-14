@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { strings } from '../../site/lib/strings';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -330,9 +331,9 @@ describe('the + bars of a table are documented', () => {
 });
 
 describe('the README header', () => {
-  it('leads with the site headline and keeps the numbers as proof', () => {
-    const head = read('README.md').split('\n').slice(0, 16).join('\n');
-    expect(head).toContain('<strong>쓰기는 편하게, 개발은 가볍게</strong>');
+  it('leads with the Korean site headline and keeps the numbers as proof', () => {
+    const head = read('README.md').slice(0, 800);
+    expect(head).toContain(`<strong>${strings.ko.hero.title}</strong>`);
     expect(head).toContain('런타임 의존성 0개');
   });
 });

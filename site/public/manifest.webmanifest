@@ -1,7 +1,7 @@
 {
   "name": "Levit",
   "short_name": "Levit",
-  "description": "Rich text editor: easy to write, light to develop",
+  "description": "Easy to write. Light to develop.",
   "start_url": "./",
   "display": "browser",
   "background_color": "#f7f7f6",

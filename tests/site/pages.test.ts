@@ -27,17 +27,33 @@ describe('site pages', () => {
 
   it('the landing page leads with what writing and developing with Levit feel like, in every language', () => {
     const want = {
-      en: { h1: 'Easy to write. Light to develop.', title: 'Levit — rich text editor, easy to write and light to develop' },
-      ko: { h1: '쓰기는 편하게, 개발은 가볍게', title: 'Levit — 쓰기 편하고 개발은 가벼운 리치 텍스트 에디터' },
-      ja: { h1: '書くのは心地よく、開発は軽く。', title: 'Levit — 書きやすく、開発も軽いリッチテキストエディター' },
+      en: { h1: 'Easy to write. Light to develop.', title: 'Levit — rich text editor, easy to write and light to develop', deps: '0 runtime dependencies' },
+      ko: { h1: '쓰기는 편하게, 개발은 가볍게', title: 'Levit — 쓰기 편하고 개발은 가벼운 리치 텍스트 에디터', deps: '런타임 의존성 0개' },
+      ja: { h1: '書くのは心地よく、開発は軽く。', title: 'Levit — 書き心地がよく、開発は軽いリッチテキストエディター', deps: 'ランタイム依存0個' },
     };
     for (const lang of LANGS) {
       const { html } = doc(lang, 'landing');
-      expect(html, lang).toMatch(new RegExp(`<h1[^>]*>${want[lang].h1}</h1>`));
+      expect(/<h1[^>]*>([^<]*)<\/h1>/.exec(html)?.[1], lang).toBe(want[lang].h1);
       expect(html, lang).toContain(`<title>${want[lang].title}</title>`);
-      // The dependency count stays as proof under the headline, not as the headline.
+      // The size and the dependency count stay as proof under the headline.
       expect(strings[lang].hero.lead, lang).toMatch(/30 kB/);
+      expect(strings[lang].meta.landingDescription, lang).toContain(want[lang].deps);
     }
+  });
+
+  it('claims only what the core does: other packages, like yjs for collaboration, are installed by you', () => {
+    for (const lang of LANGS) {
+      const text = JSON.stringify(strings[lang]);
+      for (const overclaim of ['the only thing you install', 'no version clashes', 'installs nothing else', '설치하는 것은 Levit 하나뿐', '버전 충돌도 없음', '함께 설치되는 패키지가 없습니다', 'インストールするのはLevitだけ', 'バージョン衝突もなし']) {
+        expect(text, `${lang}: ${overclaim}`).not.toContain(overclaim);
+      }
+    }
+  });
+
+  it('the link preview image and the web manifest carry the same line as the English headline', () => {
+    const line = strings.en.hero.title;
+    expect(readFileSync(resolve(__dirname, '../../scripts/brand-images.mjs'), 'utf8')).toContain(`>${line}</p>`);
+    expect(JSON.parse(readFileSync(resolve(__dirname, '../../site/public/manifest.webmanifest'), 'utf8')).description).toBe(line);
   });
 
   it.each(PAGES)('$lang $kind: links to the same page in the other languages', ({ lang, kind }) => {
