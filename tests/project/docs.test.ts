@@ -328,3 +328,11 @@ describe('the + bars of a table are documented', () => {
     for (const lang of ['en', 'ko', 'ja']) expect(read(`site/content/${lang}/guide.md`), lang).toContain(names[lang]);
   });
 });
+
+describe('the README header', () => {
+  it('leads with the site headline and keeps the numbers as proof', () => {
+    const head = read('README.md').split('\n').slice(0, 16).join('\n');
+    expect(head).toContain('<strong>쓰기는 편하게, 개발은 가볍게</strong>');
+    expect(head).toContain('런타임 의존성 0개');
+  });
+});

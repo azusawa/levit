@@ -6,9 +6,9 @@ export type Lang = 'en' | 'ko' | 'ja';
 const en = {
   langName: 'English',
   meta: {
-    landingTitle: 'Levit — rich text editor with zero dependencies',
+    landingTitle: 'Levit — rich text editor, easy to write and light to develop',
     landingDescription:
-      'Levit is a 30 kB TypeScript rich text editor with no runtime dependencies: slash menu, Markdown, AI suggestions, comments and real-time collaboration. Try it in the page.',
+      'A TypeScript rich text editor with a slash menu, Markdown, AI suggestions, comments and live collaboration. 30 kB core, 0 runtime dependencies. Try it in the page.',
     guideTitle: 'Using the editor — Levit',
     guideDescription: 'How to write, format, comment and work together in an editor built with Levit: menus, Markdown shortcuts and keys.',
     docsTitle: 'Developer docs — Levit',
@@ -23,8 +23,8 @@ const en = {
     cta: 'Get started',
   },
   hero: {
-    title: 'Rich text, zero dependencies.',
-    lead: 'Levit is a 30 kB TypeScript editor for the web, with a slash menu, Markdown, AI suggestions, comments and live collaboration. Every part of it works right here.',
+    title: 'Easy to write. Light to develop.',
+    lead: 'A web editor with a slash menu, Markdown, AI suggestions, comments and live collaboration. The core is 30 kB and installs nothing else. Try every part of it right here.',
     copy: 'Copy',
     copied: 'Copied',
     copyLabel: 'Copy the install command',
@@ -70,7 +70,7 @@ const en = {
       tested: 'Tested on every change',
     },
     items: [
-      { sentence: 'Nothing else gets installed.', detail: '0 runtime dependencies · core 30 kB gzip · AI 7.5 kB · Yjs binding 5 kB' },
+      { sentence: 'Levit is the only thing you install.', detail: '0 runtime dependencies: no other packages to trust, no version clashes · core 30 kB gzip · AI 7.5 kB · Yjs binding 5 kB' },
       { sentence: 'Long documents stay quick.', detail: '20,000 blocks · about 5 ms of script per key, near a plain contenteditable' },
       { sentence: 'Menus speak three languages.', detail: 'English, Korean and Japanese built in · screen-reader labels · Alt+F10 to the toolbar' },
       { sentence: 'Pasted HTML is cleaned up.', detail: 'Scripts, event handlers and javascript: links are dropped · validateDocument() for the server' },
@@ -119,7 +119,7 @@ const en = {
     ],
   },
   footer: {
-    statement: 'Levit is a zero-dependency rich text editor, made in the open.',
+    statement: 'Levit is a rich text editor, made in the open.',
     legal: 'MIT licence · © yonailab',
     version: 'Version',
     released: 'Released 10 November 2026',
@@ -138,9 +138,9 @@ export type SiteStrings = typeof en;
 const ko: SiteStrings = {
   langName: '한국어',
   meta: {
-    landingTitle: 'Levit — 의존성 없는 리치 텍스트 에디터',
+    landingTitle: 'Levit — 쓰기 편하고 개발은 가벼운 리치 텍스트 에디터',
     landingDescription:
-      'Levit은 런타임 의존성이 없는 30 kB TypeScript 리치 텍스트 에디터입니다. 슬래시 메뉴, Markdown, AI 제안, 댓글, 실시간 공동 편집을 페이지에서 바로 써 보세요.',
+      '슬래시 메뉴, Markdown, AI 제안, 댓글, 실시간 공동 편집을 갖춘 TypeScript 리치 텍스트 에디터. 본체 30 kB, 런타임 의존성 0개. 페이지에서 바로 써 보세요.',
     guideTitle: '에디터 사용법 — Levit',
     guideDescription: 'Levit으로 만든 에디터에서 글을 쓰고, 서식을 넣고, 댓글을 달고, 함께 쓰는 방법: 메뉴, Markdown 단축 입력, 단축키.',
     docsTitle: '개발 문서 — Levit',
@@ -155,8 +155,8 @@ const ko: SiteStrings = {
     cta: '시작하기',
   },
   hero: {
-    title: '의존성 없는 리치 텍스트 에디터',
-    lead: 'Levit은 30 kB짜리 웹용 TypeScript 에디터입니다. 슬래시 메뉴, Markdown, AI 제안, 댓글, 실시간 공동 편집까지, 모든 기능을 여기서 바로 써 볼 수 있습니다.',
+    title: '쓰기는 편하게, 개발은 가볍게',
+    lead: '슬래시 메뉴, Markdown, AI 제안, 댓글, 실시간 공동 편집을 갖춘 웹 에디터입니다. 본체는 30 kB이고 함께 설치되는 패키지가 없습니다. 모든 기능을 여기서 바로 써 보세요.',
     copy: '복사',
     copied: '복사됨',
     copyLabel: '설치 명령 복사',
@@ -202,7 +202,7 @@ const ko: SiteStrings = {
       tested: '바뀔 때마다 자동 테스트',
     },
     items: [
-      { sentence: '따로 설치되는 것이 없습니다.', detail: '런타임 의존성 0개 · 본체 30 kB(gzip) · AI 7.5 kB · Yjs 연결 5 kB' },
+      { sentence: '설치하는 것은 Levit 하나뿐입니다.', detail: '런타임 의존성 0개: 믿어야 할 다른 패키지도, 버전 충돌도 없음 · 본체 30 kB(gzip) · AI 7.5 kB · Yjs 연결 5 kB' },
       { sentence: '긴 문서에서도 빠릅니다.', detail: '블록 2만 개 · 키 입력당 스크립트 약 5 ms, 일반 contenteditable과 비슷' },
       { sentence: '메뉴가 세 언어로 나옵니다.', detail: '영어·한국어·일본어 기본 제공 · 스크린 리더 레이블 · Alt+F10으로 도구 모음' },
       { sentence: '붙여 넣은 HTML은 걸러 냅니다.', detail: '스크립트, 이벤트 핸들러, javascript: 링크 제거 · 서버용 validateDocument()' },
@@ -251,7 +251,7 @@ const ko: SiteStrings = {
     ],
   },
   footer: {
-    statement: 'Levit은 공개적으로 만드는, 의존성 없는 리치 텍스트 에디터입니다.',
+    statement: 'Levit은 공개적으로 만드는 리치 텍스트 에디터입니다.',
     legal: 'MIT 라이선스 · © yonailab',
     version: '버전',
     released: '2026년 11월 10일 출시',
@@ -268,9 +268,9 @@ const ko: SiteStrings = {
 const ja: SiteStrings = {
   langName: '日本語',
   meta: {
-    landingTitle: 'Levit — 依存ゼロのリッチテキストエディター',
+    landingTitle: 'Levit — 書きやすく、開発も軽いリッチテキストエディター',
     landingDescription:
-      'Levitはランタイム依存のない30 kBのTypeScript製リッチテキストエディターです。スラッシュメニュー、Markdown、AIの提案、コメント、リアルタイム共同編集をページ上で試せます。',
+      'スラッシュメニュー、Markdown、AIの提案、コメント、リアルタイム共同編集を備えたTypeScript製リッチテキストエディター。本体30 kB、ランタイム依存0個。ページ上で試せます。',
     guideTitle: 'エディターの使い方 — Levit',
     guideDescription: 'Levitで作られたエディターで書く、書式を付ける、コメントする、一緒に書く方法：メニュー、Markdownショートカット、キー操作。',
     docsTitle: '開発者ドキュメント — Levit',
@@ -285,8 +285,8 @@ const ja: SiteStrings = {
     cta: 'はじめる',
   },
   hero: {
-    title: '依存ゼロのリッチテキストエディター',
-    lead: 'Levitは30 kBのWeb向けTypeScriptエディターです。スラッシュメニュー、Markdown、AIの提案、コメント、リアルタイム共同編集まで、すべてこの場で試せます。',
+    title: '書くのは心地よく、開発は軽く。',
+    lead: 'スラッシュメニュー、Markdown、AIの提案、コメント、リアルタイム共同編集を備えたWebエディターです。本体は30 kBで、ほかに何もインストールされません。すべてこの場で試せます。',
     copy: 'コピー',
     copied: 'コピーしました',
     copyLabel: 'インストールコマンドをコピー',
@@ -332,7 +332,7 @@ const ja: SiteStrings = {
       tested: '変更のたびに自動テスト',
     },
     items: [
-      { sentence: 'ほかに何もインストールされません。', detail: 'ランタイム依存0個 · 本体30 kB（gzip） · AI 7.5 kB · Yjs連携5 kB' },
+      { sentence: 'インストールするのはLevitだけ。', detail: 'ランタイム依存0個：信頼すべきほかのパッケージもバージョン衝突もなし · 本体30 kB（gzip） · AI 7.5 kB · Yjs連携5 kB' },
       { sentence: '長い文書でも速いままです。', detail: '2万ブロック · キー入力あたりのスクリプト約5 ms、通常のcontenteditableとほぼ同じ' },
       { sentence: 'メニューは三つの言語で。', detail: '英語・韓国語・日本語を標準搭載 · スクリーンリーダー用ラベル · Alt+F10でツールバーへ' },
       { sentence: '貼り付けたHTMLはきれいに。', detail: 'スクリプト、イベントハンドラー、javascript:リンクを除去 · サーバー用のvalidateDocument()' },
@@ -381,7 +381,7 @@ const ja: SiteStrings = {
     ],
   },
   footer: {
-    statement: 'Levitはオープンに開発している、依存ゼロのリッチテキストエディターです。',
+    statement: 'Levitはオープンに開発しているリッチテキストエディターです。',
     legal: 'MITライセンス · © yonailab',
     version: 'バージョン',
     released: '2026年11月10日リリース',

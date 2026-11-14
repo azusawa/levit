@@ -25,6 +25,21 @@ describe('site pages', () => {
     expect(html).toMatch(/<meta name="description" content="[^"]{40,}"/);
   });
 
+  it('the landing page leads with what writing and developing with Levit feel like, in every language', () => {
+    const want = {
+      en: { h1: 'Easy to write. Light to develop.', title: 'Levit — rich text editor, easy to write and light to develop' },
+      ko: { h1: '쓰기는 편하게, 개발은 가볍게', title: 'Levit — 쓰기 편하고 개발은 가벼운 리치 텍스트 에디터' },
+      ja: { h1: '書くのは心地よく、開発は軽く。', title: 'Levit — 書きやすく、開発も軽いリッチテキストエディター' },
+    };
+    for (const lang of LANGS) {
+      const { html } = doc(lang, 'landing');
+      expect(html, lang).toMatch(new RegExp(`<h1[^>]*>${want[lang].h1}</h1>`));
+      expect(html, lang).toContain(`<title>${want[lang].title}</title>`);
+      // The dependency count stays as proof under the headline, not as the headline.
+      expect(strings[lang].hero.lead, lang).toMatch(/30 kB/);
+    }
+  });
+
   it.each(PAGES)('$lang $kind: links to the same page in the other languages', ({ lang, kind }) => {
     const { html } = doc(lang, kind);
     for (const other of LANGS) {

@@ -9,9 +9,9 @@ const editor = (page: Page, name: string) => page.locator(`[data-editor="${name}
 test.describe('landing page', () => {
   test('opens in each language with its title and a working editor', async ({ page }) => {
     for (const [path, lang, title] of [
-      ['', 'en', 'Rich text, zero dependencies.'],
-      ['ko/', 'ko', '의존성 없는 리치 텍스트 에디터'],
-      ['ja/', 'ja', '依存ゼロのリッチテキストエディター'],
+      ['', 'en', 'Easy to write. Light to develop.'],
+      ['ko/', 'ko', '쓰기는 편하게, 개발은 가볍게'],
+      ['ja/', 'ja', '書くのは心地よく、開発は軽く。'],
     ]) {
       await page.goto(SITE + path);
       await expect(page.locator('html')).toHaveAttribute('lang', lang);

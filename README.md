@@ -8,9 +8,9 @@
     <img src="./brand/levit-logo.svg" alt="Levit" width="240">
   </picture>
   <br />
-  <strong>심플하고 모던한 완성형 웹 에디터 (Zero-Dependency & AI-Ready)</strong>
+  <strong>쓰기는 편하게, 개발은 가볍게</strong>
   <br />
-  <i>가져다 쓰기 가장 편하고, 확장하기 쉬운 독립 코어 엔진</i>
+  <i>AI·공동 편집·댓글을 갖춘 웹 에디터 · 본체 30 kB · 런타임 의존성 0개</i>
 </p>
 
 **[웹사이트에서 직접 써 보기](https://azusawa.github.io/levit/ko/)** · [사용법](https://azusawa.github.io/levit/ko/guide/) · [개발 문서](https://azusawa.github.io/levit/ko/docs/)
