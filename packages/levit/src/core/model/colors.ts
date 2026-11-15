@@ -26,7 +26,8 @@ export const COLORS: readonly NamedColor[] = [
   { name: 'red', text: '#b91c1c', background: '#fee2e2' },
 ];
 
-export type ColorKind = 'text' | 'background';
+/** Text, a background, or the lines of a table, which take the text colors. */
+export type ColorKind = 'text' | 'background' | 'border';
 
 /** A highlight in a color the theme does not know shows yellow. */
 export const HIGHLIGHT_FALLBACK = '#fef08a';
@@ -54,8 +55,9 @@ export function colorCSS(value: unknown, kind: ColorKind, fallback?: string): st
   if (!color) return null;
   if (color.startsWith('#')) return color;
   const known = COLORS.find((c) => c.name === color);
-  const variable = `--levit-${kind === 'text' ? 'color' : 'bg'}-${color}`;
-  if (known) return `var(${variable}, ${kind === 'text' ? known.text : known.background})`;
+  const background = kind === 'background';
+  const variable = `--levit-${background ? 'bg' : 'color'}-${color}`;
+  if (known) return `var(${variable}, ${background ? known.background : known.text})`;
   return fallback ? `var(${variable}, ${fallback})` : `var(${variable})`;
 }
 
@@ -81,7 +83,9 @@ export function isClearColor(css: string): boolean {
  * dark pages) and page backgrounds (white, and dark grays) are the default:
  * null.
  */
-export function nearestColor(css: string, kind: ColorKind): string | null {
+export function nearestColor(css: string, of: ColorKind): string | null {
+  // Lines are like text: dark ones are the default.
+  const kind = of === 'border' ? 'text' : of;
   const rgba = parseCSSColor(css);
   if (!rgba || rgba[3] === 0) return null;
   const hex = `#${rgba.slice(0, 3).map((v) => v.toString(16).padStart(2, '0')).join('')}`;

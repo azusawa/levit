@@ -293,6 +293,16 @@ export class DOMReconciler {
       el.style.removeProperty('background-color');
       if (el.getAttribute('style') === '') el.removeAttribute('style');
     }
+    // The table's line color.
+    const border = block.type === 'table_cell' ? colorCSS(block.attrs?.border, 'border') : null;
+    if (border) {
+      el.dataset.border = normalizeColor(block.attrs?.border)!;
+      el.style.borderColor = border;
+    } else if (el.hasAttribute('data-border') || el.style.borderColor) {
+      delete el.dataset.border;
+      el.style.removeProperty('border-color');
+      if (el.getAttribute('style') === '') el.removeAttribute('style');
+    }
     const indent = listIndent(block);
     if (indent > 0) el.setAttribute('data-indent', String(indent));
     else el.removeAttribute('data-indent');

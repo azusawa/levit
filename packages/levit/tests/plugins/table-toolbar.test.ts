@@ -60,7 +60,7 @@ describe('table toolbar', () => {
     const labels = Array.from(toolbarButtons).map((b) => b.getAttribute('aria-label'));
     expect(labels).toEqual([
       'Add row above', 'Add row below', 'Add column left', 'Add column right',
-      'Delete row', 'Delete column', 'Cell color', 'Header row', 'Delete table',
+      'Delete row', 'Delete column', 'Table color', 'Header row', 'Delete table',
     ]);
     for (const b of toolbarButtons) expect(b.title.startsWith(b.getAttribute('aria-label')!)).toBe(true);
   });

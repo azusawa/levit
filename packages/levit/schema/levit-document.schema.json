@@ -357,6 +357,11 @@
                   "type": "string",
                   "pattern": "^([a-z][a-z0-9-]{0,31}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{3})$",
                   "description": "The cell's color. A color name (gray, brown, orange, yellow, green, blue, purple, pink, red, or one the app adds) or a hex color."
+                },
+                "border": {
+                  "type": "string",
+                  "pattern": "^([a-z][a-z0-9-]{0,31}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{3})$",
+                  "description": "The color of the table's lines, the same on every cell of the table. A color name (gray, brown, orange, yellow, green, blue, purple, pink, red, or one the app adds) or a hex color."
                 }
               },
               "required": [

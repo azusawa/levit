@@ -162,8 +162,13 @@ function tableHTML(blocks: readonly BlockNode[], table: TablePosition, inline: (
       .map((row) => `<tr>${row.map((k) => {
         const tag = blocks[k].attrs?.header === true ? 'th' : 'td';
         const color = normalizeColor(blocks[k].attrs?.background);
-        const style = color && `background-color: ${colorCSS(color, 'background')}`;
-        const attrs = style ? ` data-color="${escapeHTML(color)}" style="${escapeHTML(style)}"` : '';
+        const border = normalizeColor(blocks[k].attrs?.border);
+        // The lines are written whole, so they show where Levit's CSS is not.
+        const style = [color && `background-color: ${colorCSS(color, 'background')}`, border && `border: 1px solid ${colorCSS(border, 'border')}`]
+          .filter(Boolean)
+          .join('; ');
+        const data = (color ? ` data-color="${escapeHTML(color)}"` : '') + (border ? ` data-border="${escapeHTML(border)}"` : '');
+        const attrs = style ? `${data} style="${escapeHTML(style)}"` : '';
         return `<${tag}${attrs}>${inline(blocks[k])}</${tag}>`;
       }).join('')}</tr>`)
       .join('');
@@ -374,9 +379,10 @@ function readTable(table: Element, out: BlockNode[]): void {
       const header = tag === 'th';
       const span = Math.min(Math.max(parseInt(td.getAttribute('colspan') ?? '1', 10) || 1, 1), MAX_COLSPAN);
       const background = cellBackground(td);
+      const border = cellBorder(td);
       const make = () => {
         const c = createCell(tableId, rowId, header);
-        return background ? { ...c, attrs: { ...c.attrs, background } } : c;
+        return { ...c, attrs: { ...c.attrs, ...(background && { background }), ...(border && { border }) } };
       };
       out.push({ ...make(), content: readCell(td) });
       for (let k = 1; k < span; k++) out.push(make());
@@ -390,6 +396,15 @@ function cellBackground(td: Element): string | null {
   if (own) return own;
   const css = (td as HTMLElement).style?.backgroundColor;
   return css ? nearestColor(css, 'background') : null;
+}
+
+/** A cell's line color: Levit's own by name, others as the nearest named color. */
+function cellBorder(td: Element): string | null {
+  const own = normalizeColor(td.getAttribute('data-border'));
+  if (own) return own;
+  const style = (td as HTMLElement).style;
+  const css = style?.borderTopColor || style?.borderColor;
+  return css ? nearestColor(css, 'border') : null;
 }
 
 /** A cell's content: its paragraphs, list items and nested tables as lines of text. */

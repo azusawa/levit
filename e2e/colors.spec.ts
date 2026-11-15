@@ -77,10 +77,24 @@ test.describe('cell colors', () => {
     ]);
     await page.locator('[data-block-id="b"]').click();
     const toolbar = page.locator('.levit-table-toolbar');
-    await toolbar.getByRole('button', { name: 'Cell color' }).click();
+    await toolbar.getByRole('button', { name: 'Table color' }).click();
     await toolbar.getByRole('group', { name: 'Cell color' }).getByRole('button', { name: 'Green' }).click();
     expect(await style(page, '[data-block-id="b"]', 'background-color')).toBe('rgb(220, 252, 231)');
     expect(await style(page, '[data-block-id="a"]', 'background-color')).toBe('rgba(0, 0, 0, 0)');
-    await expect(toolbar.getByRole('button', { name: 'Cell color' })).toBeVisible();
+    await expect(toolbar.getByRole('button', { name: 'Table color' })).toBeVisible();
+  });
+
+  test('the table toolbar colors the lines of the whole table, in light and dark themes', async ({ page }) => {
+    await setDoc(page, [
+      { id: 'a', type: 'table_cell', attrs: { table: 't', row: 'r' }, content: [{ text: 'A' }] },
+      { id: 'b', type: 'table_cell', attrs: { table: 't', row: 'r' }, content: [{ text: 'B' }] },
+    ]);
+    await page.locator('[data-block-id="b"]').click();
+    const toolbar = page.locator('.levit-table-toolbar');
+    await toolbar.getByRole('button', { name: 'Table color' }).click();
+    await toolbar.getByRole('group', { name: 'Line color' }).getByRole('button', { name: 'Red' }).click();
+    for (const id of ['a', 'b']) expect(await style(page, `[data-block-id="${id}"]`, 'border-top-color')).toBe('rgb(185, 28, 28)');
+    await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'));
+    expect(await style(page, '[data-block-id="a"]', 'border-top-color')).toBe('rgb(248, 113, 113)');
   });
 });

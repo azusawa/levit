@@ -87,6 +87,9 @@ export const en = {
   cellColor: 'Cell color',
   noCellColor: 'No color',
   otherCellColor: 'Other cell color',
+  tableColor: 'Table color',
+  lineColor: 'Line color',
+  otherLineColor: 'Other line color',
 
   // Blocks
   markDone: 'Mark as done',
@@ -193,6 +196,9 @@ export const ko: LevitMessages = {
   cellColor: '칸 색',
   noCellColor: '색 없음',
   otherCellColor: '다른 칸 색',
+  tableColor: '표 색',
+  lineColor: '선 색',
+  otherLineColor: '다른 선 색',
 
   markDone: '완료로 표시',
   markNotDone: '미완료로 표시',
@@ -295,6 +301,9 @@ export const ja: LevitMessages = {
   cellColor: 'セルの色',
   noCellColor: '色なし',
   otherCellColor: 'ほかのセルの色',
+  tableColor: '表の色',
+  lineColor: '線の色',
+  otherLineColor: 'ほかの線の色',
 
   markDone: '完了にする',
   markNotDone: '未完了にする',

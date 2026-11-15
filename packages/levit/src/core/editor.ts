@@ -337,6 +337,12 @@ export class ChainedCommands {
     return this;
   }
 
+  /** Colors the lines of the caret's table (see setColor); null takes the color off. */
+  setTableBorder(color: string | null): this {
+    this.tr.setTableBorder(color);
+    return this;
+  }
+
   setHeading(level = 1): this {
     this.tr.setBlockType('heading', { level });
     return this;
@@ -689,6 +695,13 @@ export class LevitEditor {
     const { doc, selection } = this.state;
     const block = doc.blocks[findBlockIndex(doc, selection.head.blockId)];
     return block?.type === 'table_cell' ? normalizeColor(block.attrs?.background) : null;
+  }
+
+  /** The line color of the table with the caret, or null for the default (or outside a table). */
+  getTableBorder(): string | null {
+    const { doc, selection } = this.state;
+    const block = doc.blocks[findBlockIndex(doc, selection.head.blockId)];
+    return block?.type === 'table_cell' ? normalizeColor(block.attrs?.border) : null;
   }
 
   /** True when the caret is in a table. */

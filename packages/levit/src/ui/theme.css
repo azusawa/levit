@@ -693,6 +693,11 @@ figure.levit-block-image img {
   outline-offset: 1px;
 }
 
+/* A line color shows as a thick border round the swatch. */
+.levit-color-row-border .levit-color-swatch {
+  border-width: 3px;
+}
+
 .levit-color-row-background .levit-color-none {
   color: var(--levit-text-muted);
   text-decoration: line-through;

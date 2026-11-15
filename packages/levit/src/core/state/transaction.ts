@@ -803,7 +803,7 @@ export class Transaction {
     const cols = Math.max(...t.rows.map((r) => r.length));
     // A row added above a header row is a header too, so the header stays on top.
     const header = where === 'before' && current.every((i) => this.doc.blocks[i].attrs?.header === true);
-    const cells = Array.from({ length: cols }, () => createCell(table, row, header));
+    const cells = Array.from({ length: cols }, () => this.withTableBorder(t, createCell(table, row, header)));
     const at = where === 'before' ? current[0] : current[current.length - 1] + 1;
     this.doc.blocks.splice(at, 0, ...cells);
     this.setCaret(cells[Math.min(column ?? t.col, cols - 1)].id, 0);
@@ -822,7 +822,7 @@ export class Transaction {
     const position = where === 'before' ? t.col : where === 'after' ? t.col + 1 : Infinity;
     const inserts = t.rows.map((row) => {
       const first = this.doc.blocks[row[0]];
-      const cell = createCell(table, rowIdOf(first), first.attrs?.header === true);
+      const cell = this.withTableBorder(t, createCell(table, rowIdOf(first), first.attrs?.header === true));
       const append = position >= row.length;
       return { cell, append, at: append ? row[row.length - 1] + 1 : row[position] };
     });
@@ -900,6 +900,31 @@ export class Transaction {
       this.docChanged = true;
     }
     return this;
+  }
+
+  /**
+   * Colors the lines of the caret's table (see setColor for the values), or
+   * takes their color off (null). Every cell keeps the color, so the table
+   * keeps it when rows go. A value that is not a color is ignored.
+   */
+  setTableBorder(color: string | null): this {
+    const value = color === null ? null : normalizeColor(color);
+    const t = this.tableAtCaret();
+    if (!t || (color !== null && !value)) return this;
+    for (let i = t.start; i <= t.end; i++) {
+      const attrs = { ...this.doc.blocks[i].attrs };
+      if (value) attrs.border = value;
+      else delete attrs.border;
+      this.edit(i).attrs = attrs;
+    }
+    this.docChanged = true;
+    return this;
+  }
+
+  /** The line color of the caret's table, given to the cells a row or column adds. */
+  private withTableBorder(t: TablePosition, cell: BlockNode): BlockNode {
+    const border = normalizeColor(this.doc.blocks[t.start].attrs?.border);
+    return border ? { ...cell, attrs: { ...cell.attrs, border } } : cell;
   }
 
   /** Turns the first row of the caret's table into a header row, or back. */

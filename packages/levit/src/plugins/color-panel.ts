@@ -36,8 +36,8 @@ export function colorLabel(m: LevitMessages, name: string): string {
 function pickerValue(color: string | null, kind: ColorKind): string {
   if (color?.startsWith('#')) return color;
   const known = COLORS.find((c) => c.name === color);
-  if (known) return kind === 'text' ? known.text : known.background;
-  return kind === 'text' ? '#000000' : '#ffffff';
+  if (known) return kind === 'background' ? known.background : known.text;
+  return kind === 'background' ? '#ffffff' : '#000000';
 }
 
 /**
@@ -78,6 +78,7 @@ export function createColorPanel(editor: LevitEditor, options: ColorPanelOptions
       btn.setAttribute('aria-label', label);
       if (color === null) btn.classList.add('levit-color-none');
       else if (kind === 'text') btn.style.color = colorCSS(color, 'text')!;
+      else if (kind === 'border') btn.style.borderColor = colorCSS(color, 'border')!;
       else btn.style.backgroundColor = colorCSS(color, 'background')!;
       btn.addEventListener('mousedown', (e) => {
         e.preventDefault();

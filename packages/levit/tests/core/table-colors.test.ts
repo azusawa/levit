@@ -131,13 +131,13 @@ describe('the cell color button in the table toolbar', () => {
     make();
     toolbar = createTableToolbar(editor);
     place('b');
-    const button = toolbar.element.querySelector('button[aria-label="Cell color"]')!;
+    const button = toolbar.element.querySelector('button[aria-label="Table color"]')!;
     expect(button.getAttribute('aria-haspopup')).toBe('true');
     press(button);
     const panel = toolbar.element.querySelector('.levit-color-panel') as HTMLElement;
     expect(panel.hidden).toBe(false);
     expect((toolbar.element.querySelector('.levit-table-toolbar-buttons') as HTMLElement).hidden).toBe(true);
-    expect(Array.from(panel.querySelectorAll('[role="group"]'), (g) => g.getAttribute('aria-label'))).toEqual(['Cell color']);
+    expect(Array.from(panel.querySelectorAll('[role="group"]'), (g) => g.getAttribute('aria-label'))).toEqual(['Cell color', 'Line color']);
     expect(panel.querySelector('button')!.getAttribute('aria-label')).toBe('No color');
     expect(panel.querySelector('input[type="color"]')!.getAttribute('aria-label')).toBe('Other cell color');
 
@@ -152,7 +152,7 @@ describe('the cell color button in the table toolbar', () => {
     toolbar = createTableToolbar(editor);
     place('b');
     editor.chain().setCellBackground('pink').run();
-    const button = toolbar.element.querySelector('button[aria-label="Cell color"]')!;
+    const button = toolbar.element.querySelector('button[aria-label="Table color"]')!;
     press(button);
     const panel = toolbar.element.querySelector('.levit-color-panel') as HTMLElement;
     expect(Array.from(panel.querySelectorAll('[aria-pressed="true"]'), (b) => b.getAttribute('aria-label'))).toEqual(['Pink']);
@@ -166,7 +166,7 @@ describe('the cell color button in the table toolbar', () => {
     make();
     toolbar = createTableToolbar(editor);
     place('b');
-    press(toolbar.element.querySelector('button[aria-label="Cell color"]')!);
+    press(toolbar.element.querySelector('button[aria-label="Table color"]')!);
     place('p');
     place('b');
     expect((toolbar.element.querySelector('.levit-color-panel') as HTMLElement).hidden).toBe(true);
@@ -176,7 +176,7 @@ describe('the cell color button in the table toolbar', () => {
     make({ messages: ko });
     toolbar = createTableToolbar(editor);
     place('b');
-    expect(toolbar.element.querySelector('button[aria-label="칸 색"]')).not.toBeNull();
+    expect(toolbar.element.querySelector('button[aria-label="표 색"]')).not.toBeNull();
     expect(toolbar.element.querySelector('[aria-label="칸 색"] button[aria-label="색 없음"]')).not.toBeNull();
   });
 });
@@ -186,7 +186,7 @@ describe('review fixes: the cell color palette', () => {
     make();
     toolbar = createTableToolbar(editor);
     place('b');
-    const button = toolbar.element.querySelector('button[aria-label="Cell color"]') as HTMLButtonElement;
+    const button = toolbar.element.querySelector('button[aria-label="Table color"]') as HTMLButtonElement;
     button.focus();
     button.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 0 }));
     const swatch = document.activeElement as HTMLElement;
@@ -199,7 +199,7 @@ describe('review fixes: the cell color palette', () => {
     make();
     toolbar = createTableToolbar(editor);
     place('b');
-    press(toolbar.element.querySelector('button[aria-label="Cell color"]')!);
+    press(toolbar.element.querySelector('button[aria-label="Table color"]')!);
     editor.dispatch(editor.state.tr.setSelection({ anchor: { blockId: 'c', offset: 0 }, head: { blockId: 'c', offset: 0 }, isCollapsed: true }));
     expect(toolbar.element.style.display).not.toBe('none');
     expect((toolbar.element.querySelector('.levit-color-panel') as HTMLElement).hidden).toBe(true);

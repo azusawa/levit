@@ -80,7 +80,7 @@ export function createTableToolbar(editor: LevitEditor): TableToolbarInstance {
     { icon: 'addColumnRight', title: m.addColumnRight, action: () => editor.chain().addColumnAfter().run(), keys: TABLE_SHORTCUTS.addColumnAfter },
     { icon: 'deleteRow', title: m.deleteRow, action: () => editor.chain().deleteRow().run(), group: true, keys: TABLE_SHORTCUTS.deleteRow },
     { icon: 'deleteColumn', title: m.deleteColumn, action: () => editor.chain().deleteColumn().run(), keys: TABLE_SHORTCUTS.deleteColumn },
-    { icon: 'cellColor', title: m.cellColor, action: () => openColorPanel(), group: true },
+    { icon: 'cellColor', title: m.tableColor, action: () => openColorPanel(), group: true },
     { icon: 'headerRow', title: m.headerRow, action: () => editor.chain().toggleHeaderRow().run() },
     { icon: 'deleteTable', title: m.deleteTable, action: () => editor.chain().deleteTable().run(), group: true },
   ];
@@ -130,15 +130,19 @@ export function createTableToolbar(editor: LevitEditor): TableToolbarInstance {
   });
 
   const colorPanel = createColorPanel(editor, {
-    kinds: ['background'],
-    active: () => editor.getCellBackground(),
-    apply: (_kind, color) => editor.chain().setCellBackground(color).run(),
+    kinds: ['background', 'border'],
+    active: (kind) => (kind === 'border' ? editor.getTableBorder() : editor.getCellBackground()),
+    apply: (kind, color) =>
+      kind === 'border' ? editor.chain().setTableBorder(color).run() : editor.chain().setCellBackground(color).run(),
     onDone: ({ keyboard }) => {
       closeColorPanel();
       if (keyboard) colorButton.focus();
       else if (!editor.container.contains(document.activeElement)) editor.focus();
     },
-    labels: () => ({ group: m.cellColor, none: m.noCellColor, other: m.otherCellColor }),
+    labels: (kind) =>
+      kind === 'border'
+        ? { group: m.lineColor, none: m.defaultColor, other: m.otherLineColor }
+        : { group: m.cellColor, none: m.noCellColor, other: m.otherCellColor },
   });
   menu.appendChild(colorPanel.element);
 
