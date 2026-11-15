@@ -283,6 +283,16 @@ export class DOMReconciler {
       el.removeAttribute('contenteditable');
     }
     if (el.tagName === 'TH') el.setAttribute('scope', 'col');
+    // A table cell's color. Elements are reused, so an old color is cleared.
+    const background = block.type === 'table_cell' ? colorCSS(block.attrs?.background, 'background') : null;
+    if (background) {
+      el.dataset.color = normalizeColor(block.attrs?.background)!;
+      el.style.backgroundColor = background;
+    } else if (el.hasAttribute('data-color') || el.style.backgroundColor) {
+      delete el.dataset.color;
+      el.style.removeProperty('background-color');
+      if (el.getAttribute('style') === '') el.removeAttribute('style');
+    }
     const indent = listIndent(block);
     if (indent > 0) el.setAttribute('data-indent', String(indent));
     else el.removeAttribute('data-indent');

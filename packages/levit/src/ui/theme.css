@@ -629,11 +629,13 @@ a:hover {
 }
 
 /* The bubble menu's buttons give way to the link field or the color palette. */
-.levit-bubble-buttons {
+.levit-bubble-buttons,
+.levit-table-toolbar-buttons {
   display: contents;
 }
 
 .levit-bubble-buttons[hidden],
+.levit-table-toolbar-buttons[hidden],
 .levit-color-panel[hidden] {
   display: none;
 }

@@ -22,6 +22,7 @@ import {
   splitBlockContent,
 } from '../model/document.js';
 import { normalizeCodeLanguage, sanitizeHref, sanitizeImageSrc } from '../model/sanitize.js';
+import { normalizeColor } from '../model/colors.js';
 import {
   lineEndOffset,
   lineStartOffset,
@@ -879,6 +880,25 @@ export class Transaction {
       this.setCaret(paragraph.id, 0);
     }
     this.docChanged = true;
+    return this;
+  }
+
+  /**
+   * Colors the selected table cells (see setColor for the values), or takes
+   * their color off (null). A value that is not a color is ignored.
+   */
+  setCellBackground(color: string | null): this {
+    const value = color === null ? null : normalizeColor(color);
+    if (color !== null && !value) return this;
+    for (const index of this.selectedIndexes()) {
+      const block = this.doc.blocks[index];
+      if (!isTableCell(block?.type ?? '')) continue;
+      const attrs = { ...block.attrs };
+      if (value) attrs.background = value;
+      else delete attrs.background;
+      this.edit(index).attrs = attrs;
+      this.docChanged = true;
+    }
     return this;
   }
 

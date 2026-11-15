@@ -2,6 +2,7 @@ import { LevitEditor } from '../core/editor.js';
 import { tableAt } from '../core/model/table.js';
 import { rovingToolbar } from './toolbar-keys.js';
 import { TABLE_SHORTCUTS } from '../core/view/table-shortcuts.js';
+import { createColorPanel } from './color-panel.js';
 
 export interface TableToolbarInstance {
   element: HTMLElement;
@@ -20,6 +21,7 @@ const ICONS: Record<string, string[]> = {
   deleteRow: ['M1 5h9v6H1z', 'M12 6.5l3 3M15 6.5l-3 3'],
   deleteColumn: ['M5 1h6v9H5z', 'M6.5 12l3 3M9.5 12l-3 3'],
   headerRow: ['M2 2h12v12H2z', 'M2 6h12M2 10h12M8 6v8', 'fill:M2 2h12v4H2z'],
+  cellColor: ['M2 2h12v12H2z', 'fill:M5 5h6v6H5z'],
   deleteTable: ['M2.5 4h11M6 4V2.5h4V4', 'M4 4l.8 9.5h6.4L12 4'],
 };
 
@@ -78,16 +80,22 @@ export function createTableToolbar(editor: LevitEditor): TableToolbarInstance {
     { icon: 'addColumnRight', title: m.addColumnRight, action: () => editor.chain().addColumnAfter().run(), keys: TABLE_SHORTCUTS.addColumnAfter },
     { icon: 'deleteRow', title: m.deleteRow, action: () => editor.chain().deleteRow().run(), group: true, keys: TABLE_SHORTCUTS.deleteRow },
     { icon: 'deleteColumn', title: m.deleteColumn, action: () => editor.chain().deleteColumn().run(), keys: TABLE_SHORTCUTS.deleteColumn },
-    { icon: 'headerRow', title: m.headerRow, action: () => editor.chain().toggleHeaderRow().run(), group: true },
+    { icon: 'cellColor', title: m.cellColor, action: () => openColorPanel(), group: true },
+    { icon: 'headerRow', title: m.headerRow, action: () => editor.chain().toggleHeaderRow().run() },
     { icon: 'deleteTable', title: m.deleteTable, action: () => editor.chain().deleteTable().run(), group: true },
   ];
+
+  // The buttons give way to the color palette.
+  const buttonRow = document.createElement('div');
+  buttonRow.className = 'levit-table-toolbar-buttons';
+  menu.appendChild(buttonRow);
 
   const buttonEls = buttons.map((b) => {
     if (b.group) {
       const line = document.createElement('span');
       line.className = 'levit-table-toolbar-separator';
       line.setAttribute('aria-hidden', 'true');
-      menu.appendChild(line);
+      buttonRow.appendChild(line);
     }
     const btn = document.createElement('button');
     btn.type = 'button';
@@ -109,10 +117,42 @@ export function createTableToolbar(editor: LevitEditor): TableToolbarInstance {
       b.action();
       update();
     });
-    menu.appendChild(btn);
+    buttonRow.appendChild(btn);
     return btn;
   });
   const headerButton = buttonEls[buttons.findIndex((b) => b.icon === 'headerRow')];
+  const colorButton = buttonEls[buttons.findIndex((b) => b.icon === 'cellColor')];
+  colorButton.setAttribute('aria-haspopup', 'true');
+  colorButton.setAttribute('aria-expanded', 'false');
+  // From the keyboard, focus goes into the palette.
+  colorButton.addEventListener('click', (e) => {
+    if (e.detail === 0 && colorPanel.isOpen) colorPanel.focusFirst();
+  });
+
+  const colorPanel = createColorPanel(editor, {
+    kinds: ['background'],
+    active: () => editor.getCellBackground(),
+    apply: (_kind, color) => editor.chain().setCellBackground(color).run(),
+    onDone: ({ keyboard }) => {
+      closeColorPanel();
+      if (keyboard) colorButton.focus();
+      else if (!editor.container.contains(document.activeElement)) editor.focus();
+    },
+    labels: () => ({ group: m.cellColor, none: m.noCellColor, other: m.otherCellColor }),
+  });
+  menu.appendChild(colorPanel.element);
+
+  function openColorPanel() {
+    buttonRow.hidden = true;
+    colorPanel.open();
+    colorButton.setAttribute('aria-expanded', 'true');
+  }
+
+  function closeColorPanel() {
+    colorPanel.close();
+    buttonRow.hidden = false;
+    colorButton.setAttribute('aria-expanded', 'false');
+  }
 
   const focusButton = rovingToolbar(menu, buttonEls, () => editor.focus());
 
@@ -176,6 +216,7 @@ export function createTableToolbar(editor: LevitEditor): TableToolbarInstance {
       // A keyboard user on a button that goes away goes back to the text.
       const hadFocus = focused && menu.contains(document.activeElement);
       for (const el of floating) el.style.display = 'none';
+      closeColorPanel();
       if (hadFocus) editor.focus();
       return;
     }

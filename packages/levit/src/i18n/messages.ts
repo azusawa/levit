@@ -84,6 +84,9 @@ export const en = {
   deleteTableDescription: 'Remove the whole table',
   addRowAtEnd: 'Add a row at the end',
   addColumnAtEnd: 'Add a column at the end',
+  cellColor: 'Cell color',
+  noCellColor: 'No color',
+  otherCellColor: 'Other cell color',
 
   // Blocks
   markDone: 'Mark as done',
@@ -187,6 +190,9 @@ export const ko: LevitMessages = {
   deleteTableDescription: '표 전체 지우기',
   addRowAtEnd: '맨 아래에 행 추가',
   addColumnAtEnd: '맨 오른쪽에 열 추가',
+  cellColor: '칸 색',
+  noCellColor: '색 없음',
+  otherCellColor: '다른 칸 색',
 
   markDone: '완료로 표시',
   markNotDone: '미완료로 표시',
@@ -286,6 +292,9 @@ export const ja: LevitMessages = {
   deleteTableDescription: '表全体を消す',
   addRowAtEnd: '最後に行を追加',
   addColumnAtEnd: '最後に列を追加',
+  cellColor: 'セルの色',
+  noCellColor: '色なし',
+  otherCellColor: 'ほかのセルの色',
 
   markDone: '完了にする',
   markNotDone: '未完了にする',

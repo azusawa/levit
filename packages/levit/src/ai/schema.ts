@@ -71,6 +71,7 @@ export function getDocumentSchema(options: SerializerOptions = {}): JSONSchema {
           table: { type: 'string', minLength: 1, description: 'The table this cell belongs to. Cells of one table follow each other.' },
           row: { type: 'string', minLength: 1, description: 'The row this cell belongs to. Cells of one row follow each other, left to right.' },
           header: { type: 'boolean', description: 'A header cell.' },
+          background: { ...COLOR, description: `The cell's color. ${COLOR.description}` },
         },
         ['table', 'row']
       ),
@@ -247,10 +248,11 @@ const BLOCK_ATTRS: Record<string, AttrCheck> = {
   task_list_item: both(onlyKeys(['checked', 'indent']), checkIndent, (a, fail) => {
     if (typeof a.checked !== 'boolean') fail('checked', 'must be true or false');
   }),
-  table_cell: both(onlyKeys(['table', 'row', 'header']), (a, fail) => {
+  table_cell: both(onlyKeys(['table', 'row', 'header', 'background']), (a, fail) => {
     if (typeof a.table !== 'string' || a.table === '') fail('table', 'must be the id of the table, a string');
     if (typeof a.row !== 'string' || a.row === '') fail('row', 'must be the id of the row, a string');
     if (a.header !== undefined && typeof a.header !== 'boolean') fail('header', 'must be true or false');
+    if (a.background !== undefined && !normalizeColor(a.background)) fail('background', 'must be a color name or a hex color (#rrggbb)');
   }),
   image: both(onlyKeys(['src', 'alt']), (a, fail) => {
     if (!sanitizeImageSrc(a.src)) fail('src', 'must be a safe image URL (http, https, blob, relative or a bitmap data URL)');

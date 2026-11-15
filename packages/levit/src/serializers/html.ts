@@ -161,7 +161,10 @@ function tableHTML(blocks: readonly BlockNode[], table: TablePosition, inline: (
     rows
       .map((row) => `<tr>${row.map((k) => {
         const tag = blocks[k].attrs?.header === true ? 'th' : 'td';
-        return `<${tag}>${inline(blocks[k])}</${tag}>`;
+        const color = normalizeColor(blocks[k].attrs?.background);
+        const style = color && `background-color: ${colorCSS(color, 'background')}`;
+        const attrs = style ? ` data-color="${escapeHTML(color)}" style="${escapeHTML(style)}"` : '';
+        return `<${tag}${attrs}>${inline(blocks[k])}</${tag}>`;
       }).join('')}</tr>`)
       .join('');
   let html = '<table>';
@@ -370,10 +373,23 @@ function readTable(table: Element, out: BlockNode[]): void {
       if (tag !== 'td' && tag !== 'th') continue;
       const header = tag === 'th';
       const span = Math.min(Math.max(parseInt(td.getAttribute('colspan') ?? '1', 10) || 1, 1), MAX_COLSPAN);
-      out.push({ ...createCell(tableId, rowId, header), content: readCell(td) });
-      for (let k = 1; k < span; k++) out.push(createCell(tableId, rowId, header));
+      const background = cellBackground(td);
+      const make = () => {
+        const c = createCell(tableId, rowId, header);
+        return background ? { ...c, attrs: { ...c.attrs, background } } : c;
+      };
+      out.push({ ...make(), content: readCell(td) });
+      for (let k = 1; k < span; k++) out.push(make());
     }
   }
+}
+
+/** A cell's color: Levit's own by name, others as the nearest named color. */
+function cellBackground(td: Element): string | null {
+  const own = normalizeColor(td.getAttribute('data-color'));
+  if (own) return own;
+  const css = (td as HTMLElement).style?.backgroundColor;
+  return css ? nearestColor(css, 'background') : null;
 }
 
 /** A cell's content: its paragraphs, list items and nested tables as lines of text. */

@@ -309,6 +309,12 @@ export class ChainedCommands {
     return this;
   }
 
+  /** Colors the selected table cells (see setColor); null takes the color off. */
+  setCellBackground(color: string | null): this {
+    this.tr.setCellBackground(color);
+    return this;
+  }
+
   setHeading(level = 1): this {
     this.tr.setBlockType('heading', { level });
     return this;
@@ -648,6 +654,13 @@ export class LevitEditor {
     const nodes = sliceDocument(doc, selection).flatMap((b) => b.content).filter((n) => n.text.length > 0);
     const colors = new Set(nodes.map((n) => colorOf(n.marks)));
     return colors.size === 1 ? [...colors][0] : null;
+  }
+
+  /** The color of the table cell with the caret, or null. */
+  getCellBackground(): string | null {
+    const { doc, selection } = this.state;
+    const block = doc.blocks[findBlockIndex(doc, selection.head.blockId)];
+    return block?.type === 'table_cell' ? normalizeColor(block.attrs?.background) : null;
   }
 
   /** True when the caret is in a table. */

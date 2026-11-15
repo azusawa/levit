@@ -56,12 +56,13 @@ describe('table toolbar', () => {
     make();
     expect(toolbar.element.getAttribute('role')).toBe('toolbar');
     expect(toolbar.element.getAttribute('aria-label')).toBe('Table tools');
-    const labels = Array.from(toolbar.element.querySelectorAll('button')).map((b) => b.getAttribute('aria-label'));
+    const toolbarButtons = toolbar.element.querySelectorAll('.levit-table-toolbar-buttons button');
+    const labels = Array.from(toolbarButtons).map((b) => b.getAttribute('aria-label'));
     expect(labels).toEqual([
       'Add row above', 'Add row below', 'Add column left', 'Add column right',
-      'Delete row', 'Delete column', 'Header row', 'Delete table',
+      'Delete row', 'Delete column', 'Cell color', 'Header row', 'Delete table',
     ]);
-    for (const b of toolbar.element.querySelectorAll('button')) expect(b.title.startsWith(b.getAttribute('aria-label')!)).toBe(true);
+    for (const b of toolbarButtons) expect(b.title.startsWith(b.getAttribute('aria-label')!)).toBe(true);
   });
 
   it('shows the shortcuts of the buttons that have one', () => {
