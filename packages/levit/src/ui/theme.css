@@ -526,21 +526,21 @@ figure.levit-block-image img {
   color: var(--levit-suggestion-insert-text);
 }
 
-/* Inline Marks */
-strong {
+/* Inline Marks: only inside the editor, so the page keeps its own links and bold text. */
+.levit-editor-root strong {
   font-weight: 600;
 }
 
-em {
+.levit-editor-root em {
   font-style: italic;
 }
 
-u {
+.levit-editor-root u {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
 
-s {
+.levit-editor-root s {
   text-decoration: line-through;
   color: var(--levit-text-muted);
 }
@@ -561,13 +561,13 @@ s {
   border-radius: 4px;
 }
 
-a {
+.levit-editor-root a {
   color: var(--levit-primary);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 
-a:hover {
+.levit-editor-root a:hover {
   color: var(--levit-primary-hover);
 }
 

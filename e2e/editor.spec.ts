@@ -210,3 +210,20 @@ test.describe('slash menu', () => {
     expect(await texts(page)).toEqual(['']);
   });
 });
+
+test.describe('the page around the editor', () => {
+  test('keeps its own links, bold and struck-through text', async ({ page }) => {
+    await page.evaluate(() => {
+      document.body.insertAdjacentHTML('beforeend', '<p id="outside"><a href="#x">link</a> <strong>bold</strong> <s>old</s></p>');
+      (window as any).editor.setJSON({ version: 1, blocks: [{ id: 'p', type: 'paragraph', content: [{ text: 'in', marks: [{ type: 'link', attrs: { href: 'https://example.com' } }] }] }] });
+    });
+    const style = (selector: string, property: string) =>
+      page.evaluate(([sel, prop]) => getComputedStyle(document.querySelector(sel)!).getPropertyValue(prop), [selector, property]);
+    // Inside the editor, Levit's own look.
+    expect(await style('#editor a', 'color')).toBe('rgb(59, 130, 246)');
+    // Outside, the browser's (or the page's) look.
+    expect(await style('#outside a', 'color')).not.toBe('rgb(59, 130, 246)');
+    expect(await style('#outside strong', 'font-weight')).toBe('700');
+    expect(await style('#outside s', 'color')).toBe(await style('#outside', 'color'));
+  });
+});

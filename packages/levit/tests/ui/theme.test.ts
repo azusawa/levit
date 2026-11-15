@@ -104,3 +104,19 @@ describe('table add buttons', () => {
     expect(lastRoom).toBeGreaterThan(last);
   });
 });
+
+describe('the stylesheet styles only Levit', () => {
+  it('every rule is scoped to a Levit class, so links and bold text elsewhere on the page keep their look', () => {
+    const rules = css
+      .replace(/@keyframes[^{]*\{(?:[^{}]*\{[^}]*\})*\s*\}/g, '')
+      .replace(/@media[^{]*\{/g, '')
+      .matchAll(/([^{}]+)\{[^}]*\}/g);
+    const unscoped: string[] = [];
+    for (const [, selectors] of rules) {
+      for (const selector of selectors.split(',').map((s) => s.trim())) {
+        if (!/levit|^:root|^\[data-theme/.test(selector)) unscoped.push(selector);
+      }
+    }
+    expect(unscoped).toEqual([]);
+  });
+});
