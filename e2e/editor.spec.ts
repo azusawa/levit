@@ -219,10 +219,15 @@ test.describe('the page around the editor', () => {
     });
     const style = (selector: string, property: string) =>
       page.evaluate(([sel, prop]) => getComputedStyle(document.querySelector(sel)!).getPropertyValue(prop), [selector, property]);
-    // Inside the editor, Levit's own look.
-    expect(await style('#editor a', 'color')).toBe('rgb(59, 130, 246)');
-    // Outside, the browser's (or the page's) look.
-    expect(await style('#outside a', 'color')).not.toBe('rgb(59, 130, 246)');
+    const primary = await page.evaluate(() => {
+      const probe = document.createElement('span');
+      probe.style.color = 'var(--levit-primary)';
+      document.body.append(probe);
+      return getComputedStyle(probe).color;
+    });
+    // Inside the editor, Levit's own look; outside, the browser's (or the page's).
+    expect(await style('#editor a', 'color')).toBe(primary);
+    expect(await style('#outside a', 'color')).not.toBe(primary);
     expect(await style('#outside strong', 'font-weight')).toBe('700');
     expect(await style('#outside s', 'color')).toBe(await style('#outside', 'color'));
   });

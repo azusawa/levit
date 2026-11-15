@@ -106,17 +106,32 @@ describe('table add buttons', () => {
 });
 
 describe('the stylesheet styles only Levit', () => {
+  /** Every selector of every rule, with at-rules opened and keyframes left out. */
+  const selectors = Array.from(
+    css
+      .replace(/@(?:-webkit-)?keyframes[^{]*\{(?:[^{}]*\{[^}]*\})*\s*\}/g, '')
+      .replace(/@font-face\s*\{[^}]*\}/g, '')
+      .replace(/@[a-z-]+[^{;]*\{/g, '')
+      .matchAll(/([^{}]+)\{[^}]*\}/g),
+    (m) => m[1].split(',').map((s) => s.trim())
+  ).flat();
+
   it('every rule is scoped to a Levit class, so links and bold text elsewhere on the page keep their look', () => {
-    const rules = css
-      .replace(/@keyframes[^{]*\{(?:[^{}]*\{[^}]*\})*\s*\}/g, '')
-      .replace(/@media[^{]*\{/g, '')
-      .matchAll(/([^{}]+)\{[^}]*\}/g);
-    const unscoped: string[] = [];
-    for (const [, selectors] of rules) {
-      for (const selector of selectors.split(',').map((s) => s.trim())) {
-        if (!/levit|^:root|^\[data-theme/.test(selector)) unscoped.push(selector);
-      }
+    const theme = /^(:root|\[data-theme(="\w+")?\]|:root:not\(\[data-theme="\w+"\]\))$/;
+    const scoped = /\.levit-[\w-]+|(^|[\s>+~])levit-editor\b/;
+    expect(selectors.filter((s) => !theme.test(s) && !scoped.test(s))).toEqual([]);
+  });
+
+  it('the scoping test catches what is not scoped', () => {
+    const theme = /^(:root|\[data-theme(="\w+")?\]|:root:not\(\[data-theme="\w+"\]\))$/;
+    const scoped = /\.levit-[\w-]+|(^|[\s>+~])levit-editor\b/;
+    for (const s of [':root a', '[data-theme] strong', 'a[href*=levit]', 'a']) expect(theme.test(s) || scoped.test(s), s).toBe(false);
+  });
+
+  it('leaves marks that bring their own class, like a plugin mention, to their own styles', () => {
+    for (const tag of ['strong', 'em', 'u', 's', 'a', 'a:hover']) {
+      const [el, state = ''] = tag.split(':');
+      expect(selectors, tag).toContain(`.levit-editor-root ${el}:not([class])${state ? ':' + state : ''}`);
     }
-    expect(unscoped).toEqual([]);
   });
 });

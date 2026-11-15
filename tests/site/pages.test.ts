@@ -35,8 +35,9 @@ describe('site pages', () => {
       const { html } = doc(lang, 'landing');
       expect(/<h1[^>]*>([^<]*)<\/h1>/.exec(html)?.[1], lang).toBe(want[lang].h1);
       expect(html, lang).toContain(`<title>${want[lang].title}</title>`);
-      // The size and the dependency count stay as proof under the headline.
-      expect(strings[lang].hero.lead, lang).toMatch(/45 kB/);
+      // The size and the dependency count stay as proof under the headline
+      // (size.test.ts checks the size is right).
+      expect(strings[lang].hero.lead, lang).toMatch(/\d+ kB/);
       expect(strings[lang].meta.landingDescription, lang).toContain(want[lang].deps);
     }
   });

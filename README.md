@@ -30,7 +30,7 @@
 
 1. **Zero Runtime Dependency (런타임 의존성 0개)**
    - 외부 런타임 라이브러리 없이 순수 Web 표준 API(DOM, Selection, InputEvent)와 TypeScript만으로 독자 구현되었습니다.
-   - 번들 크기: **약 45 kB (gzipped)**입니다. AI 기능(`@yonailab/levit/ai`)은 따로 약 8 kB이고, 쓸 때만 불러옵니다.
+   - 번들 크기: 자바스크립트가 **약 45 kB (gzipped)**, CSS가 따로 약 3.5 kB입니다. AI 기능(`@yonailab/levit/ai`)은 따로 약 8 kB이고, 쓸 때만 불러옵니다.
 2. **가져다 쓰기 가장 쉬운 구조 (DX & AX First)**
    - 단 3줄의 코드로 모든 웹사이트에 연동 가능합니다.
    - `<levit-editor></levit-editor>` 웹 컴포넌트를 지원하여 React, Vue, Svelte, 바닐라 JS 어디서나 HTML 태그 하나로 동작합니다.

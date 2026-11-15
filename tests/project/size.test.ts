@@ -16,12 +16,14 @@ function withImports(file: string, seen = new Set<string>()): string {
   if (seen.has(file)) return '';
   seen.add(file);
   const code = readFileSync(file, 'utf8');
-  const imports = Array.from(code.matchAll(/from\s*["'](\.[^"']+)["']/g), (m) => resolve(dirname(file), m[1]));
+  // Static, side-effect and dynamic imports: import x from "./a", import "./b", import("./c").
+  const imports = Array.from(code.matchAll(/(?:\bfrom|\bimport)\s*\(?\s*["'](\.[^"']+)["']/g), (m) => resolve(dirname(file), m[1]));
   return code + imports.map((f) => withImports(f, seen)).join('');
 }
 
 let out: string;
-const size = { core: 0, ai: 0, yjs: 0 };
+type Kind = 'core' | 'ai' | 'yjs' | 'css';
+const size: Record<Kind, number> = { core: 0, ai: 0, yjs: 0, css: 0 };
 
 beforeAll(async () => {
   // Built the way it is published, into a folder of its own.
@@ -35,6 +37,7 @@ beforeAll(async () => {
   // What importing the core loads, and what the AI entry point adds to it.
   size.core = kB(withImports(join(out, 'index.js')));
   size.ai = kB(readFileSync(join(out, 'ai.js'), 'utf8'));
+  size.css = kB(readFileSync(join(out, 'levit.css'), 'utf8'));
   // The Yjs binding is published as tsc writes it.
   const { config } = ts.readConfigFile(resolve(root, 'packages/yjs/tsconfig.json'), ts.sys.readFile);
   const { options } = ts.parseJsonConfigFileContent(config, ts.sys, resolve(root, 'packages/yjs'));
@@ -43,33 +46,46 @@ beforeAll(async () => {
 
 afterAll(() => rmSync(out, { recursive: true, force: true }));
 
-/** The sizes a text gives, like "30 kB" or "7.5 kB". */
-const claimed = (text: string) => Array.from(text.matchAll(/(\d+(?:\.\d+)?)\s*kB/g), (m) => Number(m[1]));
-/** A size is right when it is within 10% (and at least 1 kB) of what was measured. */
-const near = (n: number, measured: number) => Math.abs(n - measured) <= Math.max(1, measured * 0.1);
+/**
+ * The sizes a text gives, like "30 kB" or "7.5 KB", each with what it is the
+ * size of: the package named in the same phrase, or the core.
+ */
+function claims(text: string): { n: number; kind: Kind }[] {
+  return Array.from(text.matchAll(/(\d+(?:\.\d+)?)\s*(?:kB|KB|kb|KiB)\b/g), (m) => {
+    // The words of the same phrase: back to the last separator, like "·" or ",".
+    const before = text.slice(0, m.index).split(/·|[,;:.]\s|[、，。：]/).pop()!;
+    const named = Array.from(before.matchAll(/\b(AI|Yjs|CSS)\b/g)).pop()?.[1];
+    return { n: Number(m[1]), kind: named === 'AI' ? 'ai' : named === 'Yjs' ? 'yjs' : named === 'CSS' ? 'css' : 'core' };
+  });
+}
+/** A size is right when it is within 1 kB of what was measured. */
+const near = (n: number, measured: number) => Math.abs(n - measured) <= 1;
+const wrong = (text: string) => claims(text).filter(({ n, kind }) => !near(n, size[kind]));
 
+const docs = ['README.md', 'llms.txt', ...(['en', 'ko', 'ja'] as const).flatMap((lang) => [`site/content/${lang}/docs.md`, `site/content/${lang}/guide.md`])];
 const texts: [string, string][] = [
-  ['README.md', read('README.md')],
-  ...(['en', 'ko', 'ja'] as const).map((lang): [string, string] => [`site/content/${lang}/docs.md`, read(`site/content/${lang}/docs.md`)]),
+  ...docs.map((file): [string, string] => [file, read(file)]),
   ...(['en', 'ko', 'ja'] as const).map((lang): [string, string] => [`site strings ${lang}`, JSON.stringify(strings[lang])]),
 ];
 
 describe('the sizes the docs and the site give', () => {
-  it('are the sizes of the packages as built', () => {
+  it('are the sizes of the packages they name, as built', () => {
     for (const [where, text] of texts) {
-      for (const n of claimed(text)) {
-        expect(
-          Object.values(size).some((measured) => near(n, measured)),
-          `${where} says ${n} kB; measured core ${size.core}, AI ${size.ai}, Yjs ${size.yjs} kB`
-        ).toBe(true);
-      }
+      expect(wrong(text), `${where}; measured ${JSON.stringify(size)} kB`).toEqual([]);
     }
   });
 
-  it('the landing page and the README give the size of the core', () => {
+  it('catches a size given for the wrong package', () => {
+    const swapped = `AI ${Math.round(size.yjs + 4)} kB · Yjs binding ${Math.round(size.ai + 4)} kB`;
+    expect(wrong(swapped).map((c) => c.kind)).toEqual(['ai', 'yjs']);
+  });
+
+  it('the landing page and the README give the size of the core, and the README that of the CSS', () => {
     for (const lang of ['en', 'ko', 'ja'] as const) {
-      expect(claimed(strings[lang].hero.lead).some((n) => near(n, size.core)), lang).toBe(true);
+      expect(claims(strings[lang].hero.lead).some(({ n, kind }) => kind === 'core' && near(n, size.core)), lang).toBe(true);
     }
-    expect(claimed(read('README.md')).some((n) => near(n, size.core))).toBe(true);
+    const readme = claims(read('README.md'));
+    expect(readme.some(({ n, kind }) => kind === 'core' && near(n, size.core))).toBe(true);
+    expect(readme.some(({ n, kind }) => kind === 'css' && near(n, size.css))).toBe(true);
   });
 });
