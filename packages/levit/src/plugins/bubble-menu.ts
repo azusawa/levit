@@ -2,6 +2,7 @@ import { LevitEditor } from '../core/editor.js';
 import { normalizeLinkInput } from '../core/model/sanitize.js';
 import type { EditorSelection } from '../core/model/types.js';
 import { rovingToolbar } from './toolbar-keys.js';
+import { createColorPanel } from './color-panel.js';
 
 export interface BubbleMenuInstance {
   element: HTMLElement;
@@ -24,7 +25,7 @@ export function createBubbleMenu(editor: LevitEditor): BubbleMenuInstance {
   menu.style.display = 'none';
 
   const buttonRow = document.createElement('div');
-  buttonRow.style.display = 'contents';
+  buttonRow.className = 'levit-bubble-buttons';
   menu.appendChild(buttonRow);
 
   const linkInput = document.createElement('input');
@@ -48,6 +49,7 @@ export function createBubbleMenu(editor: LevitEditor): BubbleMenuInstance {
     { label: 'U', title: m.underline, mark: 'underline', action: () => editor.chain().toggleUnderline().run() },
     { label: 'S', title: m.strikethrough, mark: 'strike', action: () => editor.chain().toggleStrike().run() },
     { label: '🖍', title: m.highlight, mark: 'highlight', action: () => editor.chain().toggleHighlight().run() },
+    { label: 'A', title: m.color, action: () => openColorPanel() },
     { label: '</>', title: m.code, mark: 'code', action: () => editor.chain().toggleMark({ type: 'code' }).run() },
     { label: '🔗', title: m.link, mark: 'link', action: () => openLinkField() },
     { label: 'H1', title: m.heading1, action: () => editor.chain().setHeading(1).run() },
@@ -88,6 +90,57 @@ export function createBubbleMenu(editor: LevitEditor): BubbleMenuInstance {
     buttonEls.push(btn);
   }
 
+  // The color button opens the palette in place of the buttons.
+  const colorButton = buttonEls[buttons.findIndex((b) => b.title === m.color)];
+  colorButton.classList.add('levit-bubble-color');
+  colorButton.setAttribute('aria-haspopup', 'true');
+  colorButton.setAttribute('aria-expanded', 'false');
+  // From the keyboard, focus goes into the palette.
+  colorButton.addEventListener('click', (e) => {
+    if (e.detail === 0 && colorPanel.isOpen) colorPanel.focusFirst();
+  });
+
+  const colorPanel = createColorPanel(editor, {
+    kinds: ['text', 'background'],
+    active: (kind) => editor.getActiveColor(kind),
+    apply: (kind, color) => {
+      // The color picker takes focus, so put back the text it is for.
+      if (savedSelection) editor.dispatch(editor.state.tr.setSelection(savedSelection));
+      const chain = editor.chain();
+      if (kind === 'text') (color ? chain.setColor(color) : chain.unsetColor()).run();
+      else (color ? chain.setHighlight(color) : chain.unsetHighlight()).run();
+    },
+    onDone: ({ keyboard }) => {
+      closeColorPanel();
+      if (keyboard) colorButton.focus();
+      else if (!editor.container.contains(document.activeElement)) {
+        const selection = editor.state.selection;
+        editor.container.focus();
+        editor.dispatch(editor.state.tr.setSelection(selection));
+      }
+      updateVisibility();
+    },
+    labels: (kind) =>
+      kind === 'text'
+        ? { group: m.textColor, none: m.defaultColor, other: m.otherTextColor }
+        : { group: m.highlightColor, none: m.noHighlight, other: m.otherHighlightColor },
+  });
+  menu.appendChild(colorPanel.element);
+
+  function openColorPanel() {
+    savedSelection = editor.state.selection;
+    buttonRow.hidden = true;
+    colorPanel.open();
+    colorButton.setAttribute('aria-expanded', 'true');
+    if (lastRect) show(lastRect);
+  }
+
+  function closeColorPanel() {
+    colorPanel.close();
+    buttonRow.hidden = false;
+    colorButton.setAttribute('aria-expanded', 'false');
+  }
+
   /** Marks the buttons for formats the selection already has. */
   function refreshButtons() {
     buttons.forEach((b, i) => {
@@ -118,7 +171,7 @@ export function createBubbleMenu(editor: LevitEditor): BubbleMenuInstance {
   function openLinkField() {
     savedSelection = editor.state.selection;
     linkMode = true;
-    buttonRow.style.display = 'none';
+    buttonRow.hidden = true;
     linkInput.style.display = 'block';
     linkInput.value = editor.getActiveLink() ?? '';
     linkInput.removeAttribute('aria-invalid');
@@ -133,7 +186,7 @@ export function createBubbleMenu(editor: LevitEditor): BubbleMenuInstance {
 
   function closeLinkField() {
     linkMode = false;
-    buttonRow.style.display = 'contents';
+    buttonRow.hidden = false;
     linkInput.style.display = 'none';
   }
 
@@ -181,6 +234,13 @@ export function createBubbleMenu(editor: LevitEditor): BubbleMenuInstance {
 
   function updateVisibility() {
     if (linkMode) return;
+    if (colorPanel.isOpen) {
+      // Open while its picker or swatches have focus, or the text stays selected.
+      const sel = editor.state.selection;
+      const same = savedSelection && JSON.stringify(sel) === JSON.stringify(savedSelection);
+      if (menu.contains(document.activeElement) || same) return;
+      closeColorPanel();
+    }
 
     const sel = window.getSelection();
     if (!sel || sel.isCollapsed || !editor.container.contains(sel.anchorNode)) {
@@ -212,6 +272,7 @@ export function createBubbleMenu(editor: LevitEditor): BubbleMenuInstance {
 
   function hide() {
     closeLinkField();
+    closeColorPanel();
     menu.style.display = 'none';
   }
 

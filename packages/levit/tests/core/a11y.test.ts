@@ -106,7 +106,7 @@ describe('bubble menu', () => {
   it('Alt+F10 moves focus to the toolbar, arrows move between buttons, Escape goes back', () => {
     const editor = editorWithText('text');
     const bubble = createBubbleMenu(editor);
-    const buttons = Array.from(bubble.element.querySelectorAll('button'));
+    const buttons = Array.from(bubble.element.querySelectorAll('.levit-bubble-buttons button'));
 
     expect(key(container, 'F10', { altKey: true }).defaultPrevented).toBe(true);
     expect(document.activeElement).toBe(buttons[0]);

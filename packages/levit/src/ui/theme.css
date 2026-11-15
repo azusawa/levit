@@ -628,6 +628,73 @@ a:hover {
   border-color: var(--levit-danger);
 }
 
+/* The bubble menu's buttons give way to the link field or the color palette. */
+.levit-bubble-buttons {
+  display: contents;
+}
+
+.levit-bubble-buttons[hidden],
+.levit-color-panel[hidden] {
+  display: none;
+}
+
+.levit-bubble-color {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+/* Color palette: a row of text colors and a row of highlight colors */
+.levit-color-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 2px;
+}
+
+.levit-color-row {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.levit-color-swatch,
+.levit-color-picker {
+  box-sizing: border-box;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--levit-border);
+  border-radius: 4px;
+  background-color: var(--levit-bg);
+  cursor: pointer;
+}
+
+.levit-color-swatch {
+  color: var(--levit-text);
+  font-family: var(--levit-font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.levit-color-swatch:hover,
+.levit-color-picker:hover {
+  border-color: var(--levit-text-muted);
+}
+
+.levit-color-swatch[aria-pressed="true"],
+.levit-color-swatch:focus-visible,
+.levit-color-picker:focus-visible {
+  outline: 2px solid var(--levit-primary);
+  outline-offset: 1px;
+}
+
+.levit-color-row-background .levit-color-none {
+  color: var(--levit-text-muted);
+  text-decoration: line-through;
+}
+
 /* Table Toolbar: above the table the caret is in */
 .levit-table-toolbar {
   position: absolute;

@@ -5,7 +5,7 @@
  */
 export function rovingToolbar(
   keyTarget: HTMLElement,
-  buttons: readonly HTMLButtonElement[],
+  buttons: readonly HTMLElement[],
   onEscape: () => void
 ): (index: number) => void {
   buttons.forEach((btn, i) => (btn.tabIndex = i === 0 ? 0 : -1));
@@ -17,7 +17,7 @@ export function rovingToolbar(
   }
 
   keyTarget.addEventListener('keydown', (e) => {
-    const current = buttons.indexOf(document.activeElement as HTMLButtonElement);
+    const current = buttons.indexOf(document.activeElement as HTMLElement);
     if (current === -1) return;
     const moves: Record<string, number> = {
       ArrowRight: current + 1,
