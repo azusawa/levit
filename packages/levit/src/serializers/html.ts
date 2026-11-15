@@ -1,4 +1,4 @@
-import { colorCSS, nearestColor, normalizeColor, type ColorKind } from '../core/model/colors.js';
+import { colorCSS, HIGHLIGHT_FALLBACK, isClearColor, nearestColor, normalizeColor, type ColorKind } from '../core/model/colors.js';
 import { BlockNode, DocumentData, InlineMark, InlineNode } from '../core/model/types.js';
 import {
   BUILT_IN_BLOCK_TYPES,
@@ -113,7 +113,7 @@ export function documentToHTML(doc: DocumentData, options: SerializerOptions = {
  */
 function colored(tag: 'mark' | 'span', property: string, mark: InlineMark, kind: ColorKind, html: string): string {
   const color = normalizeColor(mark.attrs?.color);
-  const css = colorCSS(color, kind);
+  const css = colorCSS(color, kind, tag === 'mark' ? HIGHLIGHT_FALLBACK : undefined);
   if (!color || !css) return tag === 'mark' ? `<mark>${html}</mark>` : html;
   return `<${tag} data-color="${escapeHTML(color)}" style="${property}: ${escapeHTML(css)}">${html}</${tag}>`;
 }
@@ -507,9 +507,12 @@ function marksFor(el: Element, marks: InlineMark[]): InlineMark[] {
       if (color) setColor('color', color);
       else remove('color');
     }
-    if (tag !== 'mark' && !own && style.backgroundColor) {
+    // A clear background shows what is behind it; any other takes the place
+    // of a highlight around it.
+    if (tag !== 'mark' && !own && style.backgroundColor && !isClearColor(style.backgroundColor)) {
       const background = nearestColor(style.backgroundColor, 'background');
       if (background) setColor('highlight', background);
+      else remove('highlight');
     }
   }
 

@@ -43,13 +43,13 @@ export function createBubbleMenu(editor: LevitEditor): BubbleMenuInstance {
   let lastRect: DOMRect | null = null;
 
   // `mark` buttons report whether the selection has that mark (aria-pressed).
-  const buttons: { label: string; title: string; mark?: string; action: () => void }[] = [
+  const buttons: { label: string; title: string; mark?: string; color?: true; action: () => void }[] = [
     { label: 'B', title: m.bold, mark: 'bold', action: () => editor.chain().toggleBold().run() },
     { label: 'I', title: m.italic, mark: 'italic', action: () => editor.chain().toggleItalic().run() },
     { label: 'U', title: m.underline, mark: 'underline', action: () => editor.chain().toggleUnderline().run() },
     { label: 'S', title: m.strikethrough, mark: 'strike', action: () => editor.chain().toggleStrike().run() },
     { label: '🖍', title: m.highlight, mark: 'highlight', action: () => editor.chain().toggleHighlight().run() },
-    { label: 'A', title: m.color, action: () => openColorPanel() },
+    { label: 'A', title: m.color, color: true, action: () => openColorPanel() },
     { label: '</>', title: m.code, mark: 'code', action: () => editor.chain().toggleMark({ type: 'code' }).run() },
     { label: '🔗', title: m.link, mark: 'link', action: () => openLinkField() },
     { label: 'H1', title: m.heading1, action: () => editor.chain().setHeading(1).run() },
@@ -91,7 +91,7 @@ export function createBubbleMenu(editor: LevitEditor): BubbleMenuInstance {
   }
 
   // The color button opens the palette in place of the buttons.
-  const colorButton = buttonEls[buttons.findIndex((b) => b.title === m.color)];
+  const colorButton = buttonEls[buttons.findIndex((b) => b.color)];
   colorButton.classList.add('levit-bubble-color');
   colorButton.setAttribute('aria-haspopup', 'true');
   colorButton.setAttribute('aria-expanded', 'false');
@@ -101,7 +101,8 @@ export function createBubbleMenu(editor: LevitEditor): BubbleMenuInstance {
   });
 
   const colorPanel = createColorPanel(editor, {
-    kinds: ['text', 'background'],
+    // An app's own "color" mark has its own controls.
+    kinds: editor.schema.marks.has('color') ? ['background'] : ['text', 'background'],
     active: (kind) => editor.getActiveColor(kind),
     apply: (kind, color) => {
       // The color picker takes focus, so put back the text it is for.

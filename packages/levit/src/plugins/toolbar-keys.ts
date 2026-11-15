@@ -17,6 +17,8 @@ export function rovingToolbar(
   }
 
   keyTarget.addEventListener('keydown', (e) => {
+    // Already handled by a toolbar inside this one, like a color palette.
+    if (e.defaultPrevented) return;
     const current = buttons.indexOf(document.activeElement as HTMLElement);
     if (current === -1) return;
     const moves: Record<string, number> = {

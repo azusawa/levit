@@ -180,3 +180,28 @@ describe('the cell color button in the table toolbar', () => {
     expect(toolbar.element.querySelector('[aria-label="칸 색"] button[aria-label="색 없음"]')).not.toBeNull();
   });
 });
+
+describe('review fixes: the cell color palette', () => {
+  it('Escape goes back to the Cell color button, not the text', () => {
+    make();
+    toolbar = createTableToolbar(editor);
+    place('b');
+    const button = toolbar.element.querySelector('button[aria-label="Cell color"]') as HTMLButtonElement;
+    button.focus();
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 0 }));
+    const swatch = document.activeElement as HTMLElement;
+    expect(swatch.getAttribute('aria-label')).toBe('No color');
+    swatch.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    expect(document.activeElement).toBe(button);
+  });
+
+  it('closes when the caret goes to another cell', () => {
+    make();
+    toolbar = createTableToolbar(editor);
+    place('b');
+    press(toolbar.element.querySelector('button[aria-label="Cell color"]')!);
+    editor.dispatch(editor.state.tr.setSelection({ anchor: { blockId: 'c', offset: 0 }, head: { blockId: 'c', offset: 0 }, isCollapsed: true }));
+    expect(toolbar.element.style.display).not.toBe('none');
+    expect((toolbar.element.querySelector('.levit-color-panel') as HTMLElement).hidden).toBe(true);
+  });
+});

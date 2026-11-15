@@ -197,6 +197,9 @@ export function validateDocument(input: unknown, options: SerializerOptions = {}
         if (typeof markType === 'string' && BUILT_IN_MARKS.includes(markType)) return;
         if ((markType === 'color' && !schema.marks.has('color')) || markType === 'highlight') {
           const color = isObject(mark.attrs) ? mark.attrs.color : undefined;
+          if (isObject(mark.attrs) && Object.keys(mark.attrs).some((key) => key !== 'color')) {
+            fail(`${markAt}.attrs`, 'must have no attrs other than color');
+          }
           const optional = markType === 'highlight' && (mark.attrs === undefined || (isObject(mark.attrs) && color === undefined));
           if (!optional && !normalizeColor(color)) fail(`${markAt}.attrs.color`, 'must be a color name or a hex color (#rrggbb)');
           return;

@@ -1,4 +1,4 @@
-import { colorCSS, normalizeColor } from '../model/colors.js';
+import { colorCSS, HIGHLIGHT_FALLBACK, normalizeColor } from '../model/colors.js';
 import { BlockNode, InlineMark, InlineNode } from '../model/types.js';
 import { EditorState } from '../state/state.js';
 import { normalizeCodeLanguage, normalizeHeadingLevel, sanitizeHref, sanitizeImageSrc } from '../model/sanitize.js';
@@ -453,7 +453,7 @@ export class DOMReconciler {
       case 'highlight': {
         el = document.createElement('mark');
         el.className = 'levit-highlight';
-        const background = colorCSS(mark.attrs?.color, 'background');
+        const background = colorCSS(mark.attrs?.color, 'background', HIGHLIGHT_FALLBACK);
         if (background) {
           el.dataset.color = normalizeColor(mark.attrs?.color)!;
           el.style.backgroundColor = background;

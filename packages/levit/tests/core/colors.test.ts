@@ -9,6 +9,7 @@ import { COLORS, colorCSS, nearestColor, normalizeColor } from '../../src/core/m
 import { documentToHTML, htmlToDocument } from '../../src/serializers/html';
 import { documentToMarkdown } from '../../src/serializers/markdown';
 import { getDocumentSchema, validateDocument } from '../../src/ai/schema';
+import { createBubbleMenu } from '../../src/plugins/bubble-menu';
 import type { DocumentData, InlineMark } from '../../src/core/model/types';
 import type { LevitPlugin } from '../../src/core/plugin/plugin';
 
@@ -260,5 +261,68 @@ describe('an app that adds its own color mark', () => {
     expect(documentToHTML(editor.state.doc, { plugins: [plugin] })).toBe('<p><span class="mine-red">hi</span></p>');
     expect(marksOf(htmlToDocument('<p><span class="mine-red" style="color: #0000ff">hi</span></p>', { plugins: [plugin] }))).toEqual([['hi', red]]);
     expect(validateDocument(docWith([{ type: 'color', attrs: { c: 1 } } as InlineMark]), { plugins: [plugin] }).valid).toBe(true);
+  });
+});
+
+describe('review fixes: pasted colors', () => {
+  it('reads every palette color back as itself', () => {
+    for (const c of COLORS) {
+      expect(nearestColor(c.text, 'text'), `${c.name} text`).toBe(c.name);
+      expect(nearestColor(c.background, 'background'), `${c.name} background`).toBe(c.name);
+    }
+  });
+
+  it('leaves dark body text, and the colors of dark pages, as the default', () => {
+    expect(nearestColor('rgb(55, 65, 81)', 'text')).toBeNull(); // Tailwind gray-700
+    expect(nearestColor('#1e1e1e', 'background')).toBeNull(); // VS Code
+    expect(nearestColor('#d4d4d4', 'text')).toBeNull();
+  });
+
+  it('a nested white background takes the highlight off, a clear one does not', () => {
+    const doc = htmlToDocument(
+      '<p><span style="background-color:#fef08a">a<span style="background-color:#ffffff">b</span><span style="background-color:transparent">c</span></span></p>'
+    );
+    expect(marksOf(doc)).toEqual([
+      ['a', [{ type: 'highlight', attrs: { color: 'yellow' } }]],
+      ['b', []],
+      ['c', [{ type: 'highlight', attrs: { color: 'yellow' } }]],
+    ]);
+  });
+
+  it('a highlight in an app color still shows yellow where the app CSS is missing', () => {
+    expect(documentToHTML(docWith([{ type: 'highlight', attrs: { color: 'teal' } }]))).toBe(
+      '<p><mark data-color="teal" style="background-color: var(--levit-bg-teal, #fef08a)">hi</mark></p>'
+    );
+  });
+
+  it('validateDocument refuses other attrs on color marks, as the schema does', () => {
+    expect(validateDocument(docWith([{ type: 'highlight', attrs: { color: 'red', foo: 'x' } }])).valid).toBe(false);
+    expect(validateDocument(docWith([{ type: 'color', attrs: { color: 'red', foo: 'x' } }])).valid).toBe(false);
+  });
+});
+
+describe('review fixes: the palette with an app color mark', () => {
+  it('leaves out the text color row when a plugin adds its own color mark', () => {
+    const el = document.createElement('div');
+    document.body.appendChild(el);
+    const editor = new LevitEditor({ element: el, plugins: [{ name: 'mine', marks: [{ type: 'color', tag: 'span' }] }] });
+    const menu = createBubbleMenu(editor);
+    const groups = Array.from(menu.element.querySelectorAll('.levit-color-panel [role="group"]'), (g) => g.getAttribute('aria-label'));
+    expect(groups).toEqual(['Highlight color']);
+    menu.destroy();
+    editor.destroy();
+    el.remove();
+  });
+
+  it('finds the color button even when its label matches another button', () => {
+    const el = document.createElement('div');
+    document.body.appendChild(el);
+    const editor = new LevitEditor({ element: el, messages: { color: 'Highlight' } });
+    const menu = createBubbleMenu(editor);
+    const popups = Array.from(menu.element.querySelectorAll('[aria-haspopup="true"]'), (b) => b.textContent);
+    expect(popups).toEqual(['A']);
+    menu.destroy();
+    editor.destroy();
+    el.remove();
   });
 });

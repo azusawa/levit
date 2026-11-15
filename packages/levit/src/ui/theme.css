@@ -131,7 +131,7 @@
     --levit-quote-border: #334155;
     --levit-highlight: rgba(234, 179, 8, 0.35);
     --levit-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
-      --levit-color-gray: #94a3b8;
+    --levit-color-gray: #94a3b8;
     --levit-color-brown: #d4a27f;
     --levit-color-orange: #fb923c;
     --levit-color-yellow: #facc15;
@@ -149,7 +149,7 @@
     --levit-bg-purple: #33204f;
     --levit-bg-pink: #481833;
     --levit-bg-red: #4c1c1c;
-}
+  }
 }
 
 /* Custom Element & Container */

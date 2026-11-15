@@ -142,7 +142,11 @@ export function createTableToolbar(editor: LevitEditor): TableToolbarInstance {
   });
   menu.appendChild(colorPanel.element);
 
+  // The cell the palette was opened for; it closes when the caret leaves it.
+  let colorCell: string | null = null;
+
   function openColorPanel() {
+    colorCell = editor.state.selection.head.blockId;
     buttonRow.hidden = true;
     colorPanel.open();
     colorButton.setAttribute('aria-expanded', 'true');
@@ -220,6 +224,7 @@ export function createTableToolbar(editor: LevitEditor): TableToolbarInstance {
       if (hadFocus) editor.focus();
       return;
     }
+    if (colorPanel.isOpen && id !== colorCell) closeColorPanel();
     const first = editor.state.doc.blocks[table.rows[0][0]];
     headerButton.setAttribute('aria-pressed', String(first.attrs?.header === true));
     menu.style.display = 'flex';

@@ -28,6 +28,9 @@ export const COLORS: readonly NamedColor[] = [
 
 export type ColorKind = 'text' | 'background';
 
+/** A highlight in a color the theme does not know shows yellow. */
+export const HIGHLIGHT_FALLBACK = '#fef08a';
+
 const NAME = /^[a-z][a-z0-9-]{0,31}$/;
 
 /**
@@ -42,14 +45,18 @@ export function normalizeColor(value: unknown): string | null {
   return /^#[0-9a-f]{6}$/i.test(value) ? value.toLowerCase() : null;
 }
 
-/** The CSS value for a color, or null when it is not a color. */
-export function colorCSS(value: unknown, kind: ColorKind): string | null {
+/**
+ * The CSS value for a color, or null when it is not a color. A name the
+ * theme does not know falls back to `fallback`, if given.
+ */
+export function colorCSS(value: unknown, kind: ColorKind, fallback?: string): string | null {
   const color = normalizeColor(value);
   if (!color) return null;
   if (color.startsWith('#')) return color;
   const known = COLORS.find((c) => c.name === color);
   const variable = `--levit-${kind === 'text' ? 'color' : 'bg'}-${color}`;
-  return known ? `var(${variable}, ${kind === 'text' ? known.text : known.background})` : `var(${variable})`;
+  if (known) return `var(${variable}, ${kind === 'text' ? known.text : known.background})`;
+  return fallback ? `var(${variable}, ${fallback})` : `var(${variable})`;
 }
 
 /** Red, green, blue and alpha of a CSS color as browsers write it, or null. */
@@ -63,13 +70,23 @@ function parseCSSColor(css: string): [number, number, number, number] | null {
   return [Number(rgb[1]), Number(rgb[2]), Number(rgb[3]), alpha];
 }
 
+/** True for a CSS color that shows nothing, like `transparent`. */
+export function isClearColor(css: string): boolean {
+  return css.trim().toLowerCase() === 'transparent' || parseCSSColor(css)?.[3] === 0;
+}
+
 /**
- * The named color closest to a pasted CSS color, by hue. Black and nearly
- * black text, and white or clear backgrounds, are the default: null.
+ * The named color closest to a pasted CSS color, by hue. The palette's own
+ * values are themselves. Body text colors (dark grays, and light grays from
+ * dark pages) and page backgrounds (white, and dark grays) are the default:
+ * null.
  */
 export function nearestColor(css: string, kind: ColorKind): string | null {
   const rgba = parseCSSColor(css);
   if (!rgba || rgba[3] === 0) return null;
+  const hex = `#${rgba.slice(0, 3).map((v) => v.toString(16).padStart(2, '0')).join('')}`;
+  const own = COLORS.find((c) => (kind === 'text' ? c.text : c.background) === hex);
+  if (own) return own.name;
   const [r, g, b] = rgba.slice(0, 3).map((v) => v / 255);
   const max = Math.max(r, g, b);
   const min = Math.min(r, g, b);
@@ -77,9 +94,11 @@ export function nearestColor(css: string, kind: ColorKind): string | null {
   const d = max - min;
   const s = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
 
-  if (kind === 'text' && l < 0.25 && s < 0.3) return null;
-  if (l > 0.94) return null;
-  if (s < 0.15) return kind === 'text' && l > 0.9 ? null : 'gray';
+  const grayish = s < 0.2;
+  if (kind === 'text' && l < 0.35 && s < 0.4) return null;
+  if (kind === 'text' && grayish && l > 0.75) return null;
+  if (kind === 'background' && (l > 0.98 || (grayish && (l > 0.9 || l < 0.3)))) return null;
+  if (grayish) return 'gray';
 
   let h = 0;
   if (max === r) h = ((g - b) / d + 6) % 6;
@@ -87,7 +106,7 @@ export function nearestColor(css: string, kind: ColorKind): string | null {
   else h = (r - g) / d + 4;
   h *= 60;
 
-  if (h >= 15 && h < 45 && l < 0.4) return 'brown';
+  if (h >= 15 && h < 45 && l < 0.45) return 'brown';
   if (h < 15 || h >= 345) return 'red';
   if (h < 45) return 'orange';
   if (h < 70) return 'yellow';
