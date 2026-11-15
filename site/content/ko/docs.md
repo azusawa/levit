@@ -242,11 +242,13 @@ editor.isInTable();                        // 캐럿이 표 안에 있으면 tru
 editor.chain().setColor('red').run();      // 글자색: 이름 또는 '#e03131'. unsetColor()로 해제
 editor.chain().setHighlight('blue').run(); // 형광펜 색. setHighlight()는 노랑, unsetHighlight()로 해제
 editor.chain().setCellBackground('green').run(); // 선택한 표 칸의 배경. null이면 해제
+editor.chain().setTableBorder('blue').run();     // 캐럿이 있는 표의 선 전체. null이면 해제
 editor.getActiveColor('text');             // 'red', '#e03131' 또는 null. 'background'는 형광펜
 editor.getCellBackground();                // 캐럿이 있는 칸의 색 또는 null
+editor.getTableBorder();                   // 캐럿이 있는 표의 선 색 또는 null
 ```
 
-버블 메뉴의 **색**(`A`) 버튼은 글자색과 형광펜 색 팔레트를, 표 도구 막대의 **칸 색** 버튼은 칸 배경 팔레트를 엽니다. 각 줄 끝에는 아무 색이나 고르는 색상 피커가 있습니다. HTML로 내보내면 `data-color`와 `style`이 함께 들어가 Levit CSS가 없는 곳에서도 색이 보이고, Markdown에는 글자만 남습니다. 붙여 넣은 색은 가장 가까운 팔레트 색이 됩니다.
+버블 메뉴의 **색**(`A`) 버튼은 글자색과 형광펜 색 팔레트를, 표 도구 막대의 **표 색** 버튼은 **칸 색** 줄과 **선 색** 줄이 있는 팔레트를 엽니다. 선 색은 글자색과 같은 색을 쓰고, 표의 모든 칸에 저장됩니다(`attrs.border`). 각 줄 끝에는 아무 색이나 고르는 색상 피커가 있습니다. HTML로 내보내면 `data-color`와 `style`이 함께 들어가 Levit CSS가 없는 곳에서도 색이 보이고, Markdown에는 글자만 남습니다. 붙여 넣은 색은 가장 가까운 팔레트 색이 됩니다.
 
 커서가 표 안에 있으면 `createTableToolbar(editor)`로 붙인 표 도구 막대가 표 위에 나타나, 같은 명령을 버튼으로 보여 줍니다. `<levit-editor>`와 React·Vue 컴포넌트는 이 막대를 알아서 붙입니다.
 

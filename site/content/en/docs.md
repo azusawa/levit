@@ -242,11 +242,13 @@ Colors:
 editor.chain().setColor('red').run();      // text color: a name or '#e03131'; unsetColor() takes it off
 editor.chain().setHighlight('blue').run(); // highlight color; setHighlight() is yellow; unsetHighlight()
 editor.chain().setCellBackground('green').run(); // the selected table cells; null takes it off
+editor.chain().setTableBorder('blue').run();     // the lines of the caret's whole table; null takes it off
 editor.getActiveColor('text');             // 'red', '#e03131' or null; 'background' for the highlight
 editor.getCellBackground();                // color of the cell with the caret, or null
+editor.getTableBorder();                   // line color of the caret's table, or null
 ```
 
-The bubble menu's **Color** (`A`) button opens a palette of text and highlight colors, and the table toolbar's **Cell color** button a palette of cell colors. Each row ends with a color picker for any other color. HTML export writes `data-color` and a `style`, so colors show where Levit's CSS is not loaded; Markdown keeps the text only. Pasted colors become the nearest palette color.
+The bubble menu's **Color** (`A`) button opens a palette of text and highlight colors, and the table toolbar's **Table color** button a palette with a **Cell color** row and a **Line color** row. Line colors use the text colors and are kept on every cell of the table (`attrs.border`). Each row ends with a color picker for any other color. HTML export writes `data-color` and a `style`, so colors show where Levit's CSS is not loaded; Markdown keeps the text only. Pasted colors become the nearest palette color.
 
 While the caret is in a table, the table toolbar from `createTableToolbar(editor)` shows above it with the same commands as buttons. `<levit-editor>` and the React and Vue components add it for you.
 

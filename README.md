@@ -48,7 +48,7 @@
    - **중첩 목록**: `Tab`으로 한 단계 들여쓰고 `Shift+Tab`으로 내어 씁니다. 번호는 단계마다 따로 매깁니다.
    - **체크리스트**: `[] ` 또는 `[ ] `로 시작하고, 상자를 누르거나 `Cmd/Ctrl+Enter`로 체크합니다.
    - **표**: 슬래시 메뉴의 `/table`(또는 `/표`)을 고르면 크기 격자가 열려 마우스나 방향키로 크기를 고릅니다. `/table 4x3`처럼 크기(열×행)를 적으면 바로 들어갑니다. `| Name | Price |`처럼 Markdown 표 한 줄을 쓰고 Enter를 눌러도 표가 되고, `Name, Price` 같은 줄들을 선택해 버블 메뉴의 **표로 바꾸기**를 눌러도 됩니다(칸은 탭, 없으면 쉼표로 나눔). `Tab`으로 다음 칸, `Shift+Tab`으로 앞 칸으로 가고, 마지막 칸에서 `Tab`을 누르면 행이 늘어납니다. 커서가 표 안에 있으면 표 위에 **표 도구 막대**가 떠서, 행·열 추가와 삭제, 머리글 행, 표 삭제를 버튼으로 할 수 있습니다(`Alt+F10`으로 키보드 이동). 표 아래와 오른쪽에 나오는 얇은 `+` 막대를 누르면 맨 아래에 행 추가, 맨 오른쪽에 열 추가가 됩니다. 칸 안에서 `Mod+Enter`는 아래에 행 추가, `Mod+Alt+Enter`는 오른쪽에 열 추가, `Mod+Shift+Backspace`는 행 삭제, `Mod+Alt+Backspace`는 열 삭제입니다(Mod는 Mac의 Cmd, 그 밖의 Ctrl). 칸 안에서 `/`를 눌러도 같은 메뉴가 나옵니다. 웹페이지·스프레드시트의 표와 Markdown 표를 붙여 넣어도 표로 들어옵니다.
-   - **색**: 글을 선택하고 버블 메뉴의 `A` 버튼을 누르면 **글자색**과 **형광펜 색**을 고르는 팔레트가 열립니다. 회색·갈색·주황·노랑·초록·파랑·보라·분홍·빨강 9색이 있고, 줄 끝의 색상 피커로 아무 색이나 고를 수도 있습니다. 표 도구 막대의 **칸 색**으로 칸 배경을 칠합니다. 팔레트에서 고른 색은 다크 모드에서 읽기 좋은 색으로 바뀝니다. Google Docs나 Word에서 붙여 넣은 색은 가장 가까운 팔레트 색이 됩니다.
+   - **색**: 글을 선택하고 버블 메뉴의 `A` 버튼을 누르면 **글자색**과 **형광펜 색**을 고르는 팔레트가 열립니다. 회색·갈색·주황·노랑·초록·파랑·보라·분홍·빨강 9색이 있고, 줄 끝의 색상 피커로 아무 색이나 고를 수도 있습니다. 표 도구 막대의 **표 색**으로 칸 배경(**칸 색**)과 표의 선(**선 색**)을 칠합니다. 팔레트에서 고른 색은 다크 모드에서 읽기 좋은 색으로 바뀝니다. Google Docs나 Word에서 붙여 넣은 색은 가장 가까운 팔레트 색이 됩니다.
    - **구분선**(`---`)과 **이미지**: 이미지는 URL로 넣거나, `uploadImage`를 연결하면 붙여넣기·끌어다 놓기로 올립니다.
    - **코드 블록 언어** 지정과 문법 강조 연결 지점(`highlightCode`)
    - `# `, `> `, ` ``` `, `- `, `* `, `1. `, `[ ] `, `---` 실시간 마크다운 단축키 자동 변환
@@ -430,7 +430,7 @@ createLevitEditor(container, { messages: { bold: 'Gras' } });   // 일부 문구
 
 변수는 상속되므로 `.levit-editor-root`에 지정하면 그 에디터에만 적용됩니다. 메뉴는 `body`에 붙으므로 메뉴까지 바꾸려면 `:root`에 지정하세요.
 
-### 글자색·형광펜 색·칸 색
+### 글자색·형광펜 색·칸 색·선 색
 
 문서에는 색 이름(`red`)이 저장되고, 화면에는 테마 변수(`--levit-color-red`, `--levit-bg-red`)로 그려집니다. 그래서 같은 문서가 라이트와 다크에서 모두 읽힙니다. 색상 피커로 고른 색(`#e03131`)은 그대로 저장되고, 어느 테마에서나 같은 색으로 보입니다.
 
@@ -438,15 +438,18 @@ createLevitEditor(container, { messages: { bold: 'Gras' } });   // 일부 문구
 editor.chain().setColor('red').run();             // 글자색: 이름 또는 '#e03131'
 editor.chain().setHighlight('blue').run();        // 형광펜 색; setHighlight()는 노랑
 editor.chain().setCellBackground('green').run();  // 선택한 표 칸의 배경
+editor.chain().setTableBorder('blue').run();      // 커서가 있는 표의 선 전체
 editor.chain().unsetColor().unsetHighlight().run();
 editor.chain().setCellBackground(null).run();
+editor.chain().setTableBorder(null).run();
 editor.getActiveColor('text');                    // 'red', '#e03131' 또는 null ('background'는 형광펜)
 editor.getCellBackground();
+editor.getTableBorder();
 ```
 
 | 변수 | 용도 |
 |---|---|
-| `--levit-color-gray` … `--levit-color-red` | 글자색 9가지 |
+| `--levit-color-gray` … `--levit-color-red` | 글자색과 표의 선 색 9가지 |
 | `--levit-bg-gray` … `--levit-bg-red` | 형광펜과 칸 배경 9가지 |
 
 - 팔레트의 색은 `colors` 옵션으로 고릅니다: `colors: ['red', 'blue', { name: 'brand', label: '브랜드' }]`. 직접 만든 이름(`brand`)은 `--levit-color-brand`와 `--levit-bg-brand`를 CSS에 정해 두세요.

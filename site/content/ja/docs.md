@@ -242,11 +242,13 @@ editor.isInTable();                        // キャレットが表の中なら 
 editor.chain().setColor('red').run();      // 文字色：名前か '#e03131'。unsetColor() で外す
 editor.chain().setHighlight('blue').run(); // ハイライトの色。setHighlight() は黄、unsetHighlight() で外す
 editor.chain().setCellBackground('green').run(); // 選択した表のセルの背景。null で外す
+editor.chain().setTableBorder('blue').run();     // キャレットのある表の線全体。null で外す
 editor.getActiveColor('text');             // 'red'、'#e03131' か null。'background' はハイライト
 editor.getCellBackground();                // キャレットのあるセルの色か null
+editor.getTableBorder();                   // キャレットのある表の線の色か null
 ```
 
-バブルメニューの **色**（`A`）ボタンは文字色とハイライトの色のパレットを、表ツールバーの **セルの色** ボタンはセルの背景のパレットを開きます。各行の最後には、どんな色でも選べるカラーピッカーがあります。HTML に書き出すと `data-color` と `style` が入り、Levit の CSS がない所でも色が見えます。Markdown には文字だけが残ります。貼り付けた色はパレットの一番近い色になります。
+バブルメニューの **色**（`A`）ボタンは文字色とハイライトの色のパレットを、表ツールバーの **表の色** ボタンは **セルの色** の行と **線の色** の行があるパレットを開きます。線の色は文字色と同じ色を使い、表のすべてのセルに保存されます（`attrs.border`）。各行の最後には、どんな色でも選べるカラーピッカーがあります。HTML に書き出すと `data-color` と `style` が入り、Levit の CSS がない所でも色が見えます。Markdown には文字だけが残ります。貼り付けた色はパレットの一番近い色になります。
 
 キャレットが表の中にあると、`createTableToolbar(editor)` で付けた表ツールバーが表の上に出て、同じコマンドをボタンで示します。`<levit-editor>` と React・Vue のコンポーネントはこのツールバーを自動で付けます。
 

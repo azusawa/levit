@@ -338,7 +338,7 @@ describe('the README header', () => {
 });
 
 describe('colors are documented', () => {
-  const api = ['setColor(', 'setHighlight(', 'setCellBackground(', 'getActiveColor(', '--levit-color-red', '--levit-bg-red', 'colorPicker', 'color-picker="false"'];
+  const api = ['setColor(', 'setHighlight(', 'setCellBackground(', 'setTableBorder(', 'getTableBorder(', 'getActiveColor(', '--levit-color-red', '--levit-bg-red', 'colorPicker', 'color-picker="false"'];
 
   it('README and llms.txt cover the palette, the API, the options and the theme variables', () => {
     for (const file of ['README.md', 'llms.txt']) {
@@ -355,9 +355,9 @@ describe('colors are documented', () => {
 
   it('the site guide and docs cover colors in every language', () => {
     const words: Record<string, string[]> = {
-      en: ['Text color', 'Highlight color', 'Cell color'],
-      ko: ['글자색', '형광펜 색', '칸 색'],
-      ja: ['文字色', 'ハイライトの色', 'セルの色'],
+      en: ['Text color', 'Highlight color', 'Table color', 'Cell color', 'Line color'],
+      ko: ['글자색', '형광펜 색', '표 색', '칸 색', '선 색'],
+      ja: ['文字色', 'ハイライトの色', '表の色', 'セルの色', '線の色'],
     };
     for (const lang of ['en', 'ko', 'ja']) {
       const guide = read(`site/content/${lang}/guide.md`);
