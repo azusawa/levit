@@ -22,7 +22,7 @@ npm 워크스페이스로 패키지 네 개를 함께 관리합니다. 버전은
 
 | 경로 | 패키지 | 내용 |
 |---|---|---|
-| `packages/levit` | `@yonailab/levit` | 에디터 본체 (런타임 의존성 0개) |
+| `packages/levit` | `@yonailab/levit` | 에디터 본체 |
 | `packages/react` | `@yonailab/levit-react` | React 컴포넌트와 훅 |
 | `packages/vue` | `@yonailab/levit-vue` | Vue 3 컴포넌트와 컴포저블 |
 | `packages/yjs` | `@yonailab/levit-yjs` | Yjs 실시간 공동 편집 (`yjs`는 peer 의존성) |

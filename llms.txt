@@ -1,8 +1,8 @@
 # Levit Web Editor (llms.txt)
-> A modern, zero-dependency, AI-ready hybrid web editor for effortless embedding and extensibility.
+> An easy, light, AI-ready hybrid web editor for effortless embedding and extensibility.
 
 ## Overview
-Levit is a web editor library designed from scratch using standard Web APIs (DOM, Selection, InputEvent) with 0 runtime external dependencies. It combines block-based navigation (Notion style) with smooth rich-text editing (Tiptap style), live markdown shortcuts, floating bubble toolbars, slash commands (`/`), and built-in AI response streaming.
+Levit is a web editor library designed from scratch on standard Web APIs (DOM, Selection, InputEvent). It combines block-based navigation (Notion style) with smooth rich-text editing (Tiptap style), live markdown shortcuts, floating bubble toolbars, slash commands (`/`), and built-in AI response streaming.
 
 ## 1. Quick Start
 
@@ -462,7 +462,7 @@ marked 'use client'.
 
 ## 11. Collaboration (Yjs) and comments
 ```bash
-npm install @yonailab/levit @yonailab/levit-yjs yjs   # yjs is a peer; the core has no dependencies
+npm install @yonailab/levit @yonailab/levit-yjs yjs   # yjs is a peer dependency
 ```
 ```ts
 import * as Y from 'yjs';

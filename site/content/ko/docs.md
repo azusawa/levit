@@ -1,6 +1,6 @@
 # 개발 문서
 
-Levit은 웹용 리치 텍스트 에디터입니다. 런타임 의존성 없이 브라우저 표준 API와 TypeScript만으로 만들었습니다. 코어는 gzip 기준 약 45 kB이고, 선택 사항인 AI 진입점은 약 8 kB가 더해집니다. 문서는 그대로 저장하고 비교하고 생성할 수 있는 평범한 JSON입니다. Chrome 87, Edge 88, Firefox 78, Safari 14 이상에서 동작합니다. 소스는 [GitHub](https://github.com/azusawa/levit), 패키지는 [npm](https://www.npmjs.com/package/@yonailab/levit)에 있습니다.
+Levit은 웹용 리치 텍스트 에디터입니다. 브라우저 표준 API와 TypeScript로 만들었습니다. 코어는 가볍고, AI 진입점과 Yjs 연결은 따로 있어 쓸 때만 불러옵니다. 문서는 그대로 저장하고 비교하고 생성할 수 있는 평범한 JSON입니다. Chrome 87, Edge 88, Firefox 78, Safari 14 이상에서 동작합니다. 소스는 [GitHub](https://github.com/azusawa/levit), 패키지는 [npm](https://www.npmjs.com/package/@yonailab/levit)에 있습니다.
 
 ## 설치
 

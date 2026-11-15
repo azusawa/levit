@@ -25,7 +25,7 @@ describe('the playground’s canned AI', () => {
     const sentence = samples.en.ai.split('\n\n')[1];
     const out = await collect(await provider(request('improve', sentence)));
     expect(out).not.toBe(sentence);
-    expect(out).toMatch(/^Our new editor is fast/);
+    expect(out).toMatch(/^Our new editor is light/);
   });
 
   it('tidies any other text: spacing, capital letter and final full stop', async () => {

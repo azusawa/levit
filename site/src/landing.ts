@@ -200,8 +200,8 @@ function build() {
     ],
   });
   if (firstBuild) {
-    // One comment to start with, on the figure in the draft.
-    selectText(commentEditor, 1, pageLang === 'en' ? 'about 5 ms' : pageLang === 'ko' ? '약 5 ms' : '約5 ms');
+    // One comment to start with, on a claim in the draft.
+    selectText(commentEditor, 1, pageLang === 'en' ? 'much faster' : pageLang === 'ko' ? '훨씬 빨라졌습니다' : 'ずっと速く');
     commentEditor.commands.addComment();
     const end = commentEditor.state.doc.blocks[0];
     commentEditor.dispatch(

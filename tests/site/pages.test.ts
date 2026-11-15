@@ -27,18 +27,14 @@ describe('site pages', () => {
 
   it('the landing page leads with what writing and developing with Levit feel like, in every language', () => {
     const want = {
-      en: { h1: 'Easy to write. Light to develop.', title: 'Levit — rich text editor, easy to write and light to develop', deps: '0 runtime dependencies' },
-      ko: { h1: '쓰기는 편하게, 개발은 가볍게', title: 'Levit — 쓰기 편하고 개발은 가벼운 리치 텍스트 에디터', deps: '런타임 의존성 0개' },
-      ja: { h1: '書くのは心地よく、開発は軽く。', title: 'Levit — 書き心地がよく、開発は軽いリッチテキストエディター', deps: 'ランタイム依存0個' },
+      en: { h1: 'Easy to write. Light to develop.', title: 'Levit — rich text editor, easy to write and light to develop' },
+      ko: { h1: '쓰기는 편하게, 개발은 가볍게', title: 'Levit — 쓰기 편하고 개발은 가벼운 리치 텍스트 에디터' },
+      ja: { h1: '書くのは心地よく、開発は軽く。', title: 'Levit — 書き心地がよく、開発は軽いリッチテキストエディター' },
     };
     for (const lang of LANGS) {
       const { html } = doc(lang, 'landing');
       expect(/<h1[^>]*>([^<]*)<\/h1>/.exec(html)?.[1], lang).toBe(want[lang].h1);
       expect(html, lang).toContain(`<title>${want[lang].title}</title>`);
-      // The size and the dependency count stay as proof under the headline
-      // (size.test.ts checks the size is right).
-      expect(strings[lang].hero.lead, lang).toMatch(/\d+ kB/);
-      expect(strings[lang].meta.landingDescription, lang).toContain(want[lang].deps);
     }
   });
 

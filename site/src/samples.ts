@@ -30,7 +30,7 @@ editor.getJSON();
 \`\`\``,
   ai: `## Launch note
 
-our new editor is very fast and it have no dependencies so its easy to add to the app.
+our new editor is very lite and it are so easy too add to the app.
 
 Teams can write together, leave comments and ask AI for help without leaving the page.`,
   together: `## Meeting notes
@@ -41,7 +41,7 @@ Teams can write together, leave comments and ask AI for help without leaving the
 Write here and watch the other side.`,
   comments: `## Draft: release notes
 
-Levit 0.6 adds real-time collaboration, comments and Japanese menus. Typing in a 20,000-block document now takes about 5 ms of script per key.
+Levit 0.6 adds real-time collaboration, comments and Japanese menus. Typing in a very long document is now much faster.
 
 The new package @yonailab/levit-yjs connects the editor to Yjs.`,
 };
@@ -68,7 +68,7 @@ editor.getJSON();
 \`\`\``,
   ai: `## 출시 안내
 
-우리 새 에디터는 매우 빠르고 의존성이 없어서 앱에 넣기가 아주 쉽습니다 그리고 가볍습니다.
+우리 새 에디터는 매우 가볍고 앱에 넣기가 아주 쉽습니다 그리고 쓰기도 편합니다.
 
 팀은 페이지를 떠나지 않고 함께 쓰고, 댓글을 달고, AI에게 도움을 받을 수 있습니다.`,
   together: `## 회의 메모
@@ -79,7 +79,7 @@ editor.getJSON();
 여기에 써 보고 반대쪽을 보세요.`,
   comments: `## 초안: 릴리스 노트
 
-Levit 0.6에는 실시간 공동 편집, 댓글, 일본어 메뉴가 들어갑니다. 블록 2만 개짜리 문서에서 키 입력당 스크립트 시간이 약 5 ms로 줄었습니다.
+Levit 0.6에는 실시간 공동 편집, 댓글, 일본어 메뉴가 들어갑니다. 아주 긴 문서에서도 입력이 훨씬 빨라졌습니다.
 
 새 패키지 @yonailab/levit-yjs가 에디터를 Yjs에 연결합니다.`,
 };
@@ -106,7 +106,7 @@ editor.getJSON();
 \`\`\``,
   ai: `## リリースのお知らせ
 
-私たちの新しいエディターはとても速いですし依存がないのでアプリに入れるのがとても簡単ですし軽いです。
+私たちの新しいエディターはとても軽いですしアプリに入れるのがとても簡単ですし書きやすいです。
 
 チームはページを離れずに一緒に書き、コメントを残し、AIに手伝ってもらえます。`,
   together: `## 会議メモ
@@ -117,7 +117,7 @@ editor.getJSON();
 ここに書いて、反対側を見てください。`,
   comments: `## 下書き：リリースノート
 
-Levit 0.6ではリアルタイム共同編集、コメント、日本語メニューが加わります。2万ブロックの文書で、キー入力あたりのスクリプト時間が約5 msになりました。
+Levit 0.6ではリアルタイム共同編集、コメント、日本語メニューが加わります。とても長い文書でも、入力がずっと速くなりました。
 
 新しいパッケージ@yonailab/levit-yjsがエディターとYjsをつなぎます。`,
 };

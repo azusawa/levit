@@ -1,6 +1,6 @@
 # 開発者ドキュメント
 
-Levit は Web 向けのリッチテキストエディタです。ランタイム依存ゼロで、ブラウザ標準 API と TypeScript だけで書かれています。コアは gzip で約 45 kB、オプションの AI エントリポイントは約 8 kB 追加です。ドキュメントはそのまま保存・比較・生成できるプレーンな JSON です。Chrome 87、Edge 88、Firefox 78、Safari 14 以降で動作します。ソースは [GitHub](https://github.com/azusawa/levit)、パッケージは [npm](https://www.npmjs.com/package/@yonailab/levit) にあります。
+Levit は Web 向けのリッチテキストエディタです。ブラウザ標準 API と TypeScript で書かれています。コアは軽く、AI エントリポイントと Yjs 連携は別になっていて、使うときだけ読み込みます。ドキュメントはそのまま保存・比較・生成できるプレーンな JSON です。Chrome 87、Edge 88、Firefox 78、Safari 14 以降で動作します。ソースは [GitHub](https://github.com/azusawa/levit)、パッケージは [npm](https://www.npmjs.com/package/@yonailab/levit) にあります。
 
 ## インストール
 

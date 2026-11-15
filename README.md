@@ -10,7 +10,7 @@
   <br />
   <strong>쓰기는 편하게, 개발은 가볍게</strong>
   <br />
-  <i>AI·공동 편집·댓글을 갖춘 웹 에디터 · 본체 45 kB · 런타임 의존성 0개</i>
+  <i>AI·공동 편집·댓글을 갖춘, 쉽고 가벼운 웹 에디터</i>
 </p>
 
 **[웹사이트에서 직접 써 보기](https://azusawa.github.io/levit/ko/)** · [사용법](https://azusawa.github.io/levit/ko/guide/) · [개발 문서](https://azusawa.github.io/levit/ko/docs/)
@@ -28,11 +28,11 @@
 
 ## ✨ 핵심 특징 (Key Highlights)
 
-1. **Zero Runtime Dependency (런타임 의존성 0개)**
-   - 외부 런타임 라이브러리 없이 순수 Web 표준 API(DOM, Selection, InputEvent)와 TypeScript만으로 독자 구현되었습니다.
-   - 번들 크기: 자바스크립트가 **약 45 kB (gzipped)**, CSS가 따로 약 3.5 kB입니다. AI 기능(`@yonailab/levit/ai`)은 따로 약 8 kB이고, 쓸 때만 불러옵니다.
+1. **가벼운 본체 (Light)**
+   - Web 표준 API(DOM, Selection, InputEvent)와 TypeScript만으로 직접 구현했습니다.
+   - AI 기능(`@yonailab/levit/ai`)과 실시간 공동 편집(`@yonailab/levit-yjs`)은 따로 들어 있어, 쓸 때만 불러옵니다.
 2. **가져다 쓰기 가장 쉬운 구조 (DX & AX First)**
-   - 단 3줄의 코드로 모든 웹사이트에 연동 가능합니다.
+   - 몇 줄의 코드로 어떤 웹사이트에도 넣을 수 있습니다.
    - `<levit-editor></levit-editor>` 웹 컴포넌트를 지원하여 React, Vue, Svelte, 바닐라 JS 어디서나 HTML 태그 하나로 동작합니다.
    - React(`@yonailab/levit-react`)와 Vue(`@yonailab/levit-vue`) 전용 컴포넌트도 있습니다.
    - **플러그인**으로 블록, 서식, 명령, 단축키를 직접 추가하고, `editor.on('update', ...)` 같은 이벤트로 변경을 받습니다.

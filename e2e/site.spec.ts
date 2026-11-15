@@ -56,11 +56,11 @@ test.describe('landing page', () => {
     await expect(panel(page, 'ai')).toBeVisible();
     await page.locator('[data-ai="improve"]').click();
     await expect(editor(page, 'ai').locator('ins').first()).toBeVisible();
-    await expect.poll(() => editor(page, 'ai').locator('ins').allTextContents().then((t) => t.join(''))).toContain('dependencies');
+    await expect.poll(() => editor(page, 'ai').locator('ins').allTextContents().then((t) => t.join(''))).toContain('light');
     await expect(page.locator('[data-ai="stop"]')).toBeDisabled();
     await page.getByRole('button', { name: 'Accept' }).click();
     await expect(editor(page, 'ai').locator('ins, del')).toHaveCount(0);
-    await expect(editor(page, 'ai')).toContainText('Our new editor is fast and has no dependencies');
+    await expect(editor(page, 'ai')).toContainText('Our new editor is light and easy to add to any app.');
   });
 
   test('AI and comment buttons still work after the sample text is deleted', async ({ page }) => {
@@ -109,7 +109,7 @@ test.describe('landing page', () => {
     await page.getByRole('tab', { name: 'Comments' }).click();
     const items = page.locator('[data-comment-list] > li');
     await expect(items).toHaveCount(1);
-    await expect(items.first()).toContainText('about 5 ms');
+    await expect(items.first()).toContainText('much faster');
     await page.locator('[data-comment-add]').click();
     await expect(items).toHaveCount(2);
     await expect(editor(page, 'comments').locator('.levit-comment')).toHaveCount(2);

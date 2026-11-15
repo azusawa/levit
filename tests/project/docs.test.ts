@@ -331,10 +331,9 @@ describe('the + bars of a table are documented', () => {
 });
 
 describe('the README header', () => {
-  it('leads with the Korean site headline and keeps the numbers as proof', () => {
+  it('leads with the Korean site headline', () => {
     const head = read('README.md').slice(0, 800);
     expect(head).toContain(`<strong>${strings.ko.hero.title}</strong>`);
-    expect(head).toContain('런타임 의존성 0개');
   });
 });
 

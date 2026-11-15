@@ -11,9 +11,9 @@ interface Request {
 }
 
 const improved: Record<Lang, string> = {
-  en: 'Our new editor is fast and has no dependencies, so it is easy to add to any app.',
-  ko: '새 에디터는 빠르고 가벼우며 의존성이 없어, 어떤 앱에도 쉽게 넣을 수 있습니다.',
-  ja: '新しいエディターは速くて軽く、依存もないので、どんなアプリにも簡単に組み込めます。',
+  en: 'Our new editor is light and easy to add to any app.',
+  ko: '새 에디터는 가볍고 쓰기 편하며, 어떤 앱에도 쉽게 넣을 수 있습니다.',
+  ja: '新しいエディターは軽くて書きやすく、どんなアプリにも簡単に組み込めます。',
 };
 
 const continued: Record<Lang, string> = {
