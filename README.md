@@ -10,7 +10,7 @@
   <br />
   <strong>쓰기는 편하게, 개발은 가볍게</strong>
   <br />
-  <i>AI·공동 편집·댓글을 갖춘 웹 에디터 · 본체 30 kB · 런타임 의존성 0개</i>
+  <i>AI·공동 편집·댓글을 갖춘 웹 에디터 · 본체 45 kB · 런타임 의존성 0개</i>
 </p>
 
 **[웹사이트에서 직접 써 보기](https://azusawa.github.io/levit/ko/)** · [사용법](https://azusawa.github.io/levit/ko/guide/) · [개발 문서](https://azusawa.github.io/levit/ko/docs/)
@@ -30,7 +30,7 @@
 
 1. **Zero Runtime Dependency (런타임 의존성 0개)**
    - 외부 런타임 라이브러리 없이 순수 Web 표준 API(DOM, Selection, InputEvent)와 TypeScript만으로 독자 구현되었습니다.
-   - 번들 크기: **약 30 kB (gzipped)**, 사용하는 쪽에서 다시 압축하면 약 25 kB입니다. AI 기능(`@yonailab/levit/ai`)은 따로 약 7 kB이고, 쓸 때만 불러옵니다.
+   - 번들 크기: **약 45 kB (gzipped)**입니다. AI 기능(`@yonailab/levit/ai`)은 따로 약 8 kB이고, 쓸 때만 불러옵니다.
 2. **가져다 쓰기 가장 쉬운 구조 (DX & AX First)**
    - 단 3줄의 코드로 모든 웹사이트에 연동 가능합니다.
    - `<levit-editor></levit-editor>` 웹 컴포넌트를 지원하여 React, Vue, Svelte, 바닐라 JS 어디서나 HTML 태그 하나로 동작합니다.

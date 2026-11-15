@@ -36,7 +36,7 @@ describe('site pages', () => {
       expect(/<h1[^>]*>([^<]*)<\/h1>/.exec(html)?.[1], lang).toBe(want[lang].h1);
       expect(html, lang).toContain(`<title>${want[lang].title}</title>`);
       // The size and the dependency count stay as proof under the headline.
-      expect(strings[lang].hero.lead, lang).toMatch(/30 kB/);
+      expect(strings[lang].hero.lead, lang).toMatch(/45 kB/);
       expect(strings[lang].meta.landingDescription, lang).toContain(want[lang].deps);
     }
   });
