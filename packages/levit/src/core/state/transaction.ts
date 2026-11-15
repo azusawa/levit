@@ -912,12 +912,13 @@ export class Transaction {
     const t = this.tableAtCaret();
     if (!t || (color !== null && !value)) return this;
     for (let i = t.start; i <= t.end; i++) {
+      if ((this.doc.blocks[i].attrs?.border ?? null) === value) continue;
       const attrs = { ...this.doc.blocks[i].attrs };
       if (value) attrs.border = value;
       else delete attrs.border;
       this.edit(i).attrs = attrs;
+      this.docChanged = true;
     }
-    this.docChanged = true;
     return this;
   }
 

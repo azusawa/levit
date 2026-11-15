@@ -78,6 +78,8 @@ export class DOMReconciler {
       if (blocks[i].id !== last[i].id) return false;
       // A cell that moved to another row or table changes the table's shape.
       if ((isTableCell(blocks[i].type) || isTableCell(last[i].type)) && !sameCellPlace(blocks[i], last[i])) return false;
+      // A line color is drawn on every cell of the table, from its first cell.
+      if (isTableCell(blocks[i].type) && blocks[i].attrs?.border !== last[i].attrs?.border) return false;
       changed.push(i);
     }
     let renumber = false;
@@ -177,9 +179,14 @@ export class DOMReconciler {
       placeChildren(wrapper, [wrapper.querySelector(':scope > table')!]);
       placeChildren(wrapper.firstElementChild!, [tbody]);
       const oldRows = Array.from(tbody.children).filter((el) => el.tagName === 'TR') as HTMLElement[];
+      // The first cell decides the color of all the lines, so a table never
+      // shows a mix, whatever its other cells say.
+      const line = blocks[table.start].attrs?.border;
       const rows = table.rows.map((cells, r) => {
         const tr = oldRows[r] ?? document.createElement('tr');
-        placeChildren(tr, cells.map((k) => elementFor(blocks[k])));
+        const tds = cells.map((k) => elementFor(blocks[k]));
+        for (const td of tds) paintLines(td, line);
+        placeChildren(tr, tds);
         return tr;
       });
       placeChildren(tbody, rows);
@@ -291,16 +298,6 @@ export class DOMReconciler {
     } else if (el.hasAttribute('data-color') || el.style.backgroundColor) {
       delete el.dataset.color;
       el.style.removeProperty('background-color');
-      if (el.getAttribute('style') === '') el.removeAttribute('style');
-    }
-    // The table's line color.
-    const border = block.type === 'table_cell' ? colorCSS(block.attrs?.border, 'border') : null;
-    if (border) {
-      el.dataset.border = normalizeColor(block.attrs?.border)!;
-      el.style.borderColor = border;
-    } else if (el.hasAttribute('data-border') || el.style.borderColor) {
-      delete el.dataset.border;
-      el.style.removeProperty('border-color');
       if (el.getAttribute('style') === '') el.removeAttribute('style');
     }
     const indent = listIndent(block);
@@ -555,4 +552,17 @@ function cleanHighlightHTML(html: string): DocumentFragment {
   };
   copy(template.content, out);
   return out;
+}
+
+/** Draws a table cell's lines in the table's line color; elements are reused, so an old one is cleared. */
+function paintLines(el: HTMLElement, value: unknown): void {
+  const color = colorCSS(value, 'border');
+  if (color) {
+    el.dataset.border = normalizeColor(value)!;
+    el.style.borderColor = color;
+  } else if (el.hasAttribute('data-border') || el.style.borderColor) {
+    delete el.dataset.border;
+    el.style.removeProperty('border-color');
+    if (el.getAttribute('style') === '') el.removeAttribute('style');
+  }
 }

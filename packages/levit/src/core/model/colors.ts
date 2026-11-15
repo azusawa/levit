@@ -84,8 +84,10 @@ export function isClearColor(css: string): boolean {
  * null.
  */
 export function nearestColor(css: string, of: ColorKind): string | null {
-  // Lines are like text: dark ones are the default.
+  // Lines are like text: dark ones are the default. Gray lines are too: pages
+  // draw their tables in grays, and that is not a color someone picked.
   const kind = of === 'border' ? 'text' : of;
+  const lines = of === 'border';
   const rgba = parseCSSColor(css);
   if (!rgba || rgba[3] === 0) return null;
   const hex = `#${rgba.slice(0, 3).map((v) => v.toString(16).padStart(2, '0')).join('')}`;
@@ -102,7 +104,7 @@ export function nearestColor(css: string, of: ColorKind): string | null {
   if (kind === 'text' && l < 0.35 && s < 0.4) return null;
   if (kind === 'text' && grayish && l > 0.75) return null;
   if (kind === 'background' && (l > 0.98 || (grayish && (l > 0.9 || l < 0.3)))) return null;
-  if (grayish) return 'gray';
+  if (grayish) return lines ? null : 'gray';
 
   let h = 0;
   if (max === r) h = ((g - b) / d + 6) % 6;

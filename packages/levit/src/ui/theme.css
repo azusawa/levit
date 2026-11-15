@@ -698,6 +698,11 @@ figure.levit-block-image img {
   border-width: 3px;
 }
 
+/* The line keeps its color on hover, so the inside changes instead. */
+.levit-color-row-border .levit-color-swatch:hover {
+  background-color: var(--levit-border);
+}
+
 .levit-color-row-background .levit-color-none {
   color: var(--levit-text-muted);
   text-decoration: line-through;

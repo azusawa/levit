@@ -126,10 +126,10 @@ describe('table line colors in HTML and the AI schema', () => {
   });
 
   it('reads pasted line colors as the nearest named color, and black lines as the default', () => {
-    const pasted = htmlToDocument(
-      '<table><tr><td style="border: 1px solid #ff0000">A</td><td style="border: 1px solid #000000">B</td></tr></table>'
-    );
-    expect(pasted.blocks.map((b) => b.attrs?.border)).toEqual(['red', undefined]);
+    const pasted = htmlToDocument('<table><tr><td style="border: 1px solid #ff0000">A</td></tr></table>');
+    expect(pasted.blocks[0].attrs?.border).toBe('red');
+    const black = htmlToDocument('<table><tr><td style="border: 1px solid #000000">A</td></tr></table>');
+    expect(black.blocks[0].attrs?.border).toBeUndefined();
   });
 
   it('the AI document schema allows line colors, and only valid ones', () => {
@@ -170,5 +170,55 @@ describe('the table color button', () => {
     expect(toolbar.element.querySelector('button[aria-label="표 색"]')).not.toBeNull();
     expect(toolbar.element.querySelector('[aria-label="선 색"] button[aria-label="기본"]')).not.toBeNull();
     expect(toolbar.element.querySelector('[aria-label="선 색"] input[aria-label="다른 선 색"]')).not.toBeNull();
+  });
+});
+
+describe('review fixes: one line color per table', () => {
+  it('the first cell decides the color of every line, whatever the other cells say', () => {
+    editor = new LevitEditor({
+      element,
+      initialContent: doc(cell('a', 'r1', 'A', { border: 'red' }), cell('b', 'r1', 'B'), cell('c', 'r2', 'C', { border: 'blue' })),
+    });
+    const tds = Array.from(element.querySelectorAll('td')) as HTMLElement[];
+    expect(tds.map((td) => td.dataset.border)).toEqual(['red', 'red', 'red']);
+    caret('c');
+    expect(editor.getTableBorder()).toBe('red');
+    editor.chain().addRowAfter().run();
+    expect(borders().slice(-2)).toEqual(['red', 'red']);
+  });
+
+  it('a table whose first cell has no color has default lines', () => {
+    editor = new LevitEditor({ element, initialContent: doc(cell('a', 'r1', 'A'), cell('b', 'r1', 'B', { border: 'blue' })) });
+    expect(Array.from(element.querySelectorAll('td'), (td) => td.getAttribute('style'))).toEqual([null, null]);
+    caret('b');
+    expect(editor.getTableBorder()).toBeNull();
+  });
+
+  it('picking the color the table already has changes nothing', () => {
+    make();
+    caret('a');
+    editor.chain().setTableBorder('red').run();
+    let updates = 0;
+    editor.on('update', () => (updates += 1));
+    editor.chain().setTableBorder('red').run();
+    expect(updates).toBe(0);
+    editor.chain().setTableBorder(null).run();
+    expect(updates).toBe(1);
+    editor.chain().setTableBorder(null).run();
+    expect(updates).toBe(1);
+  });
+
+  it('a pasted table gets one line color, from any side of any cell', () => {
+    const pasted = htmlToDocument(
+      '<table><tr><td>A</td><td style="border-top: none; border-bottom: 1px solid #ff0000">B</td></tr><tr><td style="border: 1px solid red">C</td></tr></table>'
+    );
+    expect(pasted.blocks.map((b) => b.attrs?.border)).toEqual(['red', 'red', 'red']);
+  });
+
+  it('gray lines from a web page are the default', () => {
+    for (const gray of ['#aaaaaa', '#999999', '#666666', '#dddddd']) {
+      const pasted = htmlToDocument(`<table><tr><td style="border: 1px solid ${gray}">A</td></tr></table>`);
+      expect(pasted.blocks[0].attrs?.border, gray).toBeUndefined();
+    }
   });
 });

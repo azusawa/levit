@@ -223,7 +223,8 @@ editor.getTableBorder();                      // line color of the caret's table
 // "Highlight color" rows (Default / No highlight, nine colors, a color picker).
 // The table toolbar's "Table color" button opens "Cell color" and "Line color"
 // rows. Line colors are text colors (--levit-color-*), stored on every cell
-// of the table as attrs.border; added rows and columns take it.
+// of the table as attrs.border; added rows and columns take it. The first
+// cell's color is the one drawn and read, so a table never shows a mix.
 editor.chain().insertHorizontalRule().run();
 editor.chain().insertTable(3, 3).run();       // rows, cols; { header: false } for no header row
 editor.chain().convertToTable().run();        // selected lines to rows; cells split at tabs, or commas if none

@@ -135,3 +135,10 @@ describe('the stylesheet styles only Levit', () => {
     }
   });
 });
+
+describe('the line color row of the palette', () => {
+  it('draws the swatches with a thick line, and shows the hover with the background, as the line is the color', () => {
+    expect(css).toMatch(/\.levit-color-row-border \.levit-color-swatch\s*\{[^}]*border-width:\s*3px/);
+    expect(css).toMatch(/\.levit-color-row-border \.levit-color-swatch:hover\s*\{[^}]*background-color:\s*var\(--levit-border\)/);
+  });
+});

@@ -388,6 +388,12 @@ function readTable(table: Element, out: BlockNode[]): void {
       for (let k = 1; k < span; k++) out.push(make());
     }
   }
+  // One line color for the table: the first one a cell gives.
+  const cells = out.filter((b) => b.type === 'table_cell' && b.attrs?.table === tableId);
+  const border = cells.find((c) => c.attrs?.border)?.attrs?.border;
+  for (const c of cells) {
+    if (border) c.attrs = { ...c.attrs, border };
+  }
 }
 
 /** A cell's color: Levit's own by name, others as the nearest named color. */
@@ -403,8 +409,12 @@ function cellBorder(td: Element): string | null {
   const own = normalizeColor(td.getAttribute('data-border'));
   if (own) return own;
   const style = (td as HTMLElement).style;
-  const css = style?.borderTopColor || style?.borderColor;
-  return css ? nearestColor(css, 'border') : null;
+  if (!style) return null;
+  for (const css of [style.borderTopColor, style.borderBottomColor, style.borderLeftColor, style.borderRightColor]) {
+    const color = css && nearestColor(css, 'border');
+    if (color) return color;
+  }
+  return null;
 }
 
 /** A cell's content: its paragraphs, list items and nested tables as lines of text. */

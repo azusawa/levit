@@ -9,6 +9,7 @@ import { DOMGuard } from './view/dom-guard.js';
 import { documentFromJSON, documentToJSON } from '../serializers/json.js';
 import { findBlockIndex, getBlockText, sliceBlockContent, sliceDocument } from './model/document.js';
 import { COLORS, normalizeColor, type ColorKind } from './model/colors.js';
+import { tableAt } from './model/table.js';
 import { applyInputRules, defaultInputRules } from './plugin/input-rules.js';
 import { Schema, type LevitPlugin } from './plugin/plugin.js';
 import { en, format, type LevitMessages } from '../i18n/messages.js';
@@ -699,9 +700,9 @@ export class LevitEditor {
 
   /** The line color of the table with the caret, or null for the default (or outside a table). */
   getTableBorder(): string | null {
-    const { doc, selection } = this.state;
-    const block = doc.blocks[findBlockIndex(doc, selection.head.blockId)];
-    return block?.type === 'table_cell' ? normalizeColor(block.attrs?.border) : null;
+    const table = tableAt(this.state.doc, this.state.selection.head.blockId);
+    // The first cell decides, as it does when the table is drawn.
+    return table ? normalizeColor(this.state.doc.blocks[table.start].attrs?.border) : null;
   }
 
   /** True when the caret is in a table. */

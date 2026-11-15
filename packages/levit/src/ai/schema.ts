@@ -72,7 +72,7 @@ export function getDocumentSchema(options: SerializerOptions = {}): JSONSchema {
           row: { type: 'string', minLength: 1, description: 'The row this cell belongs to. Cells of one row follow each other, left to right.' },
           header: { type: 'boolean', description: 'A header cell.' },
           background: { ...COLOR, description: `The cell's color. ${COLOR.description}` },
-          border: { ...COLOR, description: `The color of the table's lines, the same on every cell of the table. ${COLOR.description}` },
+          border: { ...COLOR, description: `The color of the table's lines. Give it on every cell of the table; the first cell's is the one used. ${COLOR.description}` },
         },
         ['table', 'row']
       ),
