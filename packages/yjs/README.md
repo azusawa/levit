@@ -7,7 +7,7 @@
 npm install @yonailab/levit @yonailab/levit-yjs yjs
 ```
 
-Levit 코어는 의존성이 없고, Yjs는 이 패키지를 쓸 때만 필요합니다.
+Yjs는 이 패키지를 쓸 때만 필요하고, Levit 코어는 Yjs 없이도 동작합니다.
 
 ## 사용법
 

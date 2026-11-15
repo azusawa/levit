@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { execSync } from 'node:child_process';
 import { strings } from '../../site/lib/strings';
 
 const root = resolve(__dirname, '../..');
@@ -12,23 +13,36 @@ const LANGS = ['en', 'ko', 'ja'] as const;
 // "zero dependencies" either.
 const numbers = [
   /\d+(?:\.\d+)?\s*(?:kB|KB|kb|KiB|MB)\b/,
-  /\d+(?:\.\d+)?\s*ms\b/,
-  /\d{1,3},\d{3}|\d+\s*万|\d+\s*만\s*개/,
-  /단\s*\d+\s*줄/,
+  // A speed: "about 5 ms", "약 5 ms", "約5 ms". A timing option like "500 ms" is a fact to use, not a claim.
+  /(?:about|around|약|約)\s*\d+(?:\.\d+)?\s*ms\b/i,
+  // A count of blocks: "20,000 blocks", "블록 2만 개", "2万ブロック".
+  /\d{1,3}(?:,\d{3})+[- ]?blocks?|블록\s*\d+\s*만|\d+\s*만\s*개|\d+\s*万\s*ブロック/i,
+  /단\s*\d+\s*줄|just \d+ lines|\d+\s*行だけ/i,
 ];
 const dependencies = [
   /zero[- ]?(?:runtime[- ])?dependenc/i,
-  /\b0 (?:runtime )?dependenc/i,
-  /no (?:runtime |other )?(?:dependencies|packages)/i,
-  /has no dependencies/i,
-  /의존성\s*0|의존성 없이|의존성이 없|딸려 오는/,
-  /依存\s*0|依存ゼロ|依存がない|依存もない|付いてくる/,
+  /dependency[- ]free/i,
+  /\b0 (?:runtime |external )?dependenc/i,
+  /(?:no|without) (?:runtime |external )?dependencies/i,
+  /의존성\s*0|의존성 없이|의존성이 (?:전혀 )?없/,
+  /依存\s*0|依存ゼロ|依存がない|依存もない|依存なし/,
 ];
 
+/** Text with code left out: code blocks and inline code give values, not claims. */
+const prose = (text: string) => text.replace(/```[\s\S]*?```/g, '').replace(/`[^`\n]*`/g, '');
+
+// Every document in the repository, the npm descriptions and keywords, and the site's copy.
+const files = execSync('git ls-files "*.md" "*.txt" "*.html"', { cwd: root, encoding: 'utf8' })
+  .split('\n')
+  .filter((f) => f && !f.startsWith('e2e/'));
+const manifests = execSync('git ls-files "packages/*/package.json"', { cwd: root, encoding: 'utf8' }).split('\n').filter(Boolean);
 const texts: [string, string][] = [
-  ['README.md', read('README.md')],
-  ['llms.txt', read('llms.txt')],
-  ...LANGS.flatMap((lang) => ['docs', 'guide'].map((page): [string, string] => [`site/content/${lang}/${page}.md`, read(`site/content/${lang}/${page}.md`)])),
+  ...files.map((f): [string, string] => [f, prose(read(f))]),
+  ...manifests.map((f): [string, string] => {
+    const { description, keywords } = JSON.parse(read(f));
+    return [f, [description, ...(keywords ?? [])].join(' · ')];
+  }),
+  ['packages/levit/src/index.ts header', read('packages/levit/src/index.ts').split('*/')[0]],
   ...LANGS.map((lang): [string, string] => [`site strings ${lang}`, JSON.stringify(strings[lang])]),
   ['site/src/samples.ts', read('site/src/samples.ts')],
   ['site/src/fake-ai.ts', read('site/src/fake-ai.ts')],
@@ -47,10 +61,16 @@ describe('what the docs and the site say about Levit', () => {
     }
   });
 
+  it('the patterns catch the claims, and leave timing options and other text alone', () => {
+    const caught = (t: string) => [...numbers, ...dependencies].some((p) => p.test(t));
+    for (const t of ['45 kB', 'about 5 ms', '20,000 blocks', '블록 2만 개', '단 3줄', 'dependency-free', 'without dependencies', '依存なし', 'Zero-Dependency']) expect(caught(t), t).toBe(true);
+    for (const t of ['captureTimeout 500 ms', 'no packages need updating', 'Chrome 87', '1,000 users', 'yjs is a peer dependency']) expect(caught(t), t).toBe(false);
+  });
+
   it('say Levit is easy and light, at the top of the README and the landing page', () => {
-    const head = read('README.md').slice(0, 800);
-    expect(head).toMatch(/쉽/);
-    expect(head).toMatch(/가볍|가벼/);
+    const tagline = /<i>([^<]*)<\/i>/.exec(read('README.md'))?.[1];
+    expect(tagline).toMatch(/쉽/);
+    expect(tagline).toMatch(/가볍|가벼/);
     const light = { en: /light/i, ko: /가볍|가벼/, ja: /軽/ };
     for (const lang of LANGS) {
       expect(strings[lang].hero.lead, lang).toMatch(light[lang]);

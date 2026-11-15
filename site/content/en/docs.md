@@ -1,6 +1,6 @@
 # Developer docs
 
-Levit is a rich-text editor for the web, written in TypeScript on standard browser APIs. The core is light; the AI entry point and the Yjs binding are separate and loaded only when you use them. Documents are plain JSON you can store, diff and generate. It runs in Chrome 87, Edge 88, Firefox 78, Safari 14 and later. Source on [GitHub](https://github.com/azusawa/levit), packages on [npm](https://www.npmjs.com/package/@yonailab/levit).
+Levit is a rich-text editor for the web, written in TypeScript on standard browser APIs. The core is light; AI is a separate entry point (`@yonailab/levit/ai`) and collaboration a separate package (`@yonailab/levit-yjs`), added only when you need them. Documents are plain JSON you can store, diff and generate. It runs in Chrome 87, Edge 88, Firefox 78, Safari 14 and later. Source on [GitHub](https://github.com/azusawa/levit), packages on [npm](https://www.npmjs.com/package/@yonailab/levit).
 
 ## Install
 

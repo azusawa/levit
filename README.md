@@ -30,7 +30,7 @@
 
 1. **가벼운 본체 (Light)**
    - Web 표준 API(DOM, Selection, InputEvent)와 TypeScript만으로 직접 구현했습니다.
-   - AI 기능(`@yonailab/levit/ai`)과 실시간 공동 편집(`@yonailab/levit-yjs`)은 따로 들어 있어, 쓸 때만 불러옵니다.
+   - AI 기능은 별도 진입점(`@yonailab/levit/ai`)이라 쓸 때만 불러오고, 실시간 공동 편집은 별도 패키지(`@yonailab/levit-yjs`)라 필요할 때 설치합니다.
 2. **가져다 쓰기 가장 쉬운 구조 (DX & AX First)**
    - 몇 줄의 코드로 어떤 웹사이트에도 넣을 수 있습니다.
    - `<levit-editor></levit-editor>` 웹 컴포넌트를 지원하여 React, Vue, Svelte, 바닐라 JS 어디서나 HTML 태그 하나로 동작합니다.

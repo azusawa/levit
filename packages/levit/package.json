@@ -1,7 +1,7 @@
 {
   "name": "@yonailab/levit",
   "version": "0.7.2",
-  "description": "A modern, zero-dependency, AI-ready hybrid web editor designed for seamless embedding and extensibility.",
+  "description": "An easy, light, AI-ready web editor designed for seamless embedding and extensibility.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -47,7 +47,7 @@
     "rich-text",
     "block-editor",
     "web-component",
-    "zero-dependency",
+    "lightweight",
     "ai-ready",
     "levit"
   ],
