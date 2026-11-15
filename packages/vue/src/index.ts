@@ -90,6 +90,8 @@ export const LevitEditor = defineComponent({
     bubbleMenu: { type: Boolean, default: true },
     slashMenu: { type: Boolean, default: true },
     tableToolbar: { type: Boolean, default: true },
+    colors: { type: Array as PropType<EditorOptions['colors']>, default: undefined },
+    colorPicker: { type: Boolean, default: true },
     // A prop rather than an emit, so without an @error listener the editor
     // falls back to logging errors to the console.
     onError: { type: Function as PropType<(error: unknown) => void>, default: undefined },
@@ -109,6 +111,8 @@ export const LevitEditor = defineComponent({
       bubbleMenu: props.bubbleMenu,
       slashMenu: props.slashMenu,
       tableToolbar: props.tableToolbar,
+      colors: props.colors,
+      colorPicker: props.colorPicker,
       onChange: (ed) => emit('update:modelValue', ed.getJSON()),
       onError: props.onError,
       onReady: (ed) => emit('ready', ed),

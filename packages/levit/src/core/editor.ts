@@ -8,7 +8,7 @@ import { InputController } from './view/controller.js';
 import { DOMGuard } from './view/dom-guard.js';
 import { documentFromJSON, documentToJSON } from '../serializers/json.js';
 import { findBlockIndex, getBlockText, sliceBlockContent, sliceDocument } from './model/document.js';
-import { normalizeColor, type ColorKind } from './model/colors.js';
+import { COLORS, normalizeColor, type ColorKind } from './model/colors.js';
 import { applyInputRules, defaultInputRules } from './plugin/input-rules.js';
 import { Schema, type LevitPlugin } from './plugin/plugin.js';
 import { en, format, type LevitMessages } from '../i18n/messages.js';
@@ -39,6 +39,28 @@ export interface EditorOptions {
   plugins?: LevitPlugin[];
   /** Text for menus, prompts and screen readers. English by default; pass `ko` or your own. */
   messages?: Partial<LevitMessages>;
+  /**
+   * The colors the palettes offer, in order: built-in names like 'red', or
+   * your own as { name, label }, drawn with --levit-color-<name> and
+   * --levit-bg-<name> that your CSS sets. Default: the nine built-in colors.
+   */
+  colors?: (string | { name: string; label: string })[];
+  /** Offer a color picker for any other color after the palette. Default: true. */
+  colorPicker?: boolean;
+}
+
+/** The colors option as a list of distinct color names, with their labels. */
+function paletteFrom(colors: EditorOptions['colors']): { name: string; label?: string }[] {
+  if (!colors) return COLORS.map((c) => ({ name: c.name }));
+  const out: { name: string; label?: string }[] = [];
+  for (const entry of colors) {
+    const name = typeof entry === 'string' ? entry : entry?.name;
+    const color = normalizeColor(name);
+    // Names only: a hex color has no theme variables.
+    if (!color || color !== name || color.startsWith('#') || out.some((c) => c.name === color)) continue;
+    out.push(typeof entry === 'string' ? { name: color } : { name: color, label: String(entry.label) });
+  }
+  return out;
 }
 
 export class ChainedCommands {
@@ -347,6 +369,10 @@ export class LevitEditor {
   public readonly commands: Record<string, (...args: any[]) => boolean>;
   /** The messages in use: the defaults with the messages option on top. */
   public readonly messages: LevitMessages;
+  /** The colors the palettes offer (the colors option). A color without a label uses the messages. */
+  public readonly colors: readonly { name: string; label?: string }[];
+  /** Whether the palettes offer a color picker (the colorPicker option). */
+  public readonly colorPicker: boolean;
   private cleanups: (() => void)[] = [];
   private originalAttributes = new Map<string, string | null>();
   private addedRootClass = false;
@@ -363,6 +389,8 @@ export class LevitEditor {
     this.events = new EventEmitter((error) => this.reportError(error));
     this.schema = new Schema(options.plugins ?? []);
     this.messages = { ...en, ...options.messages };
+    this.colors = paletteFrom(options.colors);
+    this.colorPicker = options.colorPicker !== false;
     this.commands = {};
     for (const [name, command] of this.schema.commands) {
       this.commands[name] = (...args) => {

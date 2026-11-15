@@ -48,6 +48,14 @@ describe('<LevitEditor>', () => {
     expect(document.querySelector('.levit-table-toolbar')).toBeNull();
   });
 
+  it('passes the color options to the editor', async () => {
+    let editor: Editor | null = null;
+    mount(() => h(LevitEditor, { colors: ['red'], colorPicker: false, onReady: (e: Editor) => (editor = e) }));
+    await nextTick();
+    expect(editor!.colors.map((c) => c.name)).toEqual(['red']);
+    expect(editor!.colorPicker).toBe(false);
+  });
+
   it('supports v-model and emits ready with the editor', async () => {
     const value = ref<DocumentData>(doc('start'));
     let editor: Editor | null = null;

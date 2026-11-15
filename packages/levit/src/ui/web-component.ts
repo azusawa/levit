@@ -34,7 +34,7 @@ export class LevitEditorElement extends BaseElement {
   private saved: DocumentData | null = null;
 
   static get observedAttributes(): string[] {
-    return ['placeholder', 'theme', 'lang', ...Object.keys(MENUS)];
+    return ['placeholder', 'theme', 'lang', 'color-picker', ...Object.keys(MENUS)];
   }
 
   connectedCallback(): void {
@@ -60,6 +60,7 @@ export class LevitEditorElement extends BaseElement {
       element: this.mountPoint,
       placeholder: this.getAttribute('placeholder') || messages.placeholder,
       messages,
+      colorPicker: this.getAttribute('color-picker') !== 'false',
       // Given at creation, so building again fires no change.
       initialContent: content ?? undefined,
       onChange: (ed) => {
@@ -136,7 +137,9 @@ export class LevitEditorElement extends BaseElement {
     if (Object.hasOwn(MENUS, name)) this.syncMenus();
     // Other messages: the editor is built again with the same document (a new
     // `editor` object). A lang that maps to the same messages changes nothing.
-    if (name === 'lang' && messagesFor(oldVal) !== messagesFor(newVal)) {
+    // The color picker too: the menus are made with it or without it.
+    const picker = name === 'color-picker' && (oldVal !== 'false') !== (newVal !== 'false');
+    if ((name === 'lang' && messagesFor(oldVal) !== messagesFor(newVal)) || picker) {
       this.teardown();
       this.build(this.saved);
     }

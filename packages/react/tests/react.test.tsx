@@ -45,6 +45,13 @@ describe('<LevitEditor>', () => {
     expect(document.querySelector('.levit-table-toolbar')).toBeNull();
   });
 
+  it('passes the color options to the editor', () => {
+    const ref = createRef<Editor | null>();
+    act(() => root.render(<LevitEditor ref={ref} colors={['red']} colorPicker={false} />));
+    expect(ref.current?.colors.map((c) => c.name)).toEqual(['red']);
+    expect(ref.current?.colorPicker).toBe(false);
+  });
+
   it('gives the editor through ref and onReady', () => {
     const ref = createRef<Editor | null>();
     const onReady = vi.fn();

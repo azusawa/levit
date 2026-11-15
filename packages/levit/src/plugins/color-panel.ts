@@ -67,12 +67,13 @@ export function createColorPanel(editor: LevitEditor, options: ColorPanelOptions
     row.setAttribute('role', 'group');
     row.setAttribute('aria-label', labels.group);
 
-    for (const color of [null, ...COLORS.map((c) => c.name)]) {
+    for (const entry of [null, ...editor.colors]) {
+      const color = entry?.name ?? null;
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'levit-color-swatch';
       btn.textContent = 'A';
-      const label = color === null ? labels.none : colorLabel(editor.messages, color);
+      const label = entry === null ? labels.none : (entry.label ?? colorLabel(editor.messages, entry.name));
       btn.title = label;
       btn.setAttribute('aria-label', label);
       if (color === null) btn.classList.add('levit-color-none');
@@ -90,6 +91,9 @@ export function createColorPanel(editor: LevitEditor, options: ColorPanelOptions
       focusable.push(btn);
     }
 
+    panel.appendChild(row);
+    if (!editor.colorPicker) continue;
+
     const picker = document.createElement('input');
     picker.type = 'color';
     picker.className = 'levit-color-picker';
@@ -102,8 +106,6 @@ export function createColorPanel(editor: LevitEditor, options: ColorPanelOptions
     row.appendChild(picker);
     pickers.set(kind, picker);
     focusable.push(picker);
-
-    panel.appendChild(row);
   }
 
   const focusAt = rovingToolbar(panel, focusable, () => {
@@ -115,7 +117,8 @@ export function createColorPanel(editor: LevitEditor, options: ColorPanelOptions
     for (const kind of options.kinds) {
       const active = options.active(kind);
       for (const s of swatches) if (s.kind === kind) s.el.setAttribute('aria-pressed', String(s.color !== null && s.color === active));
-      pickers.get(kind)!.value = pickerValue(active, kind);
+      const picker = pickers.get(kind);
+      if (picker) picker.value = pickerValue(active, kind);
     }
     panel.hidden = false;
   }
