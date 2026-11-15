@@ -38,7 +38,7 @@ Levit は ESM 専用です。バンドラーか `import` で使ってくださ�
 </script>
 ```
 
-この要素は `placeholder`、`lang`（組み込みメッセージは `ko` か `ja`。後から変えると同じ内容で新しい `editor` を作るので、イベントは付け直してください）、`theme`（`dark` か `light`）、初期値の `value`（ドキュメント JSON）属性を読みます。React・Vue のコンポーネントと同じく、バブルメニュー、スラッシュメニュー、表ツールバーが標準で付き、`bubble-menu="false"`、`slash-menu="false"`、`table-toolbar="false"` で外せます。`getJSON()`、`setJSON()`、`getText()`、`focus()` メソッドと、エディタ本体を持つ `editor` プロパティもあります。要素をページ内の別の場所へ移しても同じエディタのままで、取り除いた後も `getJSON()` でドキュメントを取得できます。
+この要素は `placeholder`、`lang`（組み込みメッセージは `ko` か `ja`。後から変えると同じ内容で新しい `editor` を作るので、イベントは付け直してください）、`theme`（`dark` か `light`）、初期値の `value`（ドキュメント JSON）属性を読みます。React・Vue のコンポーネントと同じく、バブルメニュー、スラッシュメニュー、表ツールバーが標準で付き、`bubble-menu="false"`、`slash-menu="false"`、`table-toolbar="false"` で外せます。`color-picker="false"` は色パレットからカラーピッカーを外します。`getJSON()`、`setJSON()`、`getText()`、`focus()` メソッドと、エディタ本体を持つ `editor` プロパティもあります。要素をページ内の別の場所へ移しても同じエディタのままで、取り除いた後も `getJSON()` でドキュメントを取得できます。
 
 ### JavaScript / TypeScript
 
@@ -131,9 +131,12 @@ editor.getText();         // プレーンテキスト
 ### マーク（書式）
 
 - `bold`、`italic`、`underline`、`strike`
-- `highlight`
+- `highlight`：色を選ぶと `attrs.color`。なければ黄
+- `color`：文字色、`attrs.color`
 - `code`
 - `link`：`attrs.href`
+
+色はパレットの名前（`gray`、`brown`、`orange`、`yellow`、`green`、`blue`、`purple`、`pink`、`red`、または `colors` オプションで加えた名前）か、`#e03131` のような16進数の色です。名前はテーマ変数 `--levit-color-<名前>`（文字）と `--levit-bg-<名前>`（ハイライト、セル）で描かれ、ダークモードでも読めます。16進数の色はどのテーマでも同じ色です。それ以外の値は無視されます。表のセルの色は `table_cell` の `attrs.background` に同じ形で保存されます。
 
 リンクの `href` は `http:`、`https:`、`mailto:` または相対パスである必要があります。`javascript:` などそれ以外の値は、描画・インポート・エクスポートの各段階で取り除かれます。
 
@@ -233,6 +236,18 @@ editor.chain().goToNextCell().run();       // Tab。goToPreviousCell() は Shift
 editor.isInTable();                        // キャレットが表の中なら true
 ```
 
+色：
+
+```ts
+editor.chain().setColor('red').run();      // 文字色：名前か '#e03131'。unsetColor() で外す
+editor.chain().setHighlight('blue').run(); // ハイライトの色。setHighlight() は黄、unsetHighlight() で外す
+editor.chain().setCellBackground('green').run(); // 選択した表のセルの背景。null で外す
+editor.getActiveColor('text');             // 'red'、'#e03131' か null。'background' はハイライト
+editor.getCellBackground();                // キャレットのあるセルの色か null
+```
+
+バブルメニューの **色**（`A`）ボタンは文字色とハイライトの色のパレットを、表ツールバーの **セルの色** ボタンはセルの背景のパレットを開きます。各行の最後には、どんな色でも選べるカラーピッカーがあります。HTML に書き出すと `data-color` と `style` が入り、Levit の CSS がない所でも色が見えます。Markdown には文字だけが残ります。貼り付けた色はパレットの一番近い色になります。
+
 キャレットが表の中にあると、`createTableToolbar(editor)` で付けた表ツールバーが表の上に出て、同じコマンドをボタンで示します。`<levit-editor>` と React・Vue のコンポーネントはこのツールバーを自動で付けます。
 
 削除はキー操作と同じように動きます。`deleteBackward()`、`deleteForward()`、`deleteWordBackward()`、`deleteWordForward()`、`deleteLineBackward()`、`deleteLineForward()`、`deleteSelection()` があります。
@@ -254,6 +269,9 @@ createLevitEditor(element, {
   highlightCode: (code, language) => code,
   plugins: [],
   messages: ja,                  // デフォルトは英語
+  // パレットに出す色と順番。独自の名前は CSS に --levit-color-<名前> と --levit-bg-<名前> を定義してください
+  colors: ['red', 'blue', { name: 'brand', label: 'ブランド' }],
+  colorPicker: false,            // カラーピッカーを外す（デフォルト true）
 });
 ```
 
@@ -328,7 +346,7 @@ export function Note() {
 
 - `value` と `onChange` を併用すると制御コンポーネント、`defaultValue` だけなら非制御コンポーネントです。
 - `onChange` は `(value, editor)` を受け取ります。
-- `bubbleMenu={false}`、`slashMenu={false}`、`tableToolbar={false}` でメニューを無効にします。
+- `bubbleMenu={false}`、`slashMenu={false}`、`tableToolbar={false}` でメニューを無効にします。`colors`、`colorPicker` はエディターのオプションと同じです。
 - `ref` か `onReady` でエディタのインスタンスを受け取ります。`className`、`style`、`id` は要素に渡されます。
 - `'use client'` が付いているので、Next.js の App Router でそのまま使えます。
 
@@ -741,6 +759,8 @@ Web Components は `lang` 属性で言語を選びます。`<levit-editor lang="
 - フォントと形状：`--levit-font-sans`、`--levit-font-mono`、`--levit-radius`、`--levit-shadow`
 - コメント：`--levit-comment-bg`、`--levit-comment-active-bg`、`--levit-comment-border`
 - AI の提案：`--levit-suggestion-insert-bg`、`--levit-suggestion-insert-text`、`--levit-suggestion-delete-text`
+- 文字色：`--levit-color-gray` … `--levit-color-red`（9色）
+- ハイライトとセルの色：`--levit-bg-gray` … `--levit-bg-red`（9色）
 
 変数は継承されるので、`.levit-editor-root` に指定するとそのエディタだけに適用されます。メニューは `body` に追加されるため、メニューも変えたい場合は `:root` に指定してください。
 

@@ -38,7 +38,7 @@ Without a build step, load the script and the stylesheet and use the `<levit-edi
 </script>
 ```
 
-The element reads `placeholder`, `lang` (`ko` or `ja` for built-in messages; changing it later builds a new `editor` with the same text, so attach handlers again), `theme` (`dark` or `light`) and an initial `value` (document JSON). It comes with the bubble and slash menus and the table toolbar, like the React and Vue components; `bubble-menu="false"`, `slash-menu="false"` or `table-toolbar="false"` leaves one out. It also has `getJSON()`, `setJSON()`, `getText()`, `focus()`, and an `editor` property with the full editor. Moving the element in the page keeps the same editor, and after removal `getJSON()` still returns the document.
+The element reads `placeholder`, `lang` (`ko` or `ja` for built-in messages; changing it later builds a new `editor` with the same text, so attach handlers again), `theme` (`dark` or `light`) and an initial `value` (document JSON). It comes with the bubble and slash menus and the table toolbar, like the React and Vue components; `bubble-menu="false"`, `slash-menu="false"` or `table-toolbar="false"` leaves one out. `color-picker="false"` leaves the color picker out of the color palettes. It also has `getJSON()`, `setJSON()`, `getText()`, `focus()`, and an `editor` property with the full editor. Moving the element in the page keeps the same editor, and after removal `getJSON()` still returns the document.
 
 ### JavaScript or TypeScript
 
@@ -131,9 +131,12 @@ Lists are flat: every list item is its own block, and consecutive items of the s
 ### Marks
 
 - `bold`, `italic`, `underline`, `strike`
-- `highlight`
+- `highlight`: `attrs.color` when a color is picked; yellow without one
+- `color`: text color, `attrs.color`
 - `code`
 - `link` with `attrs.href`
+
+A color is a palette name (`gray`, `brown`, `orange`, `yellow`, `green`, `blue`, `purple`, `pink`, `red`, or one added with the `colors` option) or a hex color like `#e03131`. Names are drawn with the theme variables `--levit-color-<name>` (text) and `--levit-bg-<name>` (highlights, cells), so they stay readable in dark mode. A hex color looks the same in every theme. Other values are ignored. A table cell keeps its color in `attrs.background` of `table_cell`, in the same form.
 
 A link `href` must be `http:`, `https:`, `mailto:` or relative. Anything else, such as `javascript:`, is dropped when the document is rendered, imported or exported.
 
@@ -233,6 +236,18 @@ editor.chain().goToNextCell().run();       // Tab; goToPreviousCell() is Shift+T
 editor.isInTable();                        // true when the caret is in a table
 ```
 
+Colors:
+
+```ts
+editor.chain().setColor('red').run();      // text color: a name or '#e03131'; unsetColor() takes it off
+editor.chain().setHighlight('blue').run(); // highlight color; setHighlight() is yellow; unsetHighlight()
+editor.chain().setCellBackground('green').run(); // the selected table cells; null takes it off
+editor.getActiveColor('text');             // 'red', '#e03131' or null; 'background' for the highlight
+editor.getCellBackground();                // color of the cell with the caret, or null
+```
+
+The bubble menu's **Color** (`A`) button opens a palette of text and highlight colors, and the table toolbar's **Cell color** button a palette of cell colors. Each row ends with a color picker for any other color. HTML export writes `data-color` and a `style`, so colors show where Levit's CSS is not loaded; Markdown keeps the text only. Pasted colors become the nearest palette color.
+
 While the caret is in a table, the table toolbar from `createTableToolbar(editor)` shows above it with the same commands as buttons. `<levit-editor>` and the React and Vue components add it for you.
 
 Deleting works like the keys: `deleteBackward()`, `deleteForward()`, `deleteWordBackward()`, `deleteWordForward()`, `deleteLineBackward()`, `deleteLineForward()` and `deleteSelection()`.
@@ -254,6 +269,10 @@ createLevitEditor(element, {
   highlightCode: (code, language) => code,
   plugins: [],
   messages: ko,                  // English by default
+  // The colors the palettes offer, in order. Your own names need
+  // --levit-color-<name> and --levit-bg-<name> in your CSS
+  colors: ['red', 'blue', { name: 'brand', label: 'Brand' }],
+  colorPicker: false,            // leave out the color picker (default: true)
 });
 ```
 
@@ -328,7 +347,7 @@ export function Note() {
 
 - `value` with `onChange` makes a controlled component; `defaultValue` alone an uncontrolled one.
 - `onChange` receives `(value, editor)`.
-- `bubbleMenu={false}`, `slashMenu={false}` and `tableToolbar={false}` turn the menus off.
+- `bubbleMenu={false}`, `slashMenu={false}` and `tableToolbar={false}` turn the menus off. `colors` and `colorPicker` work as the editor options.
 - `ref` or `onReady` gives you the editor instance. `className`, `style` and `id` go to the element.
 - The package is marked `'use client'`, so it works in the Next.js App Router.
 
@@ -741,6 +760,8 @@ Every color is a CSS variable, so changing variables restyles the whole editor.
 - Type and shape: `--levit-font-sans`, `--levit-font-mono`, `--levit-radius`, `--levit-shadow`
 - Comments: `--levit-comment-bg`, `--levit-comment-active-bg`, `--levit-comment-border`
 - AI suggestions: `--levit-suggestion-insert-bg`, `--levit-suggestion-insert-text`, `--levit-suggestion-delete-text`
+- Text colors: `--levit-color-gray` … `--levit-color-red` (nine)
+- Highlight and cell colors: `--levit-bg-gray` … `--levit-bg-red` (nine)
 
 Variables inherit, so setting them on `.levit-editor-root` styles one editor only. Menus are attached to `body`; set variables on `:root` to restyle them too.
 

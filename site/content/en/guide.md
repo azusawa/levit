@@ -50,6 +50,7 @@ Select some text and a small toolbar, the bubble menu, appears above it. Its but
 
 - **Bold**, **Italic**, **Underline**, **Strikethrough**
 - **Highlight** — marks the text like a highlighter pen.
+- **Color** (`A`) — picks a text color and a highlight color (see below).
 - **Code** — shows a short piece of code inside a sentence.
 - **Link** — adds or edits a link (see below).
 - **Heading 1**, **Heading 2** — turn the whole line into a heading.
@@ -69,6 +70,16 @@ You can also use the keyboard. With nothing selected, the shortcut applies to th
 ### Links
 
 Select text and press **Link** in the bubble menu. A field appears: type or paste the address and press Enter. You can leave out `https://` — `example.com` becomes `https://example.com`. To remove a link, select it, press **Link**, clear the field and press Enter. Escape closes the field without changes. Addresses that could be unsafe, such as `javascript:` links, are refused: the field gets a red border and the link is not added.
+
+### Colors
+
+Select text and press the **Color** (`A`) button in the bubble menu to open the palette. The top row is the **Text color**, the bottom row the **Highlight color**. Pick gray, brown, orange, yellow, green, blue, purple, pink or red: it applies at once and the palette closes. The colors the selected text has are outlined.
+
+- **Default** at the start of the top row takes the text color off, and **No highlight** takes the highlight off.
+- The square at the end of each row opens a color picker for any other color.
+- Colors from the palette change to ones that read well on a dark screen (dark mode). A color from the color picker stays the same everywhere.
+- From the keyboard, press **Alt+F10** to go to the bubble menu, press Enter on the **Color** button, choose a color with the arrow keys and press Enter. Escape closes the palette without a change.
+- Colored text pasted from Google Docs or Word gets the nearest color of the palette. Black text gets the default color.
 
 ## Lists and to-do lists
 
@@ -91,6 +102,7 @@ You can also type a Markdown table row, such as `| Name | Price |`, and press En
 - Click a cell to write in it. **Tab** moves to the next cell and **Shift+Tab** to the previous one. **Tab** in the last cell adds a row.
 - **Enter** starts a new line inside the cell.
 - While the caret is in a table, the **table toolbar** shows above it, with buttons to add a row above or below, add a column left or right, delete the row or the column, turn the header row on or off, and delete the table. Point at a button to see what it does. From the keyboard, press **Alt+F10** (Option+F10 on Mac) to reach it, the arrow keys to choose a button, Enter to press it and Escape to go back to the cell.
+- The **Cell color** button in the table toolbar colors the cell with the caret. Select several cells to color them all. The palette is the same as for text, and **No color** at the start takes the color off.
 - Thin **+** bars also show below and right of the table: **Add a row at the end** and **Add a column at the end**.
 - Shortcuts in a cell: **Mod+Enter** adds a row below, **Mod+Alt+Enter** adds a column right, **Mod+Shift+Backspace** deletes the row and **Mod+Alt+Backspace** deletes the column.
 - The same commands are in the slash menu: type `/` in a cell for **Add row above**, **Add row below**, **Add column left**, **Add column right**, **Delete row**, **Delete column**, **Header row** (turns the header row on or off) and **Delete table**.

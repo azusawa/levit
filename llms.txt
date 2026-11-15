@@ -25,6 +25,7 @@ The element adds the bubble and slash menus and the table toolbar
 (`bubble-menu="false"` / `slash-menu="false"` / `table-toolbar="false"` leave
 them out, also later). Attributes: `placeholder`,
 `lang` (ko/ja; a later change builds a new `el.editor` with the same document),
+`color-picker="false"` (no color picker in the palettes; also a rebuild),
 `theme` (dark/light, also on the menus), `value` (initial JSON). Methods:
 getJSON(), setJSON(), getText(), focus(); `el.editor` is the full LevitEditor.
 Moving the element keeps the same editor; after removal getJSON() still works.
@@ -77,7 +78,8 @@ createTableToolbar(editor);   // buttons above the table the caret is in
 `code_block` (optional `attrs.language`, e.g. `"ts"`),
 `bullet_list_item`, `ordered_list_item`, `task_list_item` (`attrs.checked`: boolean),
 `horizontal_rule`, `image` (`attrs.src`, `attrs.alt`),
-`table_cell` (`attrs.table`, `attrs.row`, optional `attrs.header`).
+`table_cell` (`attrs.table`, `attrs.row`, optional `attrs.header`, optional
+`attrs.background`: a color, see Marks).
 Lists are flat: each list item is its own block, and consecutive items of the
 same type form one list (exported as one `<ul>`/`<ol>` or one Markdown list).
 Nesting is `attrs.indent` (0-8, omitted at the top level) on list items; an
@@ -113,7 +115,18 @@ each table and row.
 ```
 
 ### Marks
-`bold`, `italic`, `underline`, `strike`, `highlight`, `code`, `link` (`attrs.href`).
+`bold`, `italic`, `underline`, `strike`, `highlight` (optional `attrs.color`;
+yellow without one), `color` (`attrs.color`), `code`, `link` (`attrs.href`).
+A color is a name (`gray`, `brown`, `orange`, `yellow`, `green`, `blue`,
+`purple`, `pink`, `red`, or one the app adds with the `colors` option) or a hex
+color like `#e03131`. Names are drawn with the theme variables
+`--levit-color-<name>` (text) and `--levit-bg-<name>` (highlights, cells), so
+they stay readable in dark mode; hex colors look the same in every theme. Any
+other value is ignored. HTML export writes `data-color` and a `style`; pasted
+colors become the nearest named color; Markdown keeps the text only.
+```json
+{ "text": "Warning", "marks": [{ "type": "color", "attrs": { "color": "red" } }, { "type": "highlight", "attrs": { "color": "yellow" } }] }
+```
 Link hrefs must be `http:`, `https:`, `mailto:` or relative; anything else
 (e.g. `javascript:`) is dropped on render, import and export.
 
@@ -199,6 +212,14 @@ editor.chain().setBlockType('task_list_item', { checked: false }).run();
 editor.chain().toggleTaskChecked().run();      // or toggleTaskChecked(blockId)
 editor.chain().toggleStrike().run();
 editor.chain().toggleHighlight().run();
+editor.chain().setColor('red').run();         // text color: a name or '#e03131'; unsetColor() takes it off
+editor.chain().setHighlight('blue').run();    // highlight color; setHighlight() is yellow; unsetHighlight()
+editor.chain().setCellBackground('green').run(); // the selected table cells; null takes it off
+editor.getActiveColor('text');                // 'red', '#e03131' or null; 'background' for the highlight
+editor.getCellBackground();                   // color of the cell with the caret, or null
+// The bubble menu's A button ("Color") opens a palette: "Text color" and
+// "Highlight color" rows (Default / No highlight, nine colors, a color picker).
+// The table toolbar's "Cell color" button opens the same for cells.
 editor.chain().insertHorizontalRule().run();
 editor.chain().insertTable(3, 3).run();       // rows, cols; { header: false } for no header row
 editor.chain().convertToTable().run();        // selected lines to rows; cells split at tabs, or commas if none
@@ -229,6 +250,10 @@ createLevitEditor(container, {
   highlightCode: (code, language) => code,
   plugins: [],      // see "6. Plugins"
   messages: ko,     // see "8. Messages"; English by default
+  // The colors the palettes offer, in order. Your own names need
+  // --levit-color-<name> and --levit-bg-<name> in your CSS.
+  colors: ['red', 'blue', { name: 'brand', label: 'Brand' }],
+  colorPicker: false,   // leave out the color picker (default: true)
 });
 ```
 
@@ -334,12 +359,12 @@ const plugin: LevitPlugin = {
   ],
   marks: [
     {
-      type: 'color',
+      type: 'mention',
       tag: 'span',
-      attributes: (mark) => ({ style: `color: ${mark.attrs?.color}` }),  // on* attributes are dropped
-      toHTML: (text, mark) => `<span style="color: ${mark.attrs?.color}">${text}</span>`,
+      attributes: (mark) => ({ 'data-user': String(mark.attrs?.user) }),  // on* attributes are dropped
+      toHTML: (text, mark) => `<span data-user="${encodeURIComponent(String(mark.attrs?.user))}">${text}</span>`,
       inclusive: false,   // text typed right after it does not get the mark (default true)
-      parseHTML: (el) => ((el as HTMLElement).style.color ? { color: (el as HTMLElement).style.color } : null),
+      parseHTML: (el) => (el.hasAttribute('data-user') ? { user: el.getAttribute('data-user') } : null),
     },
   ],
   // Command factories: arguments in, a change to the transaction out (return false to cancel).
@@ -409,8 +434,9 @@ Every color is a CSS variable (`--levit-bg`, `--levit-surface`, `--levit-border`
 `--levit-code-bg`, `--levit-code-text`, `--levit-quote-border`, `--levit-danger`,
 comments: `--levit-comment-bg`, `--levit-comment-active-bg`, `--levit-comment-border`,
 AI suggestions: `--levit-suggestion-insert-bg`, `--levit-suggestion-insert-text`,
-`--levit-suggestion-delete-text`), plus `--levit-font-sans`, `--levit-font-mono`,
-`--levit-radius`, `--levit-shadow`.
+`--levit-suggestion-delete-text`, text colors: `--levit-color-gray` ... `--levit-color-red`,
+highlight and cell colors: `--levit-bg-gray` ... `--levit-bg-red`), plus
+`--levit-font-sans`, `--levit-font-mono`, `--levit-radius`, `--levit-shadow`.
 Dark mode: `[data-theme="dark"]`, or the system setting unless `[data-theme="light"]`.
 
 ## 10. React and Vue
@@ -429,7 +455,8 @@ const { ref, editor } = useLevitEditor({ placeholder: 'Write' });   // <div ref=
 <!-- const { element, editor } = useLevitEditor(options)  →  <div ref="element" /> -->
 ```
 Both add the bubble and slash menus and the table toolbar unless turned off
-(`bubbleMenu`, `slashMenu`, `tableToolbar` set to false), and a value that comes
+(`bubbleMenu`, `slashMenu`, `tableToolbar` set to false), take `colors` and
+`colorPicker` like the editor options, and a value that comes
 back from onChange / v-model does not reset the caret. The React package is
 marked 'use client'.
 

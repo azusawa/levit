@@ -38,7 +38,7 @@ Levit은 ESM 전용입니다. 번들러나 `import`로 사용하세요. 서버 �
 </script>
 ```
 
-이 요소는 `placeholder`, `lang`(내장 문구는 `ko` 또는 `ja`. 나중에 바꾸면 같은 내용으로 새 `editor`를 만들므로 이벤트는 다시 붙이세요), `theme`(`dark` 또는 `light`), 초기값 `value`(문서 JSON) 속성을 읽습니다. React·Vue 컴포넌트처럼 버블 메뉴, 슬래시 메뉴, 표 도구 막대가 기본으로 붙고, `bubble-menu="false"`, `slash-menu="false"`, `table-toolbar="false"`로 뺄 수 있습니다. `getJSON()`, `setJSON()`, `getText()`, `focus()` 메서드와, 에디터 인스턴스 전체를 담은 `editor` 속성도 있습니다. 요소를 페이지의 다른 곳으로 옮겨도 같은 에디터가 유지되고, 제거한 뒤에도 `getJSON()`으로 문서를 얻을 수 있습니다.
+이 요소는 `placeholder`, `lang`(내장 문구는 `ko` 또는 `ja`. 나중에 바꾸면 같은 내용으로 새 `editor`를 만들므로 이벤트는 다시 붙이세요), `theme`(`dark` 또는 `light`), 초기값 `value`(문서 JSON) 속성을 읽습니다. React·Vue 컴포넌트처럼 버블 메뉴, 슬래시 메뉴, 표 도구 막대가 기본으로 붙고, `bubble-menu="false"`, `slash-menu="false"`, `table-toolbar="false"`로 뺄 수 있습니다. `color-picker="false"`는 색 팔레트에서 색상 피커를 뺍니다. `getJSON()`, `setJSON()`, `getText()`, `focus()` 메서드와, 에디터 인스턴스 전체를 담은 `editor` 속성도 있습니다. 요소를 페이지의 다른 곳으로 옮겨도 같은 에디터가 유지되고, 제거한 뒤에도 `getJSON()`으로 문서를 얻을 수 있습니다.
 
 ### JavaScript / TypeScript
 
@@ -131,9 +131,12 @@ editor.getText();         // 순수 텍스트
 ### 서식(마크)
 
 - `bold`, `italic`, `underline`, `strike`
-- `highlight`
+- `highlight`: 색을 고르면 `attrs.color`. 없으면 노랑
+- `color`: 글자색, `attrs.color`
 - `code`
 - `link`: `attrs.href`
+
+색은 팔레트의 이름(`gray`, `brown`, `orange`, `yellow`, `green`, `blue`, `purple`, `pink`, `red`, 또는 `colors` 옵션으로 더한 이름)이나 `#e03131` 같은 16진수 색입니다. 이름은 테마 변수 `--levit-color-<이름>`(글자)과 `--levit-bg-<이름>`(형광펜, 칸)으로 그려져 다크 모드에서도 읽힙니다. 16진수 색은 어느 테마에서나 같은 색입니다. 그 밖의 값은 무시됩니다. 표 칸의 배경색은 `table_cell`의 `attrs.background`에 같은 형식으로 저장됩니다.
 
 링크 `href`는 `http:`, `https:`, `mailto:` 또는 상대 경로여야 합니다. `javascript:` 같은 그 밖의 값은 렌더링, 가져오기, 내보내기 단계에서 모두 제거됩니다.
 
@@ -233,6 +236,18 @@ editor.chain().goToNextCell().run();       // Tab. goToPreviousCell()은 Shift+T
 editor.isInTable();                        // 캐럿이 표 안에 있으면 true
 ```
 
+색:
+
+```ts
+editor.chain().setColor('red').run();      // 글자색: 이름 또는 '#e03131'. unsetColor()로 해제
+editor.chain().setHighlight('blue').run(); // 형광펜 색. setHighlight()는 노랑, unsetHighlight()로 해제
+editor.chain().setCellBackground('green').run(); // 선택한 표 칸의 배경. null이면 해제
+editor.getActiveColor('text');             // 'red', '#e03131' 또는 null. 'background'는 형광펜
+editor.getCellBackground();                // 캐럿이 있는 칸의 색 또는 null
+```
+
+버블 메뉴의 **색**(`A`) 버튼은 글자색과 형광펜 색 팔레트를, 표 도구 막대의 **칸 색** 버튼은 칸 배경 팔레트를 엽니다. 각 줄 끝에는 아무 색이나 고르는 색상 피커가 있습니다. HTML로 내보내면 `data-color`와 `style`이 함께 들어가 Levit CSS가 없는 곳에서도 색이 보이고, Markdown에는 글자만 남습니다. 붙여 넣은 색은 가장 가까운 팔레트 색이 됩니다.
+
 커서가 표 안에 있으면 `createTableToolbar(editor)`로 붙인 표 도구 막대가 표 위에 나타나, 같은 명령을 버튼으로 보여 줍니다. `<levit-editor>`와 React·Vue 컴포넌트는 이 막대를 알아서 붙입니다.
 
 삭제는 키 입력과 똑같이 동작합니다. `deleteBackward()`, `deleteForward()`, `deleteWordBackward()`, `deleteWordForward()`, `deleteLineBackward()`, `deleteLineForward()`, `deleteSelection()`이 있습니다.
@@ -254,6 +269,9 @@ createLevitEditor(element, {
   highlightCode: (code, language) => code,
   plugins: [],
   messages: ko,                  // 기본은 영어
+  // 팔레트에 보일 색과 순서. 직접 만든 이름은 CSS에 --levit-color-<이름>과 --levit-bg-<이름>을 정하세요
+  colors: ['red', 'blue', { name: 'brand', label: '브랜드' }],
+  colorPicker: false,            // 색상 피커를 뺍니다(기본 true)
 });
 ```
 
@@ -328,7 +346,7 @@ export function Note() {
 
 - `value`와 `onChange`를 함께 쓰면 제어 컴포넌트, `defaultValue`만 쓰면 비제어 컴포넌트입니다.
 - `onChange`는 `(value, editor)`를 받습니다.
-- `bubbleMenu={false}`, `slashMenu={false}`, `tableToolbar={false}`로 메뉴를 끕니다.
+- `bubbleMenu={false}`, `slashMenu={false}`, `tableToolbar={false}`로 메뉴를 끕니다. `colors`, `colorPicker`는 에디터 옵션과 같습니다.
 - `ref`나 `onReady`로 에디터 인스턴스를 받습니다. `className`, `style`, `id`는 요소에 전달됩니다.
 - `'use client'`가 지정되어 있어 Next.js App Router에서 바로 쓸 수 있습니다.
 
@@ -741,6 +759,8 @@ editor.t('codeLanguageLabel', { language: 'ts' }); // 플레이스홀더를 채�
 - 글꼴과 모양: `--levit-font-sans`, `--levit-font-mono`, `--levit-radius`, `--levit-shadow`
 - 댓글: `--levit-comment-bg`, `--levit-comment-active-bg`, `--levit-comment-border`
 - AI 제안: `--levit-suggestion-insert-bg`, `--levit-suggestion-insert-text`, `--levit-suggestion-delete-text`
+- 글자색: `--levit-color-gray` … `--levit-color-red`(9가지)
+- 형광펜과 칸 배경색: `--levit-bg-gray` … `--levit-bg-red`(9가지)
 
 변수는 상속되므로 `.levit-editor-root`에 지정하면 그 에디터에만 적용됩니다. 메뉴는 `body`에 붙으므로 메뉴까지 바꾸려면 `:root`에 지정하세요.
 

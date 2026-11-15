@@ -337,3 +337,34 @@ describe('the README header', () => {
     expect(head).toContain('런타임 의존성 0개');
   });
 });
+
+describe('colors are documented', () => {
+  const api = ['setColor(', 'setHighlight(', 'setCellBackground(', 'getActiveColor(', '--levit-color-red', '--levit-bg-red', 'colorPicker', 'color-picker="false"'];
+
+  it('README and llms.txt cover the palette, the API, the options and the theme variables', () => {
+    for (const file of ['README.md', 'llms.txt']) {
+      const text = read(file);
+      for (const part of api) expect(text, `${file} ${part}`).toContain(part);
+    }
+    expect(read('README.md')).toContain('글자색');
+    expect(read('llms.txt')).toContain('Text color');
+  });
+
+  it('the llms.txt plugin example no longer adds a color mark', () => {
+    expect(read('llms.txt')).not.toMatch(/type: 'color',\s*\n\s*tag:/);
+  });
+
+  it('the site guide and docs cover colors in every language', () => {
+    const words: Record<string, string[]> = {
+      en: ['Text color', 'Highlight color', 'Cell color'],
+      ko: ['글자색', '형광펜 색', '칸 색'],
+      ja: ['文字色', 'ハイライトの色', 'セルの色'],
+    };
+    for (const lang of ['en', 'ko', 'ja']) {
+      const guide = read(`site/content/${lang}/guide.md`);
+      for (const word of words[lang]) expect(guide, `${lang} guide ${word}`).toContain(word);
+      const docs = read(`site/content/${lang}/docs.md`);
+      for (const part of api) expect(docs, `${lang} docs ${part}`).toContain(part);
+    }
+  });
+});
