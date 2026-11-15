@@ -1,5 +1,5 @@
 import * as Y from 'yjs';
-import { createRemoteCursors } from '@yonailab/levit';
+import { createRemoteCursors, normalizeInlineNodes } from '@yonailab/levit';
 import type { BlockNode, EditorPosition, EditorSelection, InlineMark, InlineNode, LevitEditor, RemoteCursor } from '@yonailab/levit';
 
 /**
@@ -401,14 +401,18 @@ function marksFrom(attributes: Attributes | undefined): InlineMark[] {
 function readBlock(ymap: Y.Map<unknown>): BlockNode {
   const ytext = ymap.get('text') as Y.Text | undefined;
   const delta = (ytext?.toDelta() ?? []) as { insert: unknown; attributes?: Attributes }[];
-  const content: InlineNode[] = delta
-    .filter((op) => typeof op.insert === 'string' && op.insert.length > 0)
-    .map((op) => ({ text: op.insert as string, marks: marksFrom(op.attributes) }));
+  // Yjs can leave text with the same formatting in pieces (after a mark with
+  // attributes, like a color, is removed), so pieces are joined.
+  const content: InlineNode[] = normalizeInlineNodes(
+    delta
+      .filter((op) => typeof op.insert === 'string' && op.insert.length > 0)
+      .map((op) => ({ text: op.insert as string, marks: marksFrom(op.attributes) }))
+  );
   return {
     id: String(ymap.get('id')),
     type: String(ymap.get('type') ?? 'paragraph'),
     attrs: { ...((ymap.get('attrs') as Record<string, unknown>) ?? {}) },
-    content: content.length > 0 ? content : [{ text: '', marks: [] }],
+    content,
   };
 }
 

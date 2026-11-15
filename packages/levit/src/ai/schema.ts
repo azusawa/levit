@@ -1,10 +1,16 @@
+import { normalizeColor } from '../core/model/colors.js';
 import { schemaFor, type SerializerOptions } from '../core/plugin/plugin.js';
 import { MAX_LIST_INDENT } from '../core/model/document.js';
 import { normalizeCodeLanguage, sanitizeHref, sanitizeImageSrc } from '../core/model/sanitize.js';
 
 type JSONSchema = Record<string, unknown>;
 
-const BUILT_IN_MARKS = ['bold', 'italic', 'underline', 'strike', 'highlight', 'code'];
+const BUILT_IN_MARKS = ['bold', 'italic', 'underline', 'strike', 'code'];
+const COLOR = {
+  type: 'string',
+  pattern: '^([a-z][a-z0-9-]{0,31}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{3})$',
+  description: 'A color name (gray, brown, orange, yellow, green, blue, purple, pink, red, or one the app adds) or a hex color.',
+};
 const LIST_TYPES = ['bullet_list_item', 'ordered_list_item'];
 const INDENT = { type: 'integer', minimum: 0, maximum: MAX_LIST_INDENT, description: 'Nesting level of a list item.' };
 
@@ -79,6 +85,14 @@ export function getDocumentSchema(options: SerializerOptions = {}): JSONSchema {
   const marks: JSONSchema[] = [
     ...BUILT_IN_MARKS.map((type) => markSchema(type)),
     markSchema('link', attrs({ href: { type: 'string', description: 'http(s), mailto or relative.' } }, ['href'])),
+    {
+      type: 'object',
+      description: 'A highlight, yellow without a color.',
+      required: ['type'],
+      properties: { type: { const: 'highlight' }, attrs: attrs({ color: COLOR }) },
+      additionalProperties: false,
+    },
+    ...(schema.marks.has('color') ? [] : [markSchema('color', attrs({ color: COLOR }, ['color']))]),
   ];
   for (const spec of schema.marks.values()) {
     marks.push({
@@ -180,6 +194,12 @@ export function validateDocument(input: unknown, options: SerializerOptions = {}
         if (!isObject(mark)) return fail(markAt, 'must be an object');
         const markType = mark.type;
         if (typeof markType === 'string' && BUILT_IN_MARKS.includes(markType)) return;
+        if ((markType === 'color' && !schema.marks.has('color')) || markType === 'highlight') {
+          const color = isObject(mark.attrs) ? mark.attrs.color : undefined;
+          const optional = markType === 'highlight' && (mark.attrs === undefined || (isObject(mark.attrs) && color === undefined));
+          if (!optional && !normalizeColor(color)) fail(`${markAt}.attrs.color`, 'must be a color name or a hex color (#rrggbb)');
+          return;
+        }
         if (markType === 'link') {
           const href = isObject(mark.attrs) ? mark.attrs.href : undefined;
           if (!sanitizeHref(href)) fail(`${markAt}.attrs.href`, 'must be a safe link (http, https, mailto or relative)');

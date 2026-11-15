@@ -35,6 +35,25 @@
   --levit-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
   --levit-radius: 8px;
   --levit-table-toolbar-room: 44px;
+  /* Colors a writer picks for text and highlights (see colors.ts). */
+  --levit-color-gray: #64748b;
+  --levit-color-brown: #92573a;
+  --levit-color-orange: #c2410c;
+  --levit-color-yellow: #a16207;
+  --levit-color-green: #15803d;
+  --levit-color-blue: #1d4ed8;
+  --levit-color-purple: #7e22ce;
+  --levit-color-pink: #be185d;
+  --levit-color-red: #b91c1c;
+  --levit-bg-gray: #f1f5f9;
+  --levit-bg-brown: #f4e9e1;
+  --levit-bg-orange: #ffedd5;
+  --levit-bg-yellow: #fef08a;
+  --levit-bg-green: #dcfce7;
+  --levit-bg-blue: #dbeafe;
+  --levit-bg-purple: #f3e8ff;
+  --levit-bg-pink: #fce7f3;
+  --levit-bg-red: #fee2e2;
 }
 
 [data-theme="dark"] {
@@ -64,6 +83,24 @@
   --levit-quote-border: #334155;
   --levit-highlight: rgba(234, 179, 8, 0.35);
   --levit-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
+  --levit-color-gray: #94a3b8;
+  --levit-color-brown: #d4a27f;
+  --levit-color-orange: #fb923c;
+  --levit-color-yellow: #facc15;
+  --levit-color-green: #4ade80;
+  --levit-color-blue: #60a5fa;
+  --levit-color-purple: #c084fc;
+  --levit-color-pink: #f472b6;
+  --levit-color-red: #f87171;
+  --levit-bg-gray: #273244;
+  --levit-bg-brown: #3d2a1f;
+  --levit-bg-orange: #47240c;
+  --levit-bg-yellow: #4a3c0b;
+  --levit-bg-green: #123d26;
+  --levit-bg-blue: #1a3160;
+  --levit-bg-purple: #33204f;
+  --levit-bg-pink: #481833;
+  --levit-bg-red: #4c1c1c;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -94,7 +131,25 @@
     --levit-quote-border: #334155;
     --levit-highlight: rgba(234, 179, 8, 0.35);
     --levit-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
-  }
+      --levit-color-gray: #94a3b8;
+    --levit-color-brown: #d4a27f;
+    --levit-color-orange: #fb923c;
+    --levit-color-yellow: #facc15;
+    --levit-color-green: #4ade80;
+    --levit-color-blue: #60a5fa;
+    --levit-color-purple: #c084fc;
+    --levit-color-pink: #f472b6;
+    --levit-color-red: #f87171;
+    --levit-bg-gray: #273244;
+    --levit-bg-brown: #3d2a1f;
+    --levit-bg-orange: #47240c;
+    --levit-bg-yellow: #4a3c0b;
+    --levit-bg-green: #123d26;
+    --levit-bg-blue: #1a3160;
+    --levit-bg-purple: #33204f;
+    --levit-bg-pink: #481833;
+    --levit-bg-red: #4c1c1c;
+}
 }
 
 /* Custom Element & Container */

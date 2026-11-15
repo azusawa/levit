@@ -89,6 +89,20 @@ describe('bindYjs', () => {
     expect(b.state.doc.blocks[0].content).toEqual([{ text: 'Hello world', marks: [] }]);
   });
 
+  it('sends colors, a change of color, and removing it', () => {
+    const { a, b } = pair();
+    a.dispatch(a.state.tr.setSelection(range('a', 0, 'a', 5)).setMark('color', { color: 'red' }));
+    expect(b.state.doc.blocks[0].content[0]).toEqual({ text: 'Hello', marks: [{ type: 'color', attrs: { color: 'red' } }] });
+    a.dispatch(a.state.tr.setSelection(range('a', 0, 'a', 5)).setMark('color', { color: '#123456' }).setMark('highlight', { color: 'blue' }));
+    expect(b.state.doc.blocks[0].content[0]).toEqual({
+      text: 'Hello',
+      marks: [{ type: 'color', attrs: { color: '#123456' } }, { type: 'highlight', attrs: { color: 'blue' } }],
+    });
+    a.dispatch(a.state.tr.setSelection(range('a', 0, 'a', 5)).setMark('color', null).setMark('highlight', null));
+    expect(b.state.doc.blocks[0].content).toEqual([{ text: 'Hello world', marks: [] }]);
+    expect(json(b)).toEqual(json(a));
+  });
+
   it('sends block changes: split, merge, type, attributes, deletion across blocks', () => {
     const { a, b } = pair();
     a.dispatch(a.state.tr.setSelection(caret('a', 5)).splitBlock());

@@ -251,7 +251,10 @@ describe('plugins in HTML and Markdown', () => {
   });
 
   it('without the plugins, unknown blocks are kept as plain paragraphs of text', () => {
-    expect(documentToHTML(doc())).toBe('<p>note</p><p>red</p>');
+    // "color" is built in, so the color stays.
+    expect(documentToHTML(doc())).toBe(
+      '<p>note</p><p><span data-color="red" style="color: var(--levit-color-red, #b91c1c)">red</span></p>'
+    );
   });
 
   it('editor.getHTML and getMarkdown use the editor plugins; paste reads them too', () => {

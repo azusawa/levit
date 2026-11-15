@@ -1,3 +1,4 @@
+import { colorCSS, normalizeColor } from '../model/colors.js';
 import { BlockNode, InlineMark, InlineNode } from '../model/types.js';
 import { EditorState } from '../state/state.js';
 import { normalizeCodeLanguage, normalizeHeadingLevel, sanitizeHref, sanitizeImageSrc } from '../model/sanitize.js';
@@ -426,7 +427,7 @@ export class DOMReconciler {
   private wrapWithMark(inner: Node, mark: InlineMark): HTMLElement {
     let el: HTMLElement;
 
-    switch (mark.type) {
+    switch (this.schema.marks.has(mark.type) ? '' : mark.type) {
       case 'bold':
         el = document.createElement('strong');
         break;
@@ -439,10 +440,26 @@ export class DOMReconciler {
       case 'strike':
         el = document.createElement('s');
         break;
-      case 'highlight':
+      case 'highlight': {
         el = document.createElement('mark');
         el.className = 'levit-highlight';
+        const background = colorCSS(mark.attrs?.color, 'background');
+        if (background) {
+          el.dataset.color = normalizeColor(mark.attrs?.color)!;
+          el.style.backgroundColor = background;
+        }
         break;
+      }
+      case 'color': {
+        el = document.createElement('span');
+        el.className = 'levit-color';
+        const color = colorCSS(mark.attrs?.color, 'text');
+        if (color) {
+          el.dataset.color = normalizeColor(mark.attrs?.color)!;
+          el.style.color = color;
+        }
+        break;
+      }
       case 'code':
         el = document.createElement('code');
         el.className = 'levit-inline-code';

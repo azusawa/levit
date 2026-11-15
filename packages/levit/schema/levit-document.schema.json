@@ -466,18 +466,6 @@
           ],
           "properties": {
             "type": {
-              "const": "highlight"
-            }
-          },
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "required": [
-            "type"
-          ],
-          "properties": {
-            "type": {
               "const": "code"
             }
           },
@@ -503,6 +491,57 @@
               },
               "required": [
                 "href"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "description": "A highlight, yellow without a color.",
+          "required": [
+            "type"
+          ],
+          "properties": {
+            "type": {
+              "const": "highlight"
+            },
+            "attrs": {
+              "type": "object",
+              "properties": {
+                "color": {
+                  "type": "string",
+                  "pattern": "^([a-z][a-z0-9-]{0,31}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{3})$",
+                  "description": "A color name (gray, brown, orange, yellow, green, blue, purple, pink, red, or one the app adds) or a hex color."
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "attrs"
+          ],
+          "properties": {
+            "type": {
+              "const": "color"
+            },
+            "attrs": {
+              "type": "object",
+              "properties": {
+                "color": {
+                  "type": "string",
+                  "pattern": "^([a-z][a-z0-9-]{0,31}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{3})$",
+                  "description": "A color name (gray, brown, orange, yellow, green, blue, purple, pink, red, or one the app adds) or a hex color."
+                }
+              },
+              "required": [
+                "color"
               ],
               "additionalProperties": false
             }

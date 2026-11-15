@@ -266,13 +266,7 @@ export class Transaction {
     const [left, right] = splitBlockContent(block, offset);
 
     // Determine marks for new text: storedMarks if set, else mark at insertion point
-    let marks: InlineMark[] = [];
-    if (this.storedMarks) {
-      marks = [...this.storedMarks];
-    } else if (left.length > 0 && left[left.length - 1].text) {
-      // Marks of the text before the caret carry on, except non-inclusive ones.
-      marks = (left[left.length - 1].marks ?? []).filter((m) => this.state.schema.marks.get(m.type)?.inclusive !== false);
-    }
+    const marks = this.storedMarks ? [...this.storedMarks] : this.inheritedMarks(left);
 
     const insertedNode: InlineNode = { text, marks };
     block.content = normalizeInlineNodes([...left, insertedNode, ...right]);
@@ -1089,6 +1083,54 @@ export class Transaction {
       });
 
       b.content = normalizeInlineNodes([...left, ...modifiedMid, ...right]);
+    }
+
+    this.docChanged = true;
+    return this;
+  }
+
+  /** Marks of the text before the caret, which carry on, except non-inclusive ones. */
+  private inheritedMarks(left: InlineNode[]): InlineMark[] {
+    const last = left[left.length - 1];
+    if (!last?.text) return [];
+    return (last.marks ?? []).filter((m) => this.state.schema.marks.get(m.type)?.inclusive !== false);
+  }
+
+  /**
+   * Puts a mark with these attrs on the selected text, replacing a mark of
+   * the same type, or removes the mark when attrs is null. At a caret, it
+   * applies to what is typed next.
+   */
+  setMark(type: string, attrs: InlineMark['attrs'] | null): this {
+    const mark: InlineMark | null =
+      attrs === null ? null : attrs && Object.keys(attrs).length > 0 ? { type, attrs: { ...attrs } } : { type };
+    const replace = (marks: InlineMark[]) => {
+      const rest = marks.filter((m) => m.type !== type);
+      return mark ? [...rest, { ...mark }] : rest;
+    };
+
+    if (this.selection.isCollapsed) {
+      if (!this.storedMarks) {
+        const block = this.doc.blocks[findBlockIndex(this.doc, this.selection.anchor.blockId)];
+        this.storedMarks = block ? this.inheritedMarks(splitBlockContent(block, this.selection.anchor.offset)[0]) : [];
+      }
+      this.storedMarks = replace(this.storedMarks);
+      return this;
+    }
+
+    const { from, to } = this.normalizeSelectionOrder();
+    const fromIdx = findBlockIndex(this.doc, from.blockId);
+    const toIdx = findBlockIndex(this.doc, to.blockId);
+    if (fromIdx === -1 || toIdx === -1) return this;
+
+    for (let i = fromIdx; i <= toIdx; i++) {
+      const b = this.edit(i);
+      const start = i === fromIdx ? from.offset : 0;
+      const end = i === toIdx ? to.offset : getBlockText(b).length;
+      const [left] = splitBlockContent(b, start);
+      const [, right] = splitBlockContent(b, end);
+      const mid = sliceBlockContent(b, start, end).map((node) => ({ text: node.text, marks: replace(node.marks ?? []) }));
+      b.content = normalizeInlineNodes([...left, ...mid, ...right]);
     }
 
     this.docChanged = true;

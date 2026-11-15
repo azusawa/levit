@@ -8,6 +8,7 @@ import { InputController } from './view/controller.js';
 import { DOMGuard } from './view/dom-guard.js';
 import { documentFromJSON, documentToJSON } from '../serializers/json.js';
 import { findBlockIndex, getBlockText, sliceBlockContent, sliceDocument } from './model/document.js';
+import { normalizeColor, type ColorKind } from './model/colors.js';
 import { applyInputRules, defaultInputRules } from './plugin/input-rules.js';
 import { Schema, type LevitPlugin } from './plugin/plugin.js';
 import { en, format, type LevitMessages } from '../i18n/messages.js';
@@ -273,6 +274,39 @@ export class ChainedCommands {
 
   toggleHighlight(): this {
     return this.toggleMark({ type: 'highlight' });
+  }
+
+  /**
+   * Colors the selected text: a color name such as "red", drawn with the
+   * theme's --levit-color-red, or a hex color like "#e03131". null removes
+   * the color. A value that is neither is ignored.
+   */
+  setColor(color: string | null): this {
+    if (color === null) return this.unsetColor();
+    const value = normalizeColor(color);
+    if (value) this.tr.setMark('color', { color: value });
+    return this;
+  }
+
+  unsetColor(): this {
+    this.tr.setMark('color', null);
+    return this;
+  }
+
+  /** Highlights the selected text in a color (see setColor); yellow without one. */
+  setHighlight(color?: string): this {
+    if (color === undefined) {
+      this.tr.setMark('highlight', {});
+      return this;
+    }
+    const value = normalizeColor(color);
+    if (value) this.tr.setMark('highlight', { color: value });
+    return this;
+  }
+
+  unsetHighlight(): this {
+    this.tr.setMark('highlight', null);
+    return this;
   }
 
   setHeading(level = 1): this {
@@ -589,6 +623,31 @@ export class LevitEditor {
     }
     const nodes = sliceDocument(doc, selection).flatMap((b) => b.content).filter((n) => n.text.length > 0);
     return nodes.length > 0 && nodes.every((n) => n.marks?.some((m) => m.type === markType));
+  }
+
+  /**
+   * The color of the selected text ('text') or of its highlight
+   * ('background'), or null when it has none or the colors differ. A
+   * highlight without a color is 'yellow'. At a caret, the color of what is
+   * typed next.
+   */
+  getActiveColor(kind: ColorKind): string | null {
+    const type = kind === 'text' ? 'color' : 'highlight';
+    const colorOf = (marks: InlineMark[] | undefined): string | null => {
+      const mark = marks?.find((m) => m.type === type);
+      if (!mark) return null;
+      return normalizeColor(mark.attrs?.color) ?? (kind === 'background' ? 'yellow' : null);
+    };
+    const { doc, selection, storedMarks } = this.state;
+    if (selection.isCollapsed) {
+      if (storedMarks) return colorOf(storedMarks);
+      const block = doc.blocks[findBlockIndex(doc, selection.anchor.blockId)];
+      if (!block || selection.anchor.offset === 0) return null;
+      return colorOf(sliceBlockContent(block, selection.anchor.offset - 1, selection.anchor.offset)[0]?.marks);
+    }
+    const nodes = sliceDocument(doc, selection).flatMap((b) => b.content).filter((n) => n.text.length > 0);
+    const colors = new Set(nodes.map((n) => colorOf(n.marks)));
+    return colors.size === 1 ? [...colors][0] : null;
   }
 
   /** True when the caret is in a table. */

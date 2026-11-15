@@ -1,3 +1,4 @@
+import { colorCSS, nearestColor, normalizeColor, type ColorKind } from '../core/model/colors.js';
 import { BlockNode, DocumentData, InlineMark, InlineNode } from '../core/model/types.js';
 import {
   BUILT_IN_BLOCK_TYPES,
@@ -105,6 +106,18 @@ export function documentToHTML(doc: DocumentData, options: SerializerOptions = {
   return html;
 }
 
+/**
+ * Colored text or highlight: the color name for Levit to read back, and a
+ * style with the light value so the color shows where theme.css is not
+ * loaded, as in an email. A highlight without a color is a plain <mark>.
+ */
+function colored(tag: 'mark' | 'span', property: string, mark: InlineMark, kind: ColorKind, html: string): string {
+  const color = normalizeColor(mark.attrs?.color);
+  const css = colorCSS(color, kind);
+  if (!color || !css) return tag === 'mark' ? `<mark>${html}</mark>` : html;
+  return `<${tag} data-color="${escapeHTML(color)}" style="${property}: ${escapeHTML(css)}">${html}</${tag}>`;
+}
+
 /** A block's text as HTML, with its marks. */
 function inlineHTML(block: BlockNode, schema: Schema): string {
   const isCode = block.type === 'code_block';
@@ -118,7 +131,8 @@ function inlineHTML(block: BlockNode, schema: Schema): string {
         else if (m.type === 'italic') t = `<em>${t}</em>`;
         else if (m.type === 'underline') t = `<u>${t}</u>`;
         else if (m.type === 'strike') t = `<s>${t}</s>`;
-        else if (m.type === 'highlight') t = `<mark>${t}</mark>`;
+        else if (m.type === 'highlight') t = colored('mark', 'background-color', m, 'background', t);
+        else if (m.type === 'color' && !schema.marks.has('color')) t = colored('span', 'color', m, 'text', t);
         else if (m.type === 'code') t = `<code>${t}</code>`;
         else if (m.type === 'link') {
           const href = sanitizeHref(m.attrs?.href);
@@ -425,6 +439,10 @@ function marksFor(el: Element, marks: InlineMark[]): InlineMark[] {
   const remove = (type: string) => {
     next = next.filter((m) => m.type !== type);
   };
+  const setColor = (type: string, color: string | null) => {
+    remove(type);
+    next.push(color ? { type, attrs: { color } } : { type });
+  };
 
   for (const spec of schema.marks.values()) {
     const attrs = spec.parseHTML?.(el);
@@ -439,7 +457,7 @@ function marksFor(el: Element, marks: InlineMark[]): InlineMark[] {
   else if (tag === 'u' || tag === 'ins') add('underline');
   else if (tag === 's' || tag === 'strike' || tag === 'del') add('strike');
   else if (tag === 'code' || tag === 'kbd' || tag === 'samp') add('code');
-  else if (tag === 'mark') add('highlight');
+  else if (tag === 'mark') setColor('highlight', normalizeColor(el.getAttribute('data-color')));
   else if (tag === 'a') {
     const href = sanitizeHref(el.getAttribute('href'));
     if (href) {
@@ -461,6 +479,22 @@ function marksFor(el: Element, marks: InlineMark[]): InlineMark[] {
     const decoration = `${style.textDecoration ?? ''} ${style.getPropertyValue('text-decoration-line') ?? ''}`;
     if (decoration.includes('underline')) add('underline');
     if (decoration.includes('line-through')) add('strike');
+
+    // Levit's own colors carry their name; colors from elsewhere become the
+    // nearest named color, and black text the default.
+    const own = el.hasAttribute('data-color') ? normalizeColor(el.getAttribute('data-color')) : null;
+    if (schema.marks.has('color')) {
+      // The app's own color mark reads its colors.
+    } else if (tag === 'span' && own) setColor('color', own);
+    else if (tag !== 'mark' && style.color) {
+      const color = nearestColor(style.color, 'text');
+      if (color) setColor('color', color);
+      else remove('color');
+    }
+    if (tag !== 'mark' && !own && style.backgroundColor) {
+      const background = nearestColor(style.backgroundColor, 'background');
+      if (background) setColor('highlight', background);
+    }
   }
 
   return next;

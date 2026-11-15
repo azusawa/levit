@@ -101,6 +101,8 @@ export interface LevitPlugin {
 
 const BUILT_IN_BLOCKS = new Set(BUILT_IN_BLOCK_TYPES);
 const BUILT_IN_MARKS = new Set(['bold', 'italic', 'underline', 'strike', 'highlight', 'code', 'link']);
+// "color" is built in too, but a plugin may add its own: apps made before
+// Levit had colors did. Then the plugin's mark is used.
 
 /** Everything the plugins of one editor add, looked up by name. */
 export class Schema {
