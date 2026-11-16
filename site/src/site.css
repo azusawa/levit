@@ -17,8 +17,9 @@
   --deep: #0b0b0c;
   --deep-2: #1f1f23;
 
-  --font: 'General Sans', system-ui, -apple-system, 'Segoe UI', 'Apple SD Gothic Neo', 'Malgun Gothic',
-    'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', Meiryo, sans-serif;
+  --font-ko: 'Apple SD Gothic Neo', 'Malgun Gothic';
+  --font-ja: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', Meiryo;
+  --font: 'General Sans', system-ui, -apple-system, 'Segoe UI', var(--font-ko), var(--font-ja), sans-serif;
   --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
   --step-small: clamp(0.8125rem, 0.79rem + 0.1vw, 0.875rem);
@@ -36,10 +37,11 @@
   --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
-/* Japanese text is set in Pretendard JP (loaded on Japanese pages only). */
+/* Japanese pages set their text in Pretendard JP (loaded on Japanese pages
+   only). It has no Hangul, so Korean words on them, like the language link,
+   take the Korean fonts after the Japanese ones. */
 :root:lang(ja) {
-  --font: 'General Sans', 'Pretendard JP Variable', 'Pretendard JP', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN',
-    'Yu Gothic', Meiryo, sans-serif;
+  --font: 'General Sans', 'Pretendard JP Variable', 'Pretendard JP', var(--font-ja), var(--font-ko), sans-serif;
 }
 
 *,

@@ -126,14 +126,18 @@ describe('site pages', () => {
       Object.entries(o).flatMap(([k, v]) => (v && typeof v === 'object' && !Array.isArray(v) ? keys(v, `${prefix}${k}.`) : [`${prefix}${k}`]));
     for (const lang of LANGS) expect(keys(strings[lang]).sort()).toEqual(keys(strings.en).sort());
   });
-  it('Japanese pages load Pretendard JP, pinned and checked; English and Korean pages do not', () => {
-    const sheet =
-      '<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-jp-dynamic-subset.min.css" integrity="sha384-8Aaw/eydkk4G7opI1CnBW5JDr21z1YKmOxBtpdGE79Fsq7Ql7NGOFRMbmCkVrCJ6" crossorigin="anonymous">';
+  it('Japanese pages load Pretendard JP, pinned and checked, without holding up the page; English and Korean pages do not', () => {
+    const href =
+      'https://cdn.jsdelivr.net/gh/orioncactus/pretendard@5c41199ea0024a9e0b2cb31735265056e5472d76/dist/web/variable/pretendardvariable-jp-dynamic-subset.css';
+    const checked = 'integrity="sha384-rSelq/kximCvEmDjno942LJlLokxEhaLMQ+RV+sB5dKi5omUYEHVbvXLysAoOzwV" crossorigin="anonymous"';
     for (const { lang, kind } of PAGES) {
-      const { html } = doc(lang, kind);
+      const { html, count } = doc(lang, kind);
       if (lang === 'ja') {
-        expect(html, kind).toContain(sheet);
+        // Loaded as print, then switched to all: the page does not wait for the CDN.
+        expect(html, kind).toContain(`<link rel="stylesheet" href="${href}" ${checked} media="print" onload="this.media='all'">`);
+        expect(html, kind).toContain(`<noscript><link rel="stylesheet" href="${href}" ${checked}></noscript>`);
         expect(html, kind).toContain('<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>');
+        expect(html.split(href).length - 1, kind).toBe(2);
       } else {
         expect(html, `${lang} ${kind}`).not.toContain('pretendard');
         expect(html, `${lang} ${kind}`).not.toContain('cdn.jsdelivr.net');
@@ -142,17 +146,18 @@ describe('site pages', () => {
     }
   });
 
-  it('Japanese text is set in Pretendard JP; English and Korean keep their fonts', () => {
+  it('Japanese text is set in Pretendard JP, Korean text on Japanese pages keeps a Korean font, and other pages keep theirs', () => {
     const css = readFileSync(resolve(__dirname, '../../site/src/site.css'), 'utf8');
-    const font = (selector: string) => {
-      const block = new RegExp(`(?:^|\\n)${selector.replace(/[.*+?^${}()|[\]\\:]/g, '\\$&')} \\{([^}]*)\\}`).exec(css)?.[1] ?? '';
-      return /--font:([^;]*);/.exec(block)?.[1].replace(/\s+/g, ' ').trim();
-    };
-    expect(font(':root')).toBe(
-      "'General Sans', system-ui, -apple-system, 'Segoe UI', 'Apple SD Gothic Neo', 'Malgun Gothic', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', Meiryo, sans-serif"
+    const block = (selector: string) => css.split(`\n${selector} {\n`)[1]?.split('\n}')[0] ?? '';
+    const prop = (selector: string, name: string) =>
+      new RegExp(`\\n\\s*${name}:([^;]*);`).exec(`\n${block(selector)}`)?.[1].replace(/\s+/g, ' ').trim();
+    const ko = prop(':root', '--font-ko');
+    const ja = prop(':root', '--font-ja');
+    expect(ko).toBe("'Apple SD Gothic Neo', 'Malgun Gothic'");
+    expect(ja).toBe("'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', Meiryo");
+    expect(prop(':root', '--font')).not.toContain('Pretendard');
+    expect(prop(':root:lang(ja)', '--font')).toBe(
+      "'General Sans', 'Pretendard JP Variable', 'Pretendard JP', var(--font-ja), var(--font-ko), sans-serif"
     );
-    const ja = font(':root:lang(ja)');
-    expect(ja).toBe("'General Sans', 'Pretendard JP Variable', 'Pretendard JP', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', Meiryo, sans-serif");
-    expect(ja).not.toContain('Malgun');
   });
 });

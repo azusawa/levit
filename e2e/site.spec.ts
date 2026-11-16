@@ -26,8 +26,8 @@ test.describe('landing page', () => {
     for (const el of [page.locator('h1'), editor(page, 'write').locator('.levit-block').first()]) {
       expect(await el.evaluate((e) => getComputedStyle(e).fontFamily)).toContain('Pretendard JP Variable');
     }
-    await page.evaluate(() => document.fonts.ready);
-    await expect.poll(pretendard).toBe(true);
+    // Korean words on the Japanese page (the language link) keep a Korean font.
+    expect(await page.locator('.langs a[lang="ko"]').evaluate((e) => getComputedStyle(e).fontFamily)).toContain('Malgun Gothic');
 
     for (const path of ['', 'ko/']) {
       await page.goto(SITE + path);

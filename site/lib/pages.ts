@@ -49,12 +49,18 @@ interface Options {
   siteUrl?: string;
 }
 
-// Japanese pages set their text in Pretendard JP. The stylesheet is pinned to
-// a release and checked with its hash; it loads only the parts of the font
-// that the page's characters need.
+// Japanese pages set their text in Pretendard JP, from the font's own
+// repository at a fixed commit, checked with its hash (the plain .css file,
+// which jsDelivr serves as it is, not a .min.css it makes). It loads only the
+// parts of the font the page's characters need. Loaded as "print" and then
+// switched to "all", it does not hold up the page: until it comes, or if
+// jsDelivr cannot be reached, the local Japanese fonts show.
+const JA_FONT_CSS = 'https://cdn.jsdelivr.net/gh/orioncactus/pretendard@5c41199ea0024a9e0b2cb31735265056e5472d76/dist/web/variable/pretendardvariable-jp-dynamic-subset.css';
+const JA_FONT_CHECK = 'integrity="sha384-rSelq/kximCvEmDjno942LJlLokxEhaLMQ+RV+sB5dKi5omUYEHVbvXLysAoOzwV" crossorigin="anonymous"';
 const JA_FONT = `
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-jp-dynamic-subset.min.css" integrity="sha384-8Aaw/eydkk4G7opI1CnBW5JDr21z1YKmOxBtpdGE79Fsq7Ql7NGOFRMbmCkVrCJ6" crossorigin="anonymous">`;
+  <link rel="stylesheet" href="${JA_FONT_CSS}" ${JA_FONT_CHECK} media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="${JA_FONT_CSS}" ${JA_FONT_CHECK}></noscript>`;
 
 export function renderPage(lang: Lang, kind: Kind, { base, siteUrl = SITE_URL }: Options): string {
   const s = strings[lang];
