@@ -36,6 +36,12 @@
   --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
+/* Japanese text is set in Pretendard JP (loaded on Japanese pages only). */
+:root:lang(ja) {
+  --font: 'General Sans', 'Pretendard JP Variable', 'Pretendard JP', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN',
+    'Yu Gothic', Meiryo, sans-serif;
+}
+
 *,
 *::before,
 *::after {

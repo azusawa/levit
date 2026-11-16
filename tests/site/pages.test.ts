@@ -126,4 +126,33 @@ describe('site pages', () => {
       Object.entries(o).flatMap(([k, v]) => (v && typeof v === 'object' && !Array.isArray(v) ? keys(v, `${prefix}${k}.`) : [`${prefix}${k}`]));
     for (const lang of LANGS) expect(keys(strings[lang]).sort()).toEqual(keys(strings.en).sort());
   });
+  it('Japanese pages load Pretendard JP, pinned and checked; English and Korean pages do not', () => {
+    const sheet =
+      '<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-jp-dynamic-subset.min.css" integrity="sha384-8Aaw/eydkk4G7opI1CnBW5JDr21z1YKmOxBtpdGE79Fsq7Ql7NGOFRMbmCkVrCJ6" crossorigin="anonymous">';
+    for (const { lang, kind } of PAGES) {
+      const { html } = doc(lang, kind);
+      if (lang === 'ja') {
+        expect(html, kind).toContain(sheet);
+        expect(html, kind).toContain('<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>');
+      } else {
+        expect(html, `${lang} ${kind}`).not.toContain('pretendard');
+        expect(html, `${lang} ${kind}`).not.toContain('cdn.jsdelivr.net');
+      }
+      expect(html, `${lang} ${kind}`).toContain('general-sans@400,500,700');
+    }
+  });
+
+  it('Japanese text is set in Pretendard JP; English and Korean keep their fonts', () => {
+    const css = readFileSync(resolve(__dirname, '../../site/src/site.css'), 'utf8');
+    const font = (selector: string) => {
+      const block = new RegExp(`(?:^|\\n)${selector.replace(/[.*+?^${}()|[\]\\:]/g, '\\$&')} \\{([^}]*)\\}`).exec(css)?.[1] ?? '';
+      return /--font:([^;]*);/.exec(block)?.[1].replace(/\s+/g, ' ').trim();
+    };
+    expect(font(':root')).toBe(
+      "'General Sans', system-ui, -apple-system, 'Segoe UI', 'Apple SD Gothic Neo', 'Malgun Gothic', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', Meiryo, sans-serif"
+    );
+    const ja = font(':root:lang(ja)');
+    expect(ja).toBe("'General Sans', 'Pretendard JP Variable', 'Pretendard JP', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', Meiryo, sans-serif");
+    expect(ja).not.toContain('Malgun');
+  });
 });

@@ -49,6 +49,13 @@ interface Options {
   siteUrl?: string;
 }
 
+// Japanese pages set their text in Pretendard JP. The stylesheet is pinned to
+// a release and checked with its hash; it loads only the parts of the font
+// that the page's characters need.
+const JA_FONT = `
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-jp-dynamic-subset.min.css" integrity="sha384-8Aaw/eydkk4G7opI1CnBW5JDr21z1YKmOxBtpdGE79Fsq7Ql7NGOFRMbmCkVrCJ6" crossorigin="anonymous">`;
+
 export function renderPage(lang: Lang, kind: Kind, { base, siteUrl = SITE_URL }: Options): string {
   const s = strings[lang];
   const link = (l: Lang, k: Kind) => `${base}${pagePath(l, k)}`;
@@ -107,7 +114,7 @@ export function renderPage(lang: Lang, kind: Kind, { base, siteUrl = SITE_URL }:
   <meta name="theme-color" content="#f7f7f6">
   <link rel="preconnect" href="https://api.fontshare.com">
   <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin>
-  <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,700&display=swap">
+  <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,700&display=swap">${lang === 'ja' ? JA_FONT : ''}
   <script type="module" src="/src/${kind === 'landing' ? 'landing' : 'doc'}.ts"></script>
 </head>
 <body>

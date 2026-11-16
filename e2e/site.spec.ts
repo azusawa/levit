@@ -20,6 +20,23 @@ test.describe('landing page', () => {
     }
   });
 
+  test('Japanese pages are set in Pretendard JP, and English and Korean pages do not load it', async ({ page }) => {
+    const pretendard = () => page.evaluate(() => [...document.fonts].some((f) => f.family.includes('Pretendard JP') && f.status === 'loaded'));
+    await page.goto(SITE + 'ja/');
+    for (const el of [page.locator('h1'), editor(page, 'write').locator('.levit-block').first()]) {
+      expect(await el.evaluate((e) => getComputedStyle(e).fontFamily)).toContain('Pretendard JP Variable');
+    }
+    await page.evaluate(() => document.fonts.ready);
+    await expect.poll(pretendard).toBe(true);
+
+    for (const path of ['', 'ko/']) {
+      await page.goto(SITE + path);
+      expect(await page.locator('h1').evaluate((e) => getComputedStyle(e).fontFamily)).not.toContain('Pretendard');
+      await page.evaluate(() => document.fonts.ready);
+      expect(await pretendard()).toBe(false);
+    }
+  });
+
   test('the editor takes typing, and the slash menu follows the chosen menu language', async ({ page }) => {
     await page.goto(SITE);
     const quote = editor(page, 'write').locator('blockquote, .levit-block-blockquote').first();
