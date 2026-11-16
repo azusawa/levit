@@ -239,6 +239,75 @@ test.describe('dividers and images', () => {
   });
 });
 
+test.describe('image toolbar', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.evaluate((png) => {
+      (window as any).editor.setJSON({
+        version: 1,
+        blocks: [
+          { id: 'a', type: 'paragraph', content: [{ text: 'before' }] },
+          { id: 'i', type: 'image', attrs: { src: `data:image/png;base64,${png}`, alt: 'dot' }, content: [{ text: '' }] },
+          { id: 'b', type: 'paragraph', content: [{ text: 'after' }] },
+        ],
+      });
+    }, PNG);
+  });
+  const toolbar = (page: Page) => page.locator('.levit-image-toolbar');
+  const image = (page: Page) => editorRoot(page).locator('figure img');
+  const attrs = (page: Page) => page.evaluate(() => (window as any).editor.getJSON().blocks[1].attrs);
+
+  test('shows above a clicked image; the buttons size and align it', async ({ page }) => {
+    await expect(toolbar(page)).toBeHidden();
+    await image(page).click();
+    await expect(toolbar(page)).toBeVisible();
+    // The formatting toolbar is for text: it stays away from a selected image.
+    await page.waitForTimeout(200);
+    await expect(page.locator('.levit-bubble-menu')).toBeHidden();
+    const bar = (await toolbar(page).boundingBox())!;
+    const img = (await image(page).boundingBox())!;
+    expect(bar.y + bar.height).toBeLessThanOrEqual(img.y);
+    await toolbar(page).getByRole('button', { name: 'Medium' }).click();
+    await toolbar(page).getByRole('button', { name: 'Center' }).click();
+    expect(await attrs(page)).toMatchObject({ size: 'medium', align: 'center' });
+    await expect(toolbar(page).getByRole('button', { name: 'Medium' })).toHaveAttribute('aria-pressed', 'true');
+    // The toolbar follows the image as it changes.
+    const moved = (await image(page).boundingBox())!;
+    const barNow = (await toolbar(page).boundingBox())!;
+    expect(Math.abs(barNow.x - moved.x)).toBeLessThan(2);
+    await editorRoot(page).locator('[data-block-id="b"]').click();
+    await expect(toolbar(page)).toBeHidden();
+  });
+
+  test('alt text: typed in the field and saved with Enter, also in Korean', async ({ page }) => {
+    await image(page).click();
+    await toolbar(page).getByRole('button', { name: 'Alt text' }).click();
+    const field = toolbar(page).getByRole('textbox', { name: 'Alt text' });
+    await expect(field).toBeFocused();
+    await expect(field).toHaveValue('dot');
+    await field.fill('빨간 점');
+    await field.press('Enter');
+    expect((await attrs(page)).alt).toBe('빨간 점');
+    await expect(image(page)).toHaveAttribute('alt', '빨간 점');
+    await expect(editorRoot(page).locator('figure')).toHaveAttribute('data-selected', '');
+    await expect(toolbar(page).getByRole('button', { name: 'Alt text' })).toBeVisible();
+  });
+
+  test('from the keyboard: Alt+F10, the arrows, Enter, and delete', async ({ page }) => {
+    await image(page).click();
+    await page.keyboard.press('Alt+F10');
+    await expect(toolbar(page).getByRole('button', { name: 'Alt text' })).toBeFocused();
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('Enter');
+    expect((await attrs(page)).size).toBe('medium');
+    await page.keyboard.press('End');
+    await page.keyboard.press('Enter');
+    expect((await page.evaluate(() => (window as any).editor.getJSON().blocks)).map((b: any) => b.type)).toEqual(['paragraph', 'paragraph']);
+    await page.keyboard.type('!');
+    expect((await blocks(page)).map(text)).toEqual(['before!', 'after']);
+  });
+});
+
 test.describe('code block languages', () => {
   async function codeBlock(page: Page, text: string, language?: string) {
     await page.evaluate(

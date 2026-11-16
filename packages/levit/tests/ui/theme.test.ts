@@ -48,8 +48,8 @@ describe('tables', () => {
 });
 
 describe('table toolbar', () => {
-  it('floats over the page in the menu colors', () => {
-    expect(css).toMatch(/\.levit-table-toolbar\s*\{[^}]*position:\s*absolute[^}]*background-color:\s*var\(--levit-surface\)/);
+  it('floats over the page in the menu colors, like the image toolbar', () => {
+    expect(css).toMatch(/\.levit-table-toolbar,\s*\.levit-image-toolbar\s*\{[^}]*position:\s*absolute[^}]*background-color:\s*var\(--levit-surface\)/);
   });
 
   it('draws its icons in the text color and marks the header button when on', () => {
@@ -82,8 +82,8 @@ describe('table toolbar room', () => {
 
   it('the room fits the toolbar and the 6px gap under it', () => {
     const button = px(/\.levit-table-toolbar-btn\s*\{[^}]*height:\s*(\d+)px/);
-    const padding = px(/\.levit-table-toolbar\s*\{[^}]*padding:\s*(\d+)px/);
-    const border = px(/\.levit-table-toolbar\s*\{[^}]*border:\s*(\d+)px/);
+    const padding = px(/\.levit-image-toolbar\s*\{[^}]*padding:\s*(\d+)px/);
+    const border = px(/\.levit-image-toolbar\s*\{[^}]*border:\s*(\d+)px/);
     const room = parseFloat(light.get('--levit-table-toolbar-room')!);
     expect(room).toBeGreaterThanOrEqual(button + 2 * padding + 2 * border + 6);
   });

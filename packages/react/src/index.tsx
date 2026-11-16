@@ -14,6 +14,7 @@ import {
   createLevitEditor,
   createSlashMenu,
   createTableToolbar,
+  createImageToolbar,
   sameContent,
   type DocumentData,
   type EditorOptions,
@@ -30,6 +31,8 @@ export interface UseLevitEditorOptions extends Omit<EditorOptions, 'element'> {
   slashMenu?: boolean;
   /** Show the table toolbar above the table the caret is in. Default: true. */
   tableToolbar?: boolean;
+  /** Show the image toolbar above the selected image. Default: true. */
+  imageToolbar?: boolean;
   /** Called once the editor exists. */
   onReady?: (editor: Editor) => void;
 }
@@ -51,7 +54,7 @@ export function useLevitEditor(options: UseLevitEditorOptions = {}): {
 
   useEffect(() => {
     if (!element) return;
-    const { bubbleMenu = true, slashMenu = true, tableToolbar = true, ...editorOptions } = latest.current;
+    const { bubbleMenu = true, slashMenu = true, tableToolbar = true, imageToolbar = true, ...editorOptions } = latest.current;
     const instance = createLevitEditor(element, {
       ...editorOptions,
       onChange: (ed) => latest.current.onChange?.(ed),
@@ -65,6 +68,7 @@ export function useLevitEditor(options: UseLevitEditorOptions = {}): {
       bubbleMenu && createBubbleMenu(instance),
       slashMenu && createSlashMenu(instance),
       tableToolbar && createTableToolbar(instance),
+      imageToolbar && createImageToolbar(instance),
     ];
     setEditor(instance);
     latest.current.onReady?.(instance);

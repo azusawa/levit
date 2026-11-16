@@ -36,7 +36,8 @@ export type { InputRule } from './core/plugin/input-rules.js';
 
 // State & Transactions
 export { EditorState, type EditorStateConfig } from './core/state/state.js';
-export { Transaction } from './core/state/transaction.js';
+export { Transaction, type ImageChanges } from './core/state/transaction.js';
+export type { ImageAlign, ImageSize } from './core/model/image.js';
 export { HistoryManager, type HistoryItem } from './core/state/history.js';
 
 // Model & Types
@@ -69,6 +70,7 @@ export { documentToHTML, htmlToDocument } from './serializers/html.js';
 export { createBubbleMenu, type BubbleMenuInstance } from './plugins/bubble-menu.js';
 export { createSlashMenu, type SlashMenuInstance, type SlashMenuItem } from './plugins/slash-menu.js';
 export { createTableToolbar, type TableToolbarInstance } from './plugins/table-toolbar.js';
+export { createImageToolbar, type ImageToolbarInstance } from './plugins/image-toolbar.js';
 export { createRemoteCursors, type RemoteCursor, type RemoteCursorsInstance } from './plugins/remote-cursors.js';
 export { commentsPlugin, getComments, type CommentsOptions, type CommentRange } from './plugins/comments.js';
 

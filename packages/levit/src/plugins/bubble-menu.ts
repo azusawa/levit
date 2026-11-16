@@ -244,7 +244,9 @@ export function createBubbleMenu(editor: LevitEditor): BubbleMenuInstance {
     }
 
     const sel = window.getSelection();
-    if (!sel || sel.isCollapsed || !editor.container.contains(sel.anchorNode)) {
+    // A selected image is selected in the browser too, but it is not text: the
+    // image toolbar is for it.
+    if (!sel || sel.isCollapsed || !editor.container.contains(sel.anchorNode) || editor.getSelectedImage()) {
       menu.style.display = 'none';
       return;
     }

@@ -665,14 +665,19 @@ figure.levit-block-image img::selection {
   border-color: var(--levit-danger);
 }
 
-/* The bubble menu's buttons give way to the link field or the color palette. */
+/* The bubble menu's buttons give way to the link field or the color palette,
+   and the image toolbar's to the alt text field. */
 .levit-bubble-buttons,
-.levit-table-toolbar-buttons {
+.levit-table-toolbar-buttons,
+.levit-image-toolbar-buttons {
   display: contents;
 }
 
 .levit-bubble-buttons[hidden],
 .levit-table-toolbar-buttons[hidden],
+.levit-image-toolbar-buttons[hidden],
+.levit-image-alt-input[hidden],
+.levit-image-alt-save[hidden],
 .levit-color-panel[hidden] {
   display: none;
 }
@@ -744,8 +749,9 @@ figure.levit-block-image img::selection {
   text-decoration: line-through;
 }
 
-/* Table Toolbar: above the table the caret is in */
-.levit-table-toolbar {
+/* Table and image toolbars: above the table the caret is in, or the selected image */
+.levit-table-toolbar,
+.levit-image-toolbar {
   position: absolute;
   z-index: 1000;
   display: flex;

@@ -3,13 +3,12 @@ import { tableAt } from '../core/model/table.js';
 import { rovingToolbar } from './toolbar-keys.js';
 import { TABLE_SHORTCUTS } from '../core/view/table-shortcuts.js';
 import { createColorPanel } from './color-panel.js';
+import { lineIcon } from './toolbar-icons.js';
 
 export interface TableToolbarInstance {
   element: HTMLElement;
   destroy: () => void;
 }
-
-const SVG = 'http://www.w3.org/2000/svg';
 
 // 16×16 line icons: a row or column with a plus or a cross, a table with a
 // filled top row, and a bin. Paths starting with "fill:" are filled.
@@ -26,19 +25,7 @@ const ICONS: Record<string, string[]> = {
 };
 
 function icon(name: string): SVGSVGElement {
-  const svg = document.createElementNS(SVG, 'svg');
-  svg.setAttribute('viewBox', '0 0 16 16');
-  svg.setAttribute('width', '16');
-  svg.setAttribute('height', '16');
-  svg.setAttribute('aria-hidden', 'true');
-  for (const d of ICONS[name]) {
-    const path = document.createElementNS(SVG, 'path');
-    const filled = d.startsWith('fill:');
-    path.setAttribute('d', filled ? d.slice(5) : d);
-    if (filled) path.setAttribute('class', 'levit-table-toolbar-fill');
-    svg.appendChild(path);
-  }
-  return svg;
+  return lineIcon(ICONS[name], 'levit-table-toolbar-fill');
 }
 
 const MAC_SYMBOLS: Record<string, string> = { Mod: '⌘', Alt: '⌥', Shift: '⇧', Enter: '↩', Backspace: '⌫' };

@@ -15,6 +15,7 @@ import {
   createLevitEditor,
   createSlashMenu,
   createTableToolbar,
+  createImageToolbar,
   sameContent,
   type DocumentData,
   type EditorOptions,
@@ -33,6 +34,8 @@ export interface UseLevitEditorOptions extends Omit<EditorOptions, 'element'> {
   slashMenu?: boolean;
   /** Show the table toolbar above the table the caret is in. Default: true. */
   tableToolbar?: boolean;
+  /** Show the image toolbar above the selected image. Default: true. */
+  imageToolbar?: boolean;
   /** Called once the editor exists. */
   onReady?: (editor: Editor) => void;
 }
@@ -53,12 +56,13 @@ export function useLevitEditor(options: UseLevitEditorOptions = {}): {
 
   onMounted(() => {
     if (!element.value) return;
-    const { bubbleMenu = true, slashMenu = true, tableToolbar = true, ...editorOptions } = options;
+    const { bubbleMenu = true, slashMenu = true, tableToolbar = true, imageToolbar = true, ...editorOptions } = options;
     const instance = createLevitEditor(element.value, editorOptions);
     const menus = [
       bubbleMenu && createBubbleMenu(instance),
       slashMenu && createSlashMenu(instance),
       tableToolbar && createTableToolbar(instance),
+      imageToolbar && createImageToolbar(instance),
     ];
     editor.value = instance;
     options.onReady?.(instance);
@@ -90,6 +94,7 @@ export const LevitEditor = defineComponent({
     bubbleMenu: { type: Boolean, default: true },
     slashMenu: { type: Boolean, default: true },
     tableToolbar: { type: Boolean, default: true },
+    imageToolbar: { type: Boolean, default: true },
     colors: { type: Array as PropType<EditorOptions['colors']>, default: undefined },
     colorPicker: { type: Boolean, default: true },
     // A prop rather than an emit, so without an @error listener the editor
@@ -111,6 +116,7 @@ export const LevitEditor = defineComponent({
       bubbleMenu: props.bubbleMenu,
       slashMenu: props.slashMenu,
       tableToolbar: props.tableToolbar,
+      imageToolbar: props.imageToolbar,
       colors: props.colors,
       colorPicker: props.colorPicker,
       onChange: (ed) => emit('update:modelValue', ed.getJSON()),

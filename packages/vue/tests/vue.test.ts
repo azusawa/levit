@@ -38,14 +38,16 @@ describe('<LevitEditor>', () => {
     expect(document.querySelector('.levit-bubble-menu')).not.toBeNull();
     expect(document.querySelector('.levit-slash-menu')).not.toBeNull();
     expect(document.querySelector('.levit-table-toolbar')).not.toBeNull();
+    expect(document.querySelector('.levit-image-toolbar')).not.toBeNull();
   });
 
   it('can leave out the menus', async () => {
-    mount(() => h(LevitEditor, { bubbleMenu: false, slashMenu: false, tableToolbar: false }));
+    mount(() => h(LevitEditor, { bubbleMenu: false, slashMenu: false, tableToolbar: false, imageToolbar: false }));
     await nextTick();
     expect(document.querySelector('.levit-bubble-menu')).toBeNull();
     expect(document.querySelector('.levit-slash-menu')).toBeNull();
     expect(document.querySelector('.levit-table-toolbar')).toBeNull();
+    expect(document.querySelector('.levit-image-toolbar')).toBeNull();
   });
 
   it('passes the color options to the editor', async () => {
@@ -95,6 +97,7 @@ describe('<LevitEditor>', () => {
     expect(document.querySelector('.levit-bubble-menu')).toBeNull();
     expect(document.querySelector('.levit-slash-menu')).toBeNull();
     expect(document.querySelector('.levit-table-toolbar')).toBeNull();
+    expect(document.querySelector('.levit-image-toolbar')).toBeNull();
   });
 });
 
