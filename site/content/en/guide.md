@@ -120,9 +120,18 @@ To set the language, click the label in the top-right corner of the block (it re
 
 ### Images
 
-Choose **Image** in the slash menu. If the app can upload pictures, a file picker opens and you can pick one or more images. Otherwise the editor asks for the image URL.
+Choose **Image** in the slash menu. If the app can upload pictures, a file picker opens and you can pick one or more images. Otherwise a field opens under the line: type or paste the image URL and press Enter or **Insert**. Escape closes it.
 
 When the app can upload pictures, you can also paste an image (for example a screenshot) or drag image files into the editor; they are uploaded and inserted one by one. If the app cannot upload, pasted or dropped image files are ignored.
+
+Click an image to select it, or move next to it and press the left or right arrow key. It gets an outline, and the **image toolbar** shows above it:
+
+- **Alt text** — a short description read out to people who cannot see the image. A field takes the place of the buttons; press Enter or **Save** to keep it, Escape to leave it as it was.
+- **Small**, **Medium** and **Full width** — a quarter, half or all of the editor's width. Press the size that is on again to go back to the image's own size.
+- **Align left**, **Center** and **Align right**.
+- **Delete image**.
+
+From the keyboard, press **Alt+F10** (Option+F10 on Mac) on a selected image to reach the toolbar. Backspace or Delete removes a selected image, and typing or Enter writes on a new line after it.
 
 ### Dividers
 

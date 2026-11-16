@@ -367,3 +367,31 @@ describe('colors are documented', () => {
     }
   });
 });
+
+describe('images are documented', () => {
+  const api = ['createImageToolbar', 'image-toolbar="false"', 'imageToolbar', 'updateImage(', 'getSelectedImage(', "'medium'", "'center'"];
+
+  it('README and llms.txt cover the image toolbar, the API and the URL field', () => {
+    for (const file of ['README.md', 'llms.txt']) {
+      const text = read(file);
+      for (const part of api) expect(text, `${file} ${part}`).toContain(part);
+    }
+    for (const word of ['이미지 도구 막대', '대체 텍스트', '작게', '중간', '전체 폭']) expect(read('README.md'), word).toContain(word);
+    for (const word of ['Image tools', 'Alt text', 'Full width', 'Alt+F10']) expect(read('llms.txt'), word).toContain(word);
+    expect(read('README.md')).not.toContain('슬래시 메뉴의 **Image**는 URL을 묻습니다');
+  });
+
+  it('the site guide and docs cover it in every language', () => {
+    const words: Record<string, string[]> = {
+      en: ['image toolbar', 'Alt text', 'Small', 'Medium', 'Full width'],
+      ko: ['이미지 도구 막대', '대체 텍스트', '작게', '중간', '전체 폭'],
+      ja: ['画像ツールバー', '代替テキスト', '小', '中', '全幅'],
+    };
+    for (const lang of ['en', 'ko', 'ja']) {
+      const guide = read(`site/content/${lang}/guide.md`);
+      for (const word of words[lang]) expect(guide, `${lang} guide ${word}`).toContain(word);
+      const docs = read(`site/content/${lang}/docs.md`);
+      for (const part of api) expect(docs, `${lang} docs ${part}`).toContain(part);
+    }
+  });
+});

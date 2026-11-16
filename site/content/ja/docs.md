@@ -38,14 +38,14 @@ Levit は ESM 専用です。バンドラーか `import` で使ってくださ�
 </script>
 ```
 
-この要素は `placeholder`、`lang`（組み込みメッセージは `ko` か `ja`。後から変えると同じ内容で新しい `editor` を作るので、イベントは付け直してください）、`theme`（`dark` か `light`）、初期値の `value`（ドキュメント JSON）属性を読みます。React・Vue のコンポーネントと同じく、バブルメニュー、スラッシュメニュー、表ツールバーが標準で付き、`bubble-menu="false"`、`slash-menu="false"`、`table-toolbar="false"` で外せます。`color-picker="false"` は色パレットからカラーピッカーを外します。`getJSON()`、`setJSON()`、`getText()`、`focus()` メソッドと、エディタ本体を持つ `editor` プロパティもあります。要素をページ内の別の場所へ移しても同じエディタのままで、取り除いた後も `getJSON()` でドキュメントを取得できます。
+この要素は `placeholder`、`lang`（組み込みメッセージは `ko` か `ja`。後から変えると同じ内容で新しい `editor` を作るので、イベントは付け直してください）、`theme`（`dark` か `light`）、初期値の `value`（ドキュメント JSON）属性を読みます。React・Vue のコンポーネントと同じく、バブルメニュー、スラッシュメニュー、表ツールバー、画像ツールバーが標準で付き、`bubble-menu="false"`、`slash-menu="false"`、`table-toolbar="false"`、`image-toolbar="false"` で外せます。`color-picker="false"` は色パレットからカラーピッカーを外します。`getJSON()`、`setJSON()`、`getText()`、`focus()` メソッドと、エディタ本体を持つ `editor` プロパティもあります。要素をページ内の別の場所へ移しても同じエディタのままで、取り除いた後も `getJSON()` でドキュメントを取得できます。
 
 ### JavaScript / TypeScript
 
 `createLevitEditor` は任意の要素をエディタにします。バブルツールバー（テキスト選択時に表示）、スラッシュメニュー（`/`）、表ツールバー（キャレットのある表の上に表示）は別々に付けるので、使うものだけを読み込めます。
 
 ```ts
-import { createLevitEditor, createBubbleMenu, createSlashMenu, createTableToolbar } from '@yonailab/levit';
+import { createLevitEditor, createBubbleMenu, createSlashMenu, createTableToolbar, createImageToolbar } from '@yonailab/levit';
 import '@yonailab/levit/levit.css';
 
 const editor = createLevitEditor(document.getElementById('editor')!, {
@@ -55,6 +55,7 @@ const editor = createLevitEditor(document.getElementById('editor')!, {
 createBubbleMenu(editor);
 createSlashMenu(editor);
 createTableToolbar(editor);
+createImageToolbar(editor);
 ```
 
 ### 読み込みと保存
@@ -218,6 +219,9 @@ editor.chain().unsetLink().run();
 
 editor.chain().insertHorizontalRule().run();
 editor.chain().insertImage({ src: 'https://example.com/a.png', alt: 'A' }).run();
+editor.chain().updateImage({ size: 'medium', align: 'center', alt: '夕焼け' }).run(); // 選んだ画像
+editor.chain().updateImage({ size: null, align: 'left' }).run(); // 本来のサイズ、左揃え（既定）
+editor.getSelectedImage();                  // 選んだ画像の { src, alt, size, align } か null
 editor.chain().setCodeBlock('ts').run();   // setCodeLanguage('py') で変更、'' で解除
 editor.chain().insertFragment(blocks).run(); // 貼り付けと同様にキャレット位置へブロックを挿入
 editor.chain().insertLineBreak().run();    // Shift+Enter
@@ -251,6 +255,8 @@ editor.getTableBorder();                   // キャレットのある表の線�
 バブルメニューの **色**（`A`）ボタンは文字色とハイライトの色のパレットを、表ツールバーの **表の色** ボタンは **セルの色** の行と **線の色** の行があるパレットを開きます。線の色は文字色と同じ色を使い、表のすべてのセルに保存されます（`attrs.border`）。各行の最後には、どんな色でも選べるカラーピッカーがあります。HTML に書き出すと `data-color` と `style` が入り、Levit の CSS がない所でも色が見えます。Markdown には文字だけが残ります。貼り付けた色はパレットの一番近い色になります。
 
 キャレットが表の中にあると、`createTableToolbar(editor)` で付けた表ツールバーが表の上に出て、同じコマンドをボタンで示します。`<levit-editor>` と React・Vue のコンポーネントはこのツールバーを自動で付けます。
+
+画像を選ぶと（クリック、または隣で左右の矢印キー）、`createImageToolbar(editor)` で付けた画像ツールバーが出ます。代替テキスト、サイズ `'small'`・`'medium'`・`'full'`（エディターの幅の4分の1、半分、全体。サイズがなければ画像本来のサイズ）、配置 `'left'`・`'center'`・`'right'`、削除があります。HTML に書き出すと `data-size`・`data-align` と、Levit の CSS がなくても見える `style` を書きます。`uploadImage` がない場合、スラッシュメニューの画像は行の下の入力欄で URL を受け取ります。
 
 削除はキー操作と同じように動きます。`deleteBackward()`、`deleteForward()`、`deleteWordBackward()`、`deleteWordForward()`、`deleteLineBackward()`、`deleteLineForward()`、`deleteSelection()` があります。
 
@@ -348,7 +354,7 @@ export function Note() {
 
 - `value` と `onChange` を併用すると制御コンポーネント、`defaultValue` だけなら非制御コンポーネントです。
 - `onChange` は `(value, editor)` を受け取ります。
-- `bubbleMenu={false}`、`slashMenu={false}`、`tableToolbar={false}` でメニューを無効にします。`colors`、`colorPicker` はエディターのオプションと同じです。
+- `bubbleMenu={false}`、`slashMenu={false}`、`tableToolbar={false}`、`imageToolbar={false}` でメニューを無効にします。`colors`、`colorPicker` はエディターのオプションと同じです。
 - `ref` か `onReady` でエディタのインスタンスを受け取ります。`className`、`style`、`id` は要素に渡されます。
 - `'use client'` が付いているので、Next.js の App Router でそのまま使えます。
 
@@ -386,7 +392,7 @@ const doc = ref<DocumentData>();
 ```
 
 - props：`placeholder`、`plugins`、`messages`、`uploadImage`、`highlightCode`
-- `:bubble-menu="false"`、`:slash-menu="false"`、`:table-toolbar="false"` でメニューを無効にします。
+- `:bubble-menu="false"`、`:slash-menu="false"`、`:table-toolbar="false"`、`:image-toolbar="false"` でメニューを無効にします。
 - `@ready` でエディタのインスタンスを、`@error` でアップロード失敗などのエラーを受け取ります。
 - コンポーネントの ref からも `editor` にアクセスできます。
 

@@ -38,14 +38,14 @@ Levit은 ESM 전용입니다. 번들러나 `import`로 사용하세요. 서버 �
 </script>
 ```
 
-이 요소는 `placeholder`, `lang`(내장 문구는 `ko` 또는 `ja`. 나중에 바꾸면 같은 내용으로 새 `editor`를 만들므로 이벤트는 다시 붙이세요), `theme`(`dark` 또는 `light`), 초기값 `value`(문서 JSON) 속성을 읽습니다. React·Vue 컴포넌트처럼 버블 메뉴, 슬래시 메뉴, 표 도구 막대가 기본으로 붙고, `bubble-menu="false"`, `slash-menu="false"`, `table-toolbar="false"`로 뺄 수 있습니다. `color-picker="false"`는 색 팔레트에서 색상 피커를 뺍니다. `getJSON()`, `setJSON()`, `getText()`, `focus()` 메서드와, 에디터 인스턴스 전체를 담은 `editor` 속성도 있습니다. 요소를 페이지의 다른 곳으로 옮겨도 같은 에디터가 유지되고, 제거한 뒤에도 `getJSON()`으로 문서를 얻을 수 있습니다.
+이 요소는 `placeholder`, `lang`(내장 문구는 `ko` 또는 `ja`. 나중에 바꾸면 같은 내용으로 새 `editor`를 만들므로 이벤트는 다시 붙이세요), `theme`(`dark` 또는 `light`), 초기값 `value`(문서 JSON) 속성을 읽습니다. React·Vue 컴포넌트처럼 버블 메뉴, 슬래시 메뉴, 표 도구 막대, 이미지 도구 막대가 기본으로 붙고, `bubble-menu="false"`, `slash-menu="false"`, `table-toolbar="false"`, `image-toolbar="false"`로 뺄 수 있습니다. `color-picker="false"`는 색 팔레트에서 색상 피커를 뺍니다. `getJSON()`, `setJSON()`, `getText()`, `focus()` 메서드와, 에디터 인스턴스 전체를 담은 `editor` 속성도 있습니다. 요소를 페이지의 다른 곳으로 옮겨도 같은 에디터가 유지되고, 제거한 뒤에도 `getJSON()`으로 문서를 얻을 수 있습니다.
 
 ### JavaScript / TypeScript
 
 `createLevitEditor`는 어떤 요소든 에디터로 만듭니다. 버블 툴바(글을 선택하면 표시), 슬래시 메뉴(`/`), 표 도구 막대(커서가 있는 표 위에 표시)는 따로 붙이므로, 쓰는 것만 불러오면 됩니다.
 
 ```ts
-import { createLevitEditor, createBubbleMenu, createSlashMenu, createTableToolbar } from '@yonailab/levit';
+import { createLevitEditor, createBubbleMenu, createSlashMenu, createTableToolbar, createImageToolbar } from '@yonailab/levit';
 import '@yonailab/levit/levit.css';
 
 const editor = createLevitEditor(document.getElementById('editor')!, {
@@ -55,6 +55,7 @@ const editor = createLevitEditor(document.getElementById('editor')!, {
 createBubbleMenu(editor);
 createSlashMenu(editor);
 createTableToolbar(editor);
+createImageToolbar(editor);
 ```
 
 ### 불러오기와 저장
@@ -218,6 +219,9 @@ editor.chain().unsetLink().run();
 
 editor.chain().insertHorizontalRule().run();
 editor.chain().insertImage({ src: 'https://example.com/a.png', alt: 'A' }).run();
+editor.chain().updateImage({ size: 'medium', align: 'center', alt: '노을' }).run(); // 고른 이미지
+editor.chain().updateImage({ size: null, align: 'left' }).run(); // 원래 크기, 왼쪽 정렬(기본)
+editor.getSelectedImage();                  // 고른 이미지의 { src, alt, size, align } 또는 null
 editor.chain().setCodeBlock('ts').run();   // setCodeLanguage('py')로 변경, ''이면 해제
 editor.chain().insertFragment(blocks).run(); // 붙여넣기처럼 커서 위치에 블록 삽입
 editor.chain().insertLineBreak().run();    // Shift+Enter
@@ -251,6 +255,8 @@ editor.getTableBorder();                   // 캐럿이 있는 표의 선 색 �
 버블 메뉴의 **색**(`A`) 버튼은 글자색과 형광펜 색 팔레트를, 표 도구 막대의 **표 색** 버튼은 **칸 색** 줄과 **선 색** 줄이 있는 팔레트를 엽니다. 선 색은 글자색과 같은 색을 쓰고, 표의 모든 칸에 저장됩니다(`attrs.border`). 각 줄 끝에는 아무 색이나 고르는 색상 피커가 있습니다. HTML로 내보내면 `data-color`와 `style`이 함께 들어가 Levit CSS가 없는 곳에서도 색이 보이고, Markdown에는 글자만 남습니다. 붙여 넣은 색은 가장 가까운 팔레트 색이 됩니다.
 
 커서가 표 안에 있으면 `createTableToolbar(editor)`로 붙인 표 도구 막대가 표 위에 나타나, 같은 명령을 버튼으로 보여 줍니다. `<levit-editor>`와 React·Vue 컴포넌트는 이 막대를 알아서 붙입니다.
+
+이미지를 고르면(클릭, 또는 옆에서 왼쪽·오른쪽 방향키) `createImageToolbar(editor)`로 붙인 이미지 도구 막대가 나타납니다. 대체 텍스트, 크기 `'small'`·`'medium'`·`'full'`(에디터 폭의 4분의 1, 절반, 전체. 크기가 없으면 이미지 원래 크기), 정렬 `'left'`·`'center'`·`'right'`, 삭제가 있습니다. HTML로 내보내면 `data-size`·`data-align`과 함께 Levit CSS 없이도 보이는 `style`을 씁니다. `uploadImage`가 없으면 슬래시 메뉴의 이미지는 줄 아래 입력 칸에서 URL을 받습니다.
 
 삭제는 키 입력과 똑같이 동작합니다. `deleteBackward()`, `deleteForward()`, `deleteWordBackward()`, `deleteWordForward()`, `deleteLineBackward()`, `deleteLineForward()`, `deleteSelection()`이 있습니다.
 
@@ -348,7 +354,7 @@ export function Note() {
 
 - `value`와 `onChange`를 함께 쓰면 제어 컴포넌트, `defaultValue`만 쓰면 비제어 컴포넌트입니다.
 - `onChange`는 `(value, editor)`를 받습니다.
-- `bubbleMenu={false}`, `slashMenu={false}`, `tableToolbar={false}`로 메뉴를 끕니다. `colors`, `colorPicker`는 에디터 옵션과 같습니다.
+- `bubbleMenu={false}`, `slashMenu={false}`, `tableToolbar={false}`, `imageToolbar={false}`로 메뉴를 끕니다. `colors`, `colorPicker`는 에디터 옵션과 같습니다.
 - `ref`나 `onReady`로 에디터 인스턴스를 받습니다. `className`, `style`, `id`는 요소에 전달됩니다.
 - `'use client'`가 지정되어 있어 Next.js App Router에서 바로 쓸 수 있습니다.
 
@@ -386,7 +392,7 @@ const doc = ref<DocumentData>();
 ```
 
 - props: `placeholder`, `plugins`, `messages`, `uploadImage`, `highlightCode`
-- `:bubble-menu="false"`, `:slash-menu="false"`, `:table-toolbar="false"`로 메뉴를 끕니다.
+- `:bubble-menu="false"`, `:slash-menu="false"`, `:table-toolbar="false"`, `:image-toolbar="false"`로 메뉴를 끕니다.
 - `@ready`로 에디터 인스턴스를, `@error`로 업로드 실패 같은 오류를 받습니다.
 - 컴포넌트 ref의 `editor`로도 인스턴스에 접근할 수 있습니다.
 

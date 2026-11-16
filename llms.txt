@@ -21,19 +21,19 @@ Levit is a web editor library designed from scratch on standard Web APIs (DOM, S
   });
 </script>
 ```
-The element adds the bubble and slash menus and the table toolbar
-(`bubble-menu="false"` / `slash-menu="false"` / `table-toolbar="false"` leave
-them out, also later). Attributes: `placeholder`,
+The element adds the bubble and slash menus and the table and image toolbars
+(`bubble-menu="false"` / `slash-menu="false"` / `table-toolbar="false"` /
+`image-toolbar="false"` leave them out, also later). Attributes: `placeholder`,
 `lang` (ko/ja; a later change builds a new `el.editor` with the same document),
 `color-picker="false"` (no color picker in the palettes; also a rebuild),
 `theme` (dark/light, also on the menus), `value` (initial JSON). Methods:
 getJSON(), setJSON(), getText(), focus(); `el.editor` is the full LevitEditor.
 Moving the element keeps the same editor; after removal getJSON() still works.
-createBubbleMenu/createSlashMenu/createTableToolbar return the editor's existing menu if it has one.
+createBubbleMenu/createSlashMenu/createTableToolbar/createImageToolbar return the editor's existing menu if it has one.
 
 ### Vanilla JavaScript / TypeScript
 ```ts
-import { createLevitEditor, createBubbleMenu, createSlashMenu, createTableToolbar } from '@yonailab/levit';
+import { createLevitEditor, createBubbleMenu, createSlashMenu, createTableToolbar, createImageToolbar } from '@yonailab/levit';
 import '@yonailab/levit/levit.css';
 
 const container = document.getElementById('editor');
@@ -46,6 +46,7 @@ const editor = createLevitEditor(container, {
 createBubbleMenu(editor);
 createSlashMenu(editor);   // "/" at the start of a line or after a space; typing after it filters
 createTableToolbar(editor);   // buttons above the table the caret is in
+createImageToolbar(editor);   // buttons above the selected image
 ```
 
 ## 2. Document Data Schema (JSON)
@@ -77,7 +78,8 @@ createTableToolbar(editor);   // buttons above the table the caret is in
 `paragraph`, `heading` (`attrs.level` 1-6), `blockquote`,
 `code_block` (optional `attrs.language`, e.g. `"ts"`),
 `bullet_list_item`, `ordered_list_item`, `task_list_item` (`attrs.checked`: boolean),
-`horizontal_rule`, `image` (`attrs.src`, `attrs.alt`),
+`horizontal_rule`, `image` (`attrs.src`, `attrs.alt`, optional `attrs.size`:
+`small` | `medium` | `full`, optional `attrs.align`: `center` | `right`),
 `table_cell` (`attrs.table`, `attrs.row`, optional `attrs.header`, optional
 `attrs.background`: a color, see Marks).
 Lists are flat: each list item is its own block, and consecutive items of the
@@ -164,6 +166,10 @@ list, `1. ` numbered list, `[] ` / `[ ] ` / `[x] ` task (also after `- `),
   at the end.
 - Backspace at the start of the block after an image or divider removes it;
   Delete at the end of the block before one does too.
+- A click on an image, or Left/Right right next to one, selects it: an
+  outline, no caret (the selection is collapsed on the image block). From a
+  selected image the arrows go to the text around it, Backspace/Delete remove
+  it, and typing or Enter writes in a new line after it.
 - `Cmd/Ctrl+A` selects the whole document.
 - Clicking a code block's language label (top right) asks for a new language.
 
@@ -234,6 +240,15 @@ editor.chain().goToNextCell().run();           // Tab; goToPreviousCell() is Shi
 editor.isInTable();                            // true when the caret is in a table
 // createTableToolbar(editor) shows these commands as buttons above the caret's table.
 editor.chain().insertImage({ src: 'https://example.com/a.png', alt: 'A' }).run();
+editor.chain().updateImage({ size: 'medium', align: 'center', alt: 'Sunset' }).run(); // the selected image
+editor.chain().updateImage({ size: null, align: 'left' }).run(); // its own size (at most the full width), left
+editor.getSelectedImage();                     // { src, alt, size: 'small' | 'medium' | 'full' | null, align } or null
+// Sizes are shares of the editor's width (a quarter, a half, all of it).
+// createImageToolbar(editor) shows above the selected image: "Alt text" (a
+// field in place of the buttons; Enter or Save keeps it, Escape cancels),
+// "Small", "Medium", "Full width" (pressed again: its own size), "Align left",
+// "Center", "Align right", "Delete image". HTML export keeps data-size and
+// data-align with a style that shows them without Levit's CSS.
 editor.chain().setCodeBlock('ts').run();       // setCodeLanguage('py') changes it, '' clears it
 editor.chain().selectAll().run();
 ```
@@ -245,8 +260,10 @@ createLevitEditor(container, {
   placeholder: 'Write...',
   onChange: (editor) => {},
   onSelectionChange: (selection) => {},
-  // Pasted and dropped image files are uploaded with this, then inserted.
-  // Without it, image files are ignored. Images go in one by one, in order.
+  // Pasted and dropped image files are uploaded with this, then inserted;
+  // the slash menu's Image opens a file picker. Without it, image files are
+  // ignored and Image asks for a URL in a field under the line (Enter or
+  // "Insert" puts it in, Escape closes it). Images go in one by one, in order.
   uploadImage: async (file) => 'https://cdn.example.com/a.png',
   // Errors from background work, such as a failed upload.
   onError: (error) => console.error(error),
@@ -431,6 +448,8 @@ block (collapsed caret) `Alt+F10` focuses the language label instead: Enter or
 Space asks for a language, Escape returns to the code. In a table (collapsed
 caret) `Alt+F10` focuses the table toolbar (`role="toolbar"`, labelled
 "Table tools"), with the same keys; its header row button has `aria-pressed`.
+On a selected image `Alt+F10` focuses the image toolbar ("Image tools"), the
+same way; its size and alignment buttons have `aria-pressed`.
 
 ## 9. Theming
 Every color is a CSS variable (`--levit-bg`, `--levit-surface`, `--levit-border`,
@@ -459,8 +478,9 @@ const { ref, editor } = useLevitEditor({ placeholder: 'Write' });   // <div ref=
 <LevitEditor v-model="doc" :messages="ko" @ready="(editor) => {}" @error="(e) => {}" />
 <!-- const { element, editor } = useLevitEditor(options)  →  <div ref="element" /> -->
 ```
-Both add the bubble and slash menus and the table toolbar unless turned off
-(`bubbleMenu`, `slashMenu`, `tableToolbar` set to false), take `colors` and
+Both add the bubble and slash menus and the table and image toolbars unless
+turned off (`bubbleMenu`, `slashMenu`, `tableToolbar`, `imageToolbar` set to
+false), take `colors` and
 `colorPicker` like the editor options, and a value that comes
 back from onChange / v-model does not reset the caret. The React package is
 marked 'use client'.

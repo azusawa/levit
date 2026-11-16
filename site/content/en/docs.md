@@ -38,14 +38,14 @@ Without a build step, load the script and the stylesheet and use the `<levit-edi
 </script>
 ```
 
-The element reads `placeholder`, `lang` (`ko` or `ja` for built-in messages; changing it later builds a new `editor` with the same text, so attach handlers again), `theme` (`dark` or `light`) and an initial `value` (document JSON). It comes with the bubble and slash menus and the table toolbar, like the React and Vue components; `bubble-menu="false"`, `slash-menu="false"` or `table-toolbar="false"` leaves one out. `color-picker="false"` leaves the color picker out of the color palettes. It also has `getJSON()`, `setJSON()`, `getText()`, `focus()`, and an `editor` property with the full editor. Moving the element in the page keeps the same editor, and after removal `getJSON()` still returns the document.
+The element reads `placeholder`, `lang` (`ko` or `ja` for built-in messages; changing it later builds a new `editor` with the same text, so attach handlers again), `theme` (`dark` or `light`) and an initial `value` (document JSON). It comes with the bubble and slash menus and the table and image toolbars, like the React and Vue components; `bubble-menu="false"`, `slash-menu="false"`, `table-toolbar="false"` or `image-toolbar="false"` leaves one out. `color-picker="false"` leaves the color picker out of the color palettes. It also has `getJSON()`, `setJSON()`, `getText()`, `focus()`, and an `editor` property with the full editor. Moving the element in the page keeps the same editor, and after removal `getJSON()` still returns the document.
 
 ### JavaScript or TypeScript
 
 `createLevitEditor` turns any element into an editor. The bubble toolbar (shown on selected text), the slash menu (`/`) and the table toolbar (shown above the table the caret is in) are separate, so you only load what you use.
 
 ```ts
-import { createLevitEditor, createBubbleMenu, createSlashMenu, createTableToolbar } from '@yonailab/levit';
+import { createLevitEditor, createBubbleMenu, createSlashMenu, createTableToolbar, createImageToolbar } from '@yonailab/levit';
 import '@yonailab/levit/levit.css';
 
 const editor = createLevitEditor(document.getElementById('editor')!, {
@@ -55,6 +55,7 @@ const editor = createLevitEditor(document.getElementById('editor')!, {
 createBubbleMenu(editor);
 createSlashMenu(editor);
 createTableToolbar(editor);
+createImageToolbar(editor);
 ```
 
 ### Load and save
@@ -218,6 +219,9 @@ editor.chain().unsetLink().run();
 
 editor.chain().insertHorizontalRule().run();
 editor.chain().insertImage({ src: 'https://example.com/a.png', alt: 'A' }).run();
+editor.chain().updateImage({ size: 'medium', align: 'center', alt: 'Sunset' }).run(); // the selected image
+editor.chain().updateImage({ size: null, align: 'left' }).run(); // its own size, on the left (the default)
+editor.getSelectedImage();                  // { src, alt, size, align } of the selected image, or null
 editor.chain().setCodeBlock('ts').run();   // setCodeLanguage('py') changes it, '' clears it
 editor.chain().insertFragment(blocks).run(); // insert blocks at the caret, like a paste
 editor.chain().insertLineBreak().run();    // Shift+Enter
@@ -251,6 +255,8 @@ editor.getTableBorder();                   // line color of the caret's table, o
 The bubble menu's **Color** (`A`) button opens a palette of text and highlight colors, and the table toolbar's **Table color** button a palette with a **Cell color** row and a **Line color** row. Line colors use the text colors and are kept on every cell of the table (`attrs.border`). Each row ends with a color picker for any other color. HTML export writes `data-color` and a `style`, so colors show where Levit's CSS is not loaded; Markdown keeps the text only. Pasted colors become the nearest palette color.
 
 While the caret is in a table, the table toolbar from `createTableToolbar(editor)` shows above it with the same commands as buttons. `<levit-editor>` and the React and Vue components add it for you.
+
+A selected image (clicked, or reached with the left and right arrows) gets the image toolbar from `createImageToolbar(editor)`: alt text, the sizes `'small'`, `'medium'` and `'full'` (a quarter, half or all of the editor's width; without one an image keeps its own size), the alignments `'left'`, `'center'` and `'right'`, and delete. HTML export keeps them as `data-size` and `data-align`, with a style that shows them without Levit's CSS. Without `uploadImage`, the slash menu's Image asks for the URL in a field under the line.
 
 Deleting works like the keys: `deleteBackward()`, `deleteForward()`, `deleteWordBackward()`, `deleteWordForward()`, `deleteLineBackward()`, `deleteLineForward()` and `deleteSelection()`.
 
@@ -349,7 +355,7 @@ export function Note() {
 
 - `value` with `onChange` makes a controlled component; `defaultValue` alone an uncontrolled one.
 - `onChange` receives `(value, editor)`.
-- `bubbleMenu={false}`, `slashMenu={false}` and `tableToolbar={false}` turn the menus off. `colors` and `colorPicker` work as the editor options.
+- `bubbleMenu={false}`, `slashMenu={false}`, `tableToolbar={false}` and `imageToolbar={false}` turn the menus off. `colors` and `colorPicker` work as the editor options.
 - `ref` or `onReady` gives you the editor instance. `className`, `style` and `id` go to the element.
 - The package is marked `'use client'`, so it works in the Next.js App Router.
 
@@ -387,7 +393,7 @@ const doc = ref<DocumentData>();
 ```
 
 - Props: `placeholder`, `plugins`, `messages`, `uploadImage`, `highlightCode`.
-- `:bubble-menu="false"`, `:slash-menu="false"` and `:table-toolbar="false"` turn the menus off.
+- `:bubble-menu="false"`, `:slash-menu="false"`, `:table-toolbar="false"` and `:image-toolbar="false"` turn the menus off.
 - `@ready` gives you the editor; `@error` receives errors such as a failed upload.
 - The component ref also exposes `editor`.
 
