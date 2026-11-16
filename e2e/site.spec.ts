@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Locator, type Page } from '@playwright/test';
 
 // The website (site/), served by its own Vite server: see playwright.config.ts.
 const SITE = process.env.LEVIT_SITE_URL ?? 'http://localhost:5193/levit/';
@@ -21,19 +21,28 @@ test.describe('landing page', () => {
   });
 
   test('Korean pages are set in Pretendard, Japanese pages in Pretendard JP, and English pages load neither', async ({ page }) => {
-    const font = (el: ReturnType<Page['locator']>) => el.evaluate((e) => getComputedStyle(e).fontFamily);
+    const font = (el: Locator) => el.evaluate((e) => getComputedStyle(e).fontFamily);
     for (const [path, family, not] of [
       ['ko/', 'Pretendard Variable', 'Pretendard JP'],
       ['ja/', 'Pretendard JP Variable', 'Pretendard Variable'],
     ]) {
-      await page.goto(SITE + path);
+      await page.goto(SITE + path, { waitUntil: 'domcontentloaded' });
       for (const el of [page.locator('h1'), editor(page, 'write').locator('.levit-block').first()]) {
         expect(await font(el), path).toContain(family);
         expect(await font(el), path).not.toContain(not);
       }
     }
-    // Korean words on the Japanese page (the language link) keep a Korean font.
-    expect(await font(page.locator('.langs a[lang="ko"]'))).toContain('Malgun Gothic');
+    // Words in the other language (the language links) keep that language's fonts.
+    await page.goto(SITE + 'ja/', { waitUntil: 'domcontentloaded' });
+    const korean = await font(page.locator('.langs a[lang="ko"]'));
+    expect(korean.indexOf('Malgun Gothic')).toBeLessThan(korean.indexOf('Hiragino Sans'));
+    expect(korean).not.toContain('Pretendard');
+    await page.goto(SITE + 'ko/', { waitUntil: 'domcontentloaded' });
+    const japanese = await font(page.locator('.langs a[lang="ja"]'));
+    expect(japanese.indexOf('Hiragino Sans')).toBeLessThan(japanese.indexOf('Malgun Gothic'));
+    expect(japanese).not.toContain('Pretendard');
+    // The page's script switches the font on.
+    await expect(page.locator('link[data-page-font]')).toHaveAttribute('media', 'all');
 
     await page.goto(SITE);
     expect(await font(page.locator('h1'))).not.toContain('Pretendard');

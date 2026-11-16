@@ -53,9 +53,9 @@ interface Options {
 // Each comes from the font's own repository at a fixed commit, checked with
 // its hash (the plain .css files, which jsDelivr serves as they are, not
 // .min.css files it makes). They load only the parts of the font the page's
-// characters need. Loaded as "print" and then switched to "all", they do not
-// hold up the page: until they come, or if jsDelivr cannot be reached, the
-// local fonts show.
+// characters need. Loaded as "print" and switched to "all" by the page's
+// script (showPageFonts in src/page.ts), they do not hold up the page: until
+// they come, or if jsDelivr cannot be reached, the local fonts show.
 const PRETENDARD = 'https://cdn.jsdelivr.net/gh/orioncactus/pretendard@5c41199ea0024a9e0b2cb31735265056e5472d76/dist/web/variable/';
 const PAGE_FONTS: Partial<Record<Lang, { file: string; hash: string }>> = {
   ko: { file: 'pretendardvariable-dynamic-subset.css', hash: 'sha384-2nNKoOPayicGa+aRguOQuiZP+RqQ4G3jalfDeOgftkKD7zBM2gJXTwcFqCZltdv0' },
@@ -68,7 +68,7 @@ function pageFont(lang: Lang): string {
   const sheet = `href="${PRETENDARD}${font.file}" integrity="${font.hash}" crossorigin="anonymous"`;
   return `
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-  <link rel="stylesheet" ${sheet} media="print" onload="this.media='all'">
+  <link rel="stylesheet" ${sheet} media="print" data-page-font>
   <noscript><link rel="stylesheet" ${sheet}></noscript>`;
 }
 

@@ -7,7 +7,18 @@ const ENTER = [
   '.site-footer > *', '.toc', '.prose > h2',
 ].join(', ');
 
+/**
+ * Korean and Japanese pages load their font as a "print" stylesheet, so the
+ * page does not wait for it. This switches it on, from the page's own script
+ * rather than an inline handler, so it also works under a strict CSP.
+ */
+export function showPageFonts(root: ParentNode = document) {
+  for (const link of root.querySelectorAll<HTMLLinkElement>('link[data-page-font]')) link.media = 'all';
+}
+
 export function setUpPage() {
+  showPageFonts();
+
   // The site is light. The editor's own dark theme follows only the switch in
   // the playground, not the system setting.
   document.documentElement.dataset.theme ??= 'light';

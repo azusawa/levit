@@ -136,6 +136,8 @@ describe('site pages', () => {
       const { html } = doc(lang, kind);
       const where = `${lang} ${kind}`;
       expect(html, where).toContain('general-sans@400,500,700');
+      // Pages work under a CSP without 'unsafe-inline' scripts: no inline handlers.
+      expect(html, where).not.toMatch(/\son[a-z]+=/);
       if (lang === 'en') {
         expect(html, where).not.toContain('pretendard');
         expect(html, where).not.toContain('cdn.jsdelivr.net');
@@ -143,8 +145,9 @@ describe('site pages', () => {
       }
       const { href, hash } = sheets[lang];
       const checked = `integrity="${hash}" crossorigin="anonymous"`;
-      // Loaded as print, then switched to all: the page does not wait for the CDN.
-      expect(html, where).toContain(`<link rel="stylesheet" href="${href}" ${checked} media="print" onload="this.media='all'">`);
+      // Loaded as print, then switched to all by the page's script: the page
+      // does not wait for the CDN, and no inline handler is needed.
+      expect(html, where).toContain(`<link rel="stylesheet" href="${href}" ${checked} media="print" data-page-font>`);
       expect(html, where).toContain(`<noscript><link rel="stylesheet" href="${href}" ${checked}></noscript>`);
       expect(html, where).toContain('<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>');
       expect(html.match(/orioncactus\/pretendard@/g), where).toHaveLength(2);
@@ -163,5 +166,10 @@ describe('site pages', () => {
     expect(prop(':root:lang(ja)', '--font')).toBe(
       "'General Sans', 'Pretendard JP Variable', 'Pretendard JP', var(--font-ja), var(--font-ko), sans-serif"
     );
+    // Words in the other language (the language links, the menu lists) take
+    // that language's own fonts, not the page's.
+    const own = (selector: string) => /font-family:([^;]*);/.exec(block(selector))?.[1].replace(/\s+/g, ' ').trim();
+    expect(own(":root:lang(ko) [lang='ja']")).toBe("'General Sans', var(--font-ja), var(--font-ko), sans-serif");
+    expect(own(":root:lang(ja) [lang='ko']")).toBe("'General Sans', var(--font-ko), var(--font-ja), sans-serif");
   });
 });
