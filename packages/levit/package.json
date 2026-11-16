@@ -1,6 +1,6 @@
 {
   "name": "@yonailab/levit",
-  "version": "0.7.2",
+  "version": "0.7.3",
   "description": "An easy, light, AI-ready web editor designed for seamless embedding and extensibility.",
   "type": "module",
   "main": "./dist/index.js",
