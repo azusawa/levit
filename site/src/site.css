@@ -37,9 +37,13 @@
   --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
-/* Japanese pages set their text in Pretendard JP (loaded on Japanese pages
-   only). It has no Hangul, so Korean words on them, like the language link,
-   take the Korean fonts after the Japanese ones. */
+/* Korean pages set their text in Pretendard, Japanese pages in Pretendard JP
+   (each loaded on its own pages only). Pretendard JP has no Hangul, so Korean
+   words on Japanese pages, like the language link, take the Korean fonts
+   after the Japanese ones. */
+:root:lang(ko) {
+  --font: 'General Sans', 'Pretendard Variable', 'Pretendard', var(--font-ko), var(--font-ja), sans-serif;
+}
 :root:lang(ja) {
   --font: 'General Sans', 'Pretendard JP Variable', 'Pretendard JP', var(--font-ja), var(--font-ko), sans-serif;
 }

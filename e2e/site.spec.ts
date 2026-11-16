@@ -20,21 +20,25 @@ test.describe('landing page', () => {
     }
   });
 
-  test('Japanese pages are set in Pretendard JP, and English and Korean pages do not load it', async ({ page }) => {
-    const pretendard = () => page.evaluate(() => [...document.fonts].some((f) => f.family.includes('Pretendard JP') && f.status === 'loaded'));
-    await page.goto(SITE + 'ja/');
-    for (const el of [page.locator('h1'), editor(page, 'write').locator('.levit-block').first()]) {
-      expect(await el.evaluate((e) => getComputedStyle(e).fontFamily)).toContain('Pretendard JP Variable');
+  test('Korean pages are set in Pretendard, Japanese pages in Pretendard JP, and English pages load neither', async ({ page }) => {
+    const font = (el: ReturnType<Page['locator']>) => el.evaluate((e) => getComputedStyle(e).fontFamily);
+    for (const [path, family, not] of [
+      ['ko/', 'Pretendard Variable', 'Pretendard JP'],
+      ['ja/', 'Pretendard JP Variable', 'Pretendard Variable'],
+    ]) {
+      await page.goto(SITE + path);
+      for (const el of [page.locator('h1'), editor(page, 'write').locator('.levit-block').first()]) {
+        expect(await font(el), path).toContain(family);
+        expect(await font(el), path).not.toContain(not);
+      }
     }
     // Korean words on the Japanese page (the language link) keep a Korean font.
-    expect(await page.locator('.langs a[lang="ko"]').evaluate((e) => getComputedStyle(e).fontFamily)).toContain('Malgun Gothic');
+    expect(await font(page.locator('.langs a[lang="ko"]'))).toContain('Malgun Gothic');
 
-    for (const path of ['', 'ko/']) {
-      await page.goto(SITE + path);
-      expect(await page.locator('h1').evaluate((e) => getComputedStyle(e).fontFamily)).not.toContain('Pretendard');
-      await page.evaluate(() => document.fonts.ready);
-      expect(await pretendard()).toBe(false);
-    }
+    await page.goto(SITE);
+    expect(await font(page.locator('h1'))).not.toContain('Pretendard');
+    await page.evaluate(() => document.fonts.ready);
+    expect(await page.evaluate(() => [...document.fonts].some((f) => f.family.includes('Pretendard')))).toBe(false);
   });
 
   test('the editor takes typing, and the slash menu follows the chosen menu language', async ({ page }) => {

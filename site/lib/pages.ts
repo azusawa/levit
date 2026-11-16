@@ -49,18 +49,28 @@ interface Options {
   siteUrl?: string;
 }
 
-// Japanese pages set their text in Pretendard JP, from the font's own
-// repository at a fixed commit, checked with its hash (the plain .css file,
-// which jsDelivr serves as it is, not a .min.css it makes). It loads only the
-// parts of the font the page's characters need. Loaded as "print" and then
-// switched to "all", it does not hold up the page: until it comes, or if
-// jsDelivr cannot be reached, the local Japanese fonts show.
-const JA_FONT_CSS = 'https://cdn.jsdelivr.net/gh/orioncactus/pretendard@5c41199ea0024a9e0b2cb31735265056e5472d76/dist/web/variable/pretendardvariable-jp-dynamic-subset.css';
-const JA_FONT_CHECK = 'integrity="sha384-rSelq/kximCvEmDjno942LJlLokxEhaLMQ+RV+sB5dKi5omUYEHVbvXLysAoOzwV" crossorigin="anonymous"';
-const JA_FONT = `
+// Korean pages set their text in Pretendard, Japanese pages in Pretendard JP.
+// Each comes from the font's own repository at a fixed commit, checked with
+// its hash (the plain .css files, which jsDelivr serves as they are, not
+// .min.css files it makes). They load only the parts of the font the page's
+// characters need. Loaded as "print" and then switched to "all", they do not
+// hold up the page: until they come, or if jsDelivr cannot be reached, the
+// local fonts show.
+const PRETENDARD = 'https://cdn.jsdelivr.net/gh/orioncactus/pretendard@5c41199ea0024a9e0b2cb31735265056e5472d76/dist/web/variable/';
+const PAGE_FONTS: Partial<Record<Lang, { file: string; hash: string }>> = {
+  ko: { file: 'pretendardvariable-dynamic-subset.css', hash: 'sha384-2nNKoOPayicGa+aRguOQuiZP+RqQ4G3jalfDeOgftkKD7zBM2gJXTwcFqCZltdv0' },
+  ja: { file: 'pretendardvariable-jp-dynamic-subset.css', hash: 'sha384-rSelq/kximCvEmDjno942LJlLokxEhaLMQ+RV+sB5dKi5omUYEHVbvXLysAoOzwV' },
+};
+
+function pageFont(lang: Lang): string {
+  const font = PAGE_FONTS[lang];
+  if (!font) return '';
+  const sheet = `href="${PRETENDARD}${font.file}" integrity="${font.hash}" crossorigin="anonymous"`;
+  return `
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-  <link rel="stylesheet" href="${JA_FONT_CSS}" ${JA_FONT_CHECK} media="print" onload="this.media='all'">
-  <noscript><link rel="stylesheet" href="${JA_FONT_CSS}" ${JA_FONT_CHECK}></noscript>`;
+  <link rel="stylesheet" ${sheet} media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" ${sheet}></noscript>`;
+}
 
 export function renderPage(lang: Lang, kind: Kind, { base, siteUrl = SITE_URL }: Options): string {
   const s = strings[lang];
@@ -120,7 +130,7 @@ export function renderPage(lang: Lang, kind: Kind, { base, siteUrl = SITE_URL }:
   <meta name="theme-color" content="#f7f7f6">
   <link rel="preconnect" href="https://api.fontshare.com">
   <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin>
-  <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,700&display=swap">${lang === 'ja' ? JA_FONT : ''}
+  <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,700&display=swap">${pageFont(lang)}
   <script type="module" src="/src/${kind === 'landing' ? 'landing' : 'doc'}.ts"></script>
 </head>
 <body>
