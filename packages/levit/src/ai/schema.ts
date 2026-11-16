@@ -1,4 +1,5 @@
 import { normalizeColor } from '../core/model/colors.js';
+import { IMAGE_ALIGNS, IMAGE_SIZES, normalizeImageAlign, normalizeImageSize } from '../core/model/image.js';
 import { schemaFor, type SerializerOptions } from '../core/plugin/plugin.js';
 import { MAX_LIST_INDENT } from '../core/model/document.js';
 import { normalizeCodeLanguage, sanitizeHref, sanitizeImageSrc } from '../core/model/sanitize.js';
@@ -61,7 +62,15 @@ export function getDocumentSchema(options: SerializerOptions = {}): JSONSchema {
     blockSchema('horizontal_rule', attrs(), true),
     blockSchema(
       'image',
-      attrs({ src: { type: 'string', description: 'http(s), blob, relative, or a bitmap data URL (no SVG).' }, alt: { type: 'string' } }, ['src']),
+      attrs(
+        {
+          src: { type: 'string', description: 'http(s), blob, relative, or a bitmap data URL (no SVG).' },
+          alt: { type: 'string' },
+          size: { enum: [...IMAGE_SIZES], description: 'A share of the width: small, medium or full. Leave it out for the image\'s own size.' },
+          align: { enum: [...IMAGE_ALIGNS], description: 'Leave it out for the left.' },
+        },
+        ['src']
+      ),
       true
     ),
     blockSchema(
@@ -259,8 +268,10 @@ const BLOCK_ATTRS: Record<string, AttrCheck> = {
     if (a.background !== undefined && !normalizeColor(a.background)) fail('background', 'must be a color name or a hex color (#rrggbb)');
     if (a.border !== undefined && !normalizeColor(a.border)) fail('border', 'must be a color name or a hex color (#rrggbb)');
   }),
-  image: both(onlyKeys(['src', 'alt']), (a, fail) => {
+  image: both(onlyKeys(['src', 'alt', 'size', 'align']), (a, fail) => {
     if (!sanitizeImageSrc(a.src)) fail('src', 'must be a safe image URL (http, https, blob, relative or a bitmap data URL)');
     if (a.alt !== undefined && typeof a.alt !== 'string') fail('alt', 'must be a string');
+    if (a.size !== undefined && !normalizeImageSize(a.size)) fail('size', `must be one of ${IMAGE_SIZES.join(', ')}`);
+    if (a.align !== undefined && !normalizeImageAlign(a.align)) fail('align', `must be one of ${IMAGE_ALIGNS.join(', ')}`);
   }),
 };

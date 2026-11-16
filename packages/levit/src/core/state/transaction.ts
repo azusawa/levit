@@ -23,6 +23,7 @@ import {
 } from '../model/document.js';
 import { normalizeCodeLanguage, sanitizeHref, sanitizeImageSrc } from '../model/sanitize.js';
 import { normalizeColor } from '../model/colors.js';
+import { normalizeImageAlign, normalizeImageSize, type ImageAlign, type ImageSize } from '../model/image.js';
 import {
   lineEndOffset,
   lineStartOffset,
@@ -34,6 +35,13 @@ import {
 import { BlockNode } from '../model/types.js';
 import { cellContent, createCell, createTable, isTableCell, markdownRowCells, tableAtIndex, tableIdOf, rowIdOf, type TablePosition } from '../model/table.js';
 import { EditorState } from './state.js';
+
+/** What updateImage changes; a key left out stays as it is. */
+export interface ImageChanges {
+  size?: ImageSize | null;
+  align?: ImageAlign | null;
+  alt?: string;
+}
 
 export function cloneDocument(doc: DocumentData): DocumentData {
   return {
@@ -998,6 +1006,28 @@ export class Transaction {
     const safe = sanitizeImageSrc(src);
     if (!safe) return this;
     return this.insertAtom('image', { src: safe, alt });
+  }
+
+  /**
+   * Changes the selected image (the caret on it): its size, its alignment
+   * ('left' or null for the default) and its alt text. Null takes a size off.
+   * Values it does not know are ignored.
+   */
+  updateImage(changes: ImageChanges): this {
+    const index = findBlockIndex(this.doc, this.selection.head.blockId);
+    const block = this.doc.blocks[index];
+    if (block?.type !== 'image') return this;
+    const attrs: Record<string, any> = { ...block.attrs };
+    if (changes.size === null) delete attrs.size;
+    else if (normalizeImageSize(changes.size)) attrs.size = changes.size;
+    if (changes.align === null || changes.align === 'left') delete attrs.align;
+    else if (normalizeImageAlign(changes.align)) attrs.align = changes.align;
+    if (typeof changes.alt === 'string') attrs.alt = changes.alt;
+    const same = (key: string) => attrs[key] === block.attrs?.[key];
+    if (['size', 'align', 'alt'].every(same)) return this;
+    this.edit(index).attrs = attrs;
+    this.docChanged = true;
+    return this;
   }
 
   /**

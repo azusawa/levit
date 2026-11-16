@@ -116,7 +116,8 @@ export function domSelectionToEditorSelection(container: HTMLElement): EditorSel
   return {
     anchor: isBackward ? end : start,
     head: isBackward ? start : end,
-    isCollapsed: sel.isCollapsed,
+    // A range around one image (or divider) is the caret on it.
+    isCollapsed: sel.isCollapsed || (start.blockId === end.blockId && start.offset === end.offset),
   };
 }
 
@@ -205,6 +206,11 @@ export function positionToDOMPoint(
   return findDOMPoint(blockEl, offset);
 }
 
+/** True for the element of an image block, which can be selected as a whole. */
+export function isImageElement(el: Element): boolean {
+  return el.classList.contains('levit-block-image') && el.getAttribute('contenteditable') === 'false';
+}
+
 export function restoreDOMSelection(container: HTMLElement, sel: EditorSelection): void {
   const domSel = window.getSelection();
   if (!domSel) return;
@@ -213,6 +219,17 @@ export function restoreDOMSelection(container: HTMLElement, sel: EditorSelection
   if (!anchorBlock) return;
 
   const range = document.createRange();
+
+  if (sel.isCollapsed && isImageElement(anchorBlock)) {
+    // A selected image: the browser selection goes around it, so copying
+    // copies it, and it reads back as the image (domSelectionToEditorSelection).
+    const index = Array.prototype.indexOf.call(container.childNodes, anchorBlock);
+    range.setStart(container, index);
+    range.setEnd(container, index + 1);
+    domSel.removeAllRanges();
+    domSel.addRange(range);
+    return;
+  }
 
   if (sel.isCollapsed) {
     const point = positionToDOMPoint(container, anchorBlock, sel.anchor.offset, false);

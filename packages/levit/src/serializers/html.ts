@@ -12,6 +12,7 @@ import {
 import { cellContent, createCell, tableAtIndex, type TablePosition } from '../core/model/table.js';
 import { defaultSchema, schemaFor, type BlockSpec, type Schema, type SerializerOptions } from '../core/plugin/plugin.js';
 import { normalizeCodeLanguage, normalizeHeadingLevel, sanitizeHref, sanitizeImageSrc } from '../core/model/sanitize.js';
+import { IMAGE_WIDTHS, normalizeImageAlign, normalizeImageSize } from '../core/model/image.js';
 
 /** The element that holds each kind of list item, and how it is opened. */
 const LISTS: Record<string, { tag: string; open: string }> = {
@@ -21,6 +22,20 @@ const LISTS: Record<string, { tag: string; open: string }> = {
 };
 
 const BUILT_IN_HTML_BLOCKS = new Set(BUILT_IN_BLOCK_TYPES);
+
+/**
+ * An image's size and alignment, as data attributes Levit reads back and a
+ * style that shows them where Levit's CSS is not loaded, like in an email.
+ */
+function imageSettings(block: BlockNode): string {
+  const size = normalizeImageSize(block.attrs?.size);
+  const align = normalizeImageAlign(block.attrs?.align);
+  if (!size && !align) return '';
+  const style = ['display: block'];
+  if (size) style.push(`width: ${IMAGE_WIDTHS[size]}`);
+  if (align) style.push(`margin-left: auto${align === 'center' ? '; margin-right: auto' : ''}`);
+  return `${size ? ` data-size="${size}"` : ''}${align ? ` data-align="${align}"` : ''} style="${style.join('; ')}"`;
+}
 
 export function documentToHTML(doc: DocumentData, options: SerializerOptions = {}): string {
   const schema = schemaFor(options.plugins);
@@ -74,7 +89,7 @@ export function documentToHTML(doc: DocumentData, options: SerializerOptions = {
         break;
       case 'image': {
         const src = sanitizeImageSrc(block.attrs?.src);
-        if (src) html += `<img src="${escapeHTML(src)}" alt="${escapeHTML(String(block.attrs?.alt ?? ''))}">`;
+        if (src) html += `<img src="${escapeHTML(src)}" alt="${escapeHTML(String(block.attrs?.alt ?? ''))}"${imageSettings(block)}>`;
         break;
       }
       case 'code_block': {
@@ -328,7 +343,14 @@ function readBlockElement(el: Element, ctx: Context, out: BlockNode[]): void {
     out.push(createBlock(spec.type, attrs, content));
   } else if (tag === 'img') {
     const src = sanitizeImageSrc(el.getAttribute('src'));
-    if (src) out.push(createBlock('image', { src, alt: el.getAttribute('alt') ?? '' }));
+    if (src) {
+      const attrs: Record<string, string> = { src, alt: el.getAttribute('alt') ?? '' };
+      const size = normalizeImageSize(el.getAttribute('data-size'));
+      const align = normalizeImageAlign(el.getAttribute('data-align'));
+      if (size) attrs.size = size;
+      if (align) attrs.align = align;
+      out.push(createBlock('image', attrs));
+    }
   } else if (/^h[1-6]$/.test(tag) || (LEAF_TAGS.has(tag) && !holdsBlocks(el))) {
     readLeaf(el, tag, ctx, out);
   } else if (LEAF_TAGS.has(tag)) {

@@ -165,6 +165,78 @@ test.describe('dividers and images', () => {
     await page.keyboard.type('new');
     expect((await blocks(page)).map((b) => [b.type, text(b)])).toEqual([['paragraph', 'new']]);
   });
+
+  async function textImageText(page: Page) {
+    await page.evaluate((png) => {
+      (window as any).editor.setJSON({
+        version: 1,
+        blocks: [
+          { id: 'a', type: 'paragraph', content: [{ text: 'before' }] },
+          { id: 'i', type: 'image', attrs: { src: `data:image/png;base64,${png}`, alt: 'dot' }, content: [{ text: '' }] },
+          { id: 'b', type: 'paragraph', content: [{ text: 'after' }] },
+        ],
+      });
+    }, PNG);
+  }
+  const head = (page: Page) => page.evaluate(() => (window as any).editor.state.selection.head);
+  const figure = (page: Page) => editorRoot(page).locator('figure');
+
+  test('a click selects an image with an outline; Backspace deletes it', async ({ page }) => {
+    await textImageText(page);
+    await figure(page).locator('img').click();
+    await expect(figure(page)).toHaveAttribute('data-selected', '');
+    expect(await head(page)).toEqual({ blockId: 'i', offset: 0 });
+    expect(await figure(page).locator('img').evaluate((img) => getComputedStyle(img).outlineStyle)).toBe('solid');
+    await page.keyboard.press('Backspace');
+    expect((await blocks(page)).map((b) => b.type)).toEqual(['paragraph', 'paragraph']);
+    await page.keyboard.type('!');
+    expect((await blocks(page)).map(text)).toEqual(['before!', 'after']);
+  });
+
+  test('the arrow keys stop on an image and go on past it', async ({ page }) => {
+    await textImageText(page);
+    await editorRoot(page).locator('[data-block-id="b"]').click();
+    await page.evaluate(() => {
+      const e = (window as any).editor;
+      e.dispatch(e.state.tr.setSelection({ anchor: { blockId: 'b', offset: 0 }, head: { blockId: 'b', offset: 0 }, isCollapsed: true }));
+    });
+    await page.keyboard.press('ArrowLeft');
+    await expect(figure(page)).toHaveAttribute('data-selected', '');
+    await page.keyboard.press('ArrowLeft');
+    expect(await head(page)).toEqual({ blockId: 'a', offset: 6 });
+    await expect(figure(page)).not.toHaveAttribute('data-selected', '');
+    await page.keyboard.press('ArrowRight');
+    await expect(figure(page)).toHaveAttribute('data-selected', '');
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.type('>');
+    expect((await blocks(page)).map(text)).toEqual(['before', '', '>after']);
+  });
+
+  test('typing or Enter on a selected image writes in a new line after it', async ({ page }) => {
+    await textImageText(page);
+    await figure(page).locator('img').click();
+    await page.keyboard.type('x');
+    expect((await blocks(page)).map((b) => [b.type, text(b)])).toEqual([
+      ['paragraph', 'before'],
+      ['image', ''],
+      ['paragraph', 'x'],
+      ['paragraph', 'after'],
+    ]);
+  });
+
+  test('a size and an alignment show on the page', async ({ page }) => {
+    await textImageText(page);
+    const width = () => figure(page).locator('img').evaluate((img) => img.getBoundingClientRect().width);
+    const editorWidth = await editorRoot(page).evaluate((el) => el.getBoundingClientRect().width);
+    await figure(page).locator('img').click();
+    await page.evaluate(() => (window as any).editor.chain().updateImage({ size: 'medium', align: 'right' }).run());
+    const img = await figure(page).locator('img').boundingBox();
+    const box = await figure(page).boundingBox();
+    expect(Math.abs((await width()) - box!.width / 2)).toBeLessThan(2);
+    expect(Math.abs(img!.x + img!.width - (box!.x + box!.width))).toBeLessThan(2);
+    expect(box!.width).toBeLessThanOrEqual(editorWidth);
+    await expect(figure(page)).toHaveAttribute('data-selected', '');
+  });
 });
 
 test.describe('code block languages', () => {

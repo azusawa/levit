@@ -1,5 +1,6 @@
 import { LevitEditor } from '../editor.js';
-import { findBlockIndex, isListItem, sliceDocument } from '../model/document.js';
+import { findBlockIndex, getBlockText, isListItem, sliceDocument } from '../model/document.js';
+import type { BlockNode, EditorSelection } from '../model/types.js';
 import { readClipboard, writeClipboard } from './clipboard.js';
 import { tableAt } from '../model/table.js';
 import { matchesShortcut } from '../plugin/plugin.js';
@@ -7,8 +8,15 @@ import { TABLE_SHORTCUTS, type TableShortcutCommand } from './table-shortcuts.js
 import {
   domRangeToEditorSelection,
   domSelectionToEditorSelection,
+  isImageElement,
   positionFromPoint,
 } from './selection.js';
+
+const caretAt = (blockId: string, offset: number): EditorSelection => ({
+  anchor: { blockId, offset },
+  head: { blockId, offset },
+  isCollapsed: true,
+});
 
 type Chain = ReturnType<LevitEditor['chain']>;
 
@@ -157,6 +165,8 @@ export class InputController {
     if (this.isComposing) return;
     this.syncSelectionFromDOM();
 
+    if (this.imageArrowKey(e)) return;
+
     const isMod = e.metaKey || e.ctrlKey;
     const hasModifier = isMod || e.altKey;
 
@@ -291,6 +301,16 @@ export class InputController {
     // Pressing the language label must not move the caret; the click asks.
     if (this.languageLabel(e.target)) {
       e.preventDefault();
+      return;
+    }
+
+    // Pressing an image selects it.
+    const figure = (e.target as Element | null)?.closest?.('[data-block-id]');
+    if (figure?.parentNode === this.container && isImageElement(figure) && this.editor.isEditable) {
+      e.preventDefault();
+      const blockId = figure.getAttribute('data-block-id')!;
+      this.container.focus({ preventScroll: true });
+      this.editor.dispatch(this.editor.state.tr.setSelection(caretAt(blockId, 0)));
       return;
     }
 
@@ -449,6 +469,46 @@ export class InputController {
     if (!content) return;
     if ('text' in content) this.editor.chain().insertPlainText(content.text).run();
     else this.editor.chain().insertFragment(content.blocks).run();
+  }
+
+  /**
+   * The arrow keys stop on images: Left at the start of the block after one,
+   * or Right at the end of the block before one, selects it. From a selected
+   * image, Left and Up go to the end of the block before it, Right and Down to
+   * the start of the block after it (or the next image). Dividers are stepped
+   * over. Returns true when it handled the key.
+   */
+  private imageArrowKey(e: KeyboardEvent): boolean {
+    const dir = { ArrowLeft: -1, ArrowUp: -1, ArrowRight: 1, ArrowDown: 1 }[e.key];
+    if (!dir || e.shiftKey || e.altKey || e.metaKey || e.ctrlKey) return false;
+    const { doc, selection } = this.editor.state;
+    if (!selection.isCollapsed) return false;
+    const index = findBlockIndex(doc, selection.head.blockId);
+    const block = doc.blocks[index];
+    if (!block) return false;
+    const isImage = (b: BlockNode | undefined) => b?.type === 'image';
+    const atomic = (b: BlockNode) => this.editor.schema.isAtom(b.type);
+
+    if (isImage(block)) {
+      // The nearest block that is not a divider, in the key's direction.
+      let i = index + dir;
+      while (doc.blocks[i] && atomic(doc.blocks[i]) && !isImage(doc.blocks[i])) i += dir;
+      const next = doc.blocks[i];
+      e.preventDefault();
+      if (!next) return true;
+      const offset = dir < 0 && !atomic(next) ? getBlockText(next).length : 0;
+      this.editor.dispatch(this.editor.state.tr.setSelection(caretAt(next.id, offset)));
+      return true;
+    }
+
+    // Only Left and Right step onto an image; Up and Down move by lines.
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return false;
+    const atEdge = dir < 0 ? selection.head.offset === 0 : selection.head.offset === getBlockText(block).length;
+    const next = doc.blocks[index + dir];
+    if (!atEdge || !isImage(next) || atomic(block)) return false;
+    e.preventDefault();
+    this.editor.dispatch(this.editor.state.tr.setSelection(caretAt(next.id, 0)));
+    return true;
   }
 
   private handleSelectionChange(): void {

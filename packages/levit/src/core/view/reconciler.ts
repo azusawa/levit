@@ -1,4 +1,5 @@
 import { colorCSS, HIGHLIGHT_FALLBACK, normalizeColor } from '../model/colors.js';
+import { normalizeImageAlign, normalizeImageSize } from '../model/image.js';
 import { BlockNode, InlineMark, InlineNode } from '../model/types.js';
 import { EditorState } from '../state/state.js';
 import { normalizeCodeLanguage, normalizeHeadingLevel, sanitizeHref, sanitizeImageSrc } from '../model/sanitize.js';
@@ -303,6 +304,14 @@ export class DOMReconciler {
     const indent = listIndent(block);
     if (indent > 0) el.setAttribute('data-indent', String(indent));
     else el.removeAttribute('data-indent');
+    // An image's size and alignment (theme.css draws them). Cleared like the rest.
+    const image = block.type === 'image';
+    const size = image ? normalizeImageSize(block.attrs?.size) : null;
+    const align = image ? normalizeImageAlign(block.attrs?.align) : null;
+    if (size) el.dataset.size = size;
+    else delete el.dataset.size;
+    if (align) el.dataset.align = align;
+    else delete el.dataset.align;
   }
 
   private updateBlockContent(el: HTMLElement, block: BlockNode): void {

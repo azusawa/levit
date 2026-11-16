@@ -1,9 +1,10 @@
 import { BlockNode, DocumentData, EditorSelection, InlineMark } from './model/types.js';
 import { EditorState } from './state/state.js';
 import { HistoryManager } from './state/history.js';
-import { Transaction } from './state/transaction.js';
+import { Transaction, type ImageChanges } from './state/transaction.js';
+import { normalizeImageAlign, normalizeImageSize, type ImageAlign, type ImageSize } from './model/image.js';
 import { DOMReconciler } from './view/reconciler.js';
-import { restoreDOMSelection } from './view/selection.js';
+import { isImageElement, restoreDOMSelection } from './view/selection.js';
 import { InputController } from './view/controller.js';
 import { DOMGuard } from './view/dom-guard.js';
 import { documentFromJSON, documentToJSON } from '../serializers/json.js';
@@ -193,6 +194,15 @@ export class ChainedCommands {
   /** Inserts an image at the caret. Unsafe URLs are ignored. */
   insertImage(image: { src: string; alt?: string }): this {
     this.tr.insertImage(image);
+    return this;
+  }
+
+  /**
+   * Changes the selected image: size ('small', 'medium', 'full' or null for
+   * its own size), alignment ('left', 'center', 'right') and alt text.
+   */
+  updateImage(changes: ImageChanges): this {
+    this.tr.updateImage(changes);
     return this;
   }
 
@@ -500,6 +510,7 @@ export class LevitEditor {
   }
 
   private notifySelection(): void {
+    this.markSelectedImage();
     this.events.emit('selectionUpdate', { editor: this, selection: this.state.selection });
     this.options.onSelectionChange?.(this.state.selection);
   }
@@ -507,7 +518,24 @@ export class LevitEditor {
   /** Renders the model and tells the guard that these DOM changes are ours. */
   private render(): void {
     this.reconciler.render(this.state);
+    this.markSelectedImage();
     this.guard?.ignorePending();
+  }
+
+  /**
+   * Marks the selected image (data-selected) for theme.css, and the editor
+   * while one is (levit-image-selected), which hides the caret.
+   */
+  private markSelectedImage(): void {
+    const { selection } = this.state;
+    const id = selection.isCollapsed ? selection.head.blockId : null;
+    const el = id ? this.container.querySelector<HTMLElement>(`:scope > [data-block-id="${CSS.escape(id)}"]`) : null;
+    const selected = el && isImageElement(el) ? el : null;
+    for (const old of this.container.querySelectorAll<HTMLElement>(':scope > [data-selected]')) {
+      if (old !== selected) old.removeAttribute('data-selected');
+    }
+    selected?.setAttribute('data-selected', '');
+    this.container.classList.toggle('levit-image-selected', !!selected);
   }
 
   chain(): ChainedCommands {
@@ -705,6 +733,19 @@ export class LevitEditor {
     return table ? normalizeColor(this.state.doc.blocks[table.start].attrs?.border) : null;
   }
 
+  /** The selected image (the caret on it) with its settings, or null. */
+  getSelectedImage(): { src: string; alt: string; size: ImageSize | null; align: ImageAlign } | null {
+    const { doc, selection } = this.state;
+    const block = doc.blocks[findBlockIndex(doc, selection.head.blockId)];
+    if (block?.type !== 'image' || !selection.isCollapsed) return null;
+    return {
+      src: String(block.attrs?.src ?? ''),
+      alt: typeof block.attrs?.alt === 'string' ? block.attrs.alt : '',
+      size: normalizeImageSize(block.attrs?.size),
+      align: normalizeImageAlign(block.attrs?.align) ?? 'left',
+    };
+  }
+
   /** True when the caret is in a table. */
   isInTable(): boolean {
     const { doc, selection } = this.state;
@@ -792,6 +833,7 @@ export class LevitEditor {
       else this.container.setAttribute(name, value);
     }
     if (this.addedRootClass) this.container.classList.remove('levit-editor-root');
+    this.container.classList.remove('levit-image-selected');
   }
 }
 

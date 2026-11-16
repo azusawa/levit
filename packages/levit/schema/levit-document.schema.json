@@ -308,6 +308,21 @@
                 },
                 "alt": {
                   "type": "string"
+                },
+                "size": {
+                  "enum": [
+                    "small",
+                    "medium",
+                    "full"
+                  ],
+                  "description": "A share of the width: small, medium or full. Leave it out for the image's own size."
+                },
+                "align": {
+                  "enum": [
+                    "center",
+                    "right"
+                  ],
+                  "description": "Leave it out for the left."
                 }
               },
               "required": [

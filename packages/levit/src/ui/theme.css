@@ -476,6 +476,42 @@ figure.levit-block-image img {
   border-radius: var(--levit-radius);
 }
 
+/* Sizes are shares of the editor's width; without one an image keeps its own size. */
+figure.levit-block-image[data-size="small"] img {
+  width: 25%;
+}
+
+figure.levit-block-image[data-size="medium"] img {
+  width: 50%;
+}
+
+figure.levit-block-image[data-size="full"] img {
+  width: 100%;
+}
+
+figure.levit-block-image[data-align="center"] {
+  text-align: center;
+}
+
+figure.levit-block-image[data-align="right"] {
+  text-align: right;
+}
+
+/* A selected image: an outline instead of the browser's selection color, and no caret. */
+figure.levit-block-image[data-selected] img {
+  outline: 2px solid var(--levit-primary);
+  outline-offset: 2px;
+}
+
+figure.levit-block-image::selection,
+figure.levit-block-image img::selection {
+  background: transparent;
+}
+
+.levit-editor-root.levit-image-selected {
+  caret-color: transparent;
+}
+
 /* AI: answers streaming in, and suggestions to accept or reject */
 .levit-editor-root[aria-busy="true"] {
   cursor: progress;

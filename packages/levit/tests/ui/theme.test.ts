@@ -141,4 +141,15 @@ describe('the line color row of the palette', () => {
     expect(css).toMatch(/\.levit-color-row-border \.levit-color-swatch\s*\{[^}]*border-width:\s*3px/);
     expect(css).toMatch(/\.levit-color-row-border \.levit-color-swatch:hover\s*\{[^}]*background-color:\s*var\(--levit-border\)/);
   });
+
+  it('draws image sizes and alignments, and the selected image with an outline and no caret', async () => {
+    const { IMAGE_WIDTHS } = await import('../../src/core/model/image');
+    for (const [size, width] of Object.entries(IMAGE_WIDTHS)) {
+      expect(css).toMatch(new RegExp(`figure\\.levit-block-image\\[data-size="${size}"\\] img\\s*\\{[^}]*width:\\s*${width}`));
+    }
+    expect(css).toMatch(/figure\.levit-block-image\[data-align="center"\]\s*\{[^}]*text-align:\s*center/);
+    expect(css).toMatch(/figure\.levit-block-image\[data-align="right"\]\s*\{[^}]*text-align:\s*right/);
+    expect(css).toMatch(/figure\.levit-block-image\[data-selected\] img\s*\{[^}]*outline:\s*2px solid var\(--levit-primary\)/);
+    expect(css).toMatch(/\.levit-editor-root\.levit-image-selected\s*\{[^}]*caret-color:\s*transparent/);
+  });
 });
