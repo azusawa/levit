@@ -917,6 +917,20 @@ figure.levit-block-image img::selection {
   gap: 3px;
 }
 
+/* The image URL field that the slash menu's Image opens without uploads */
+.levit-image-url {
+  position: absolute;
+  z-index: 1000;
+  align-items: center;
+  gap: 4px;
+  background-color: var(--levit-surface);
+  border: 1px solid var(--levit-border);
+  box-shadow: var(--levit-shadow);
+  border-radius: var(--levit-radius);
+  padding: 4px;
+  animation: levitFadeIn 0.15s ease-out;
+}
+
 .levit-table-picker-cell {
   width: 18px;
   height: 18px;

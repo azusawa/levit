@@ -265,15 +265,19 @@ describe('slash menu', () => {
     menu.destroy();
   });
 
-  it('Image asks for a URL when no upload function is set', () => {
+  it('Image asks for a URL in a field of its own when no upload function is set, not with a prompt', () => {
     const editor = new LevitEditor({ element: container });
     const menu = createSlashMenu(editor);
     const prompt = vi.fn(() => 'https://x.test/a.png');
     vi.stubGlobal('prompt', prompt);
     menu.getItems().find((i) => i.id === 'image')!.action(editor);
-    expect(prompt).toHaveBeenCalled();
+    expect(prompt).not.toHaveBeenCalled();
+    const field = document.querySelector<HTMLInputElement>('.levit-image-url input')!;
+    field.value = 'https://x.test/a.png';
+    field.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
     expect(editor.state.doc.blocks[0]).toMatchObject({ type: 'image', attrs: { src: 'https://x.test/a.png' } });
     menu.destroy();
+    vi.unstubAllGlobals();
   });
 });
 

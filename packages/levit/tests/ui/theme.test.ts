@@ -152,4 +152,9 @@ describe('the line color row of the palette', () => {
     expect(css).toMatch(/figure\.levit-block-image\[data-selected\] img\s*\{[^}]*outline:\s*2px solid var\(--levit-primary\)/);
     expect(css).toMatch(/\.levit-editor-root\.levit-image-selected\s*\{[^}]*caret-color:\s*transparent/);
   });
+
+  it('floats the image URL field like the menus, with the field and its button in a row', () => {
+    expect(css).toMatch(/\.levit-image-url\s*\{[^}]*position:\s*absolute[^}]*background-color:\s*var\(--levit-surface\)/);
+    expect(css).toMatch(/\.levit-image-url\s*\{[^}]*gap:/);
+  });
 });

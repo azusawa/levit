@@ -50,6 +50,28 @@ test.describe('landing page', () => {
     expect(await page.evaluate(() => [...document.fonts].some((f) => f.family.includes('Pretendard')))).toBe(false);
   });
 
+  test('Image in the slash menu asks for a URL in a field, inserts it, and the image toolbar sizes it', async ({ page }) => {
+    await page.goto(SITE);
+    const write = editor(page, 'write');
+    await write.locator('.levit-block').first().click();
+    await page.keyboard.press('End');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('/image');
+    await page.keyboard.press('Enter');
+    const field = page.getByRole('textbox', { name: 'Image URL' });
+    await expect(field).toBeFocused();
+    await field.fill('javascript:alert(1)');
+    await field.press('Enter');
+    await expect(field).toHaveAttribute('aria-invalid', 'true');
+    await field.fill('/levit/icon-192.png');
+    await field.press('Enter');
+    const image = write.locator('figure img');
+    await expect(image).toHaveAttribute('src', '/levit/icon-192.png');
+    await image.click();
+    await page.locator('.levit-image-toolbar').getByRole('button', { name: 'Small' }).click();
+    await expect(write.locator('figure')).toHaveAttribute('data-size', 'small');
+  });
+
   test('the editor takes typing, and the slash menu follows the chosen menu language', async ({ page }) => {
     await page.goto(SITE);
     const quote = editor(page, 'write').locator('blockquote, .levit-block-blockquote').first();

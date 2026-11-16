@@ -115,6 +115,17 @@ describe('<levit-editor>', () => {
     expect(document.querySelector('.levit-image-toolbar')!.getAttribute('data-theme')).toBe('dark');
   });
 
+  it('the slash menu\'s size grid and image URL field take the theme too, when they open', () => {
+    const el = mount({ theme: 'dark' });
+    el.editor.focus();
+    const menu = createSlashMenu(el.editor);
+    menu.getItems().find((i) => i.id === 'image')!.action(el.editor);
+    expect(document.querySelector('.levit-image-url')!.getAttribute('data-theme')).toBe('dark');
+    el.editor.focus();
+    menu.getItems().find((i) => i.id === 'table')!.action(el.editor);
+    expect(document.querySelector('.levit-table-picker')!.getAttribute('data-theme')).toBe('dark');
+  });
+
   it('removing placeholder or theme goes back to the defaults', () => {
     const el = mount({ placeholder: 'Write here', theme: 'dark' });
     el.removeAttribute('placeholder');

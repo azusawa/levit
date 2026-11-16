@@ -1,5 +1,7 @@
 import { LevitEditor } from '../core/editor.js';
 import { getBlockText } from '../core/model/document.js';
+import { sanitizeImageSrc } from '../core/model/sanitize.js';
+import type { EditorSelection } from '../core/model/types.js';
 import { format } from '../i18n/messages.js';
 
 export interface SlashMenuItem {
@@ -16,21 +18,16 @@ export interface SlashMenuInstance {
   destroy: () => void;
 }
 
-/** Opens a file picker when uploads are set up, otherwise asks for a URL. */
-function chooseImage(editor: LevitEditor): void {
-  if (editor.canUploadImages) {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.multiple = true;
-    input.addEventListener('change', () => {
-      void editor.uploadImages(Array.from(input.files ?? []));
-    });
-    input.click();
-    return;
-  }
-  const src = window.prompt(editor.messages.imageUrlPrompt);
-  if (src && src.trim()) editor.chain().insertImage({ src: src.trim() }).run();
+/** Opens a file picker for the uploadImage option. */
+function chooseImageFiles(editor: LevitEditor): void {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.multiple = true;
+  input.addEventListener('change', () => {
+    void editor.uploadImages(Array.from(input.files ?? []));
+  });
+  input.click();
 }
 
 let menuCount = 0;
@@ -153,7 +150,8 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
       title: m.image,
       description: m.imageDescription,
       icon: '🖼',
-      action: (ed) => chooseImage(ed),
+      // Files when uploads are set up, otherwise a URL.
+      action: (ed) => (ed.canUploadImages ? chooseImageFiles(ed) : openUrlField()),
     },
     {
       id: 'table',
@@ -300,6 +298,13 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
     return offset === 0 || /\s/.test(before) ? { blockId: block.id, offset } : null;
   }
 
+  /** The grid and the URL field live in <body> too: they take the menu's theme (set by <levit-editor>). */
+  function followTheme(el: HTMLElement) {
+    const theme = menu.getAttribute('data-theme');
+    if (theme) el.setAttribute('data-theme', theme);
+    else el.removeAttribute('data-theme');
+  }
+
   // The size grid that choosing "Table" opens. Focus stays in the text, as
   // with the menu: the arrows change the size, Enter inserts the table and
   // Escape closes the grid. The size is read out as it changes.
@@ -345,6 +350,7 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
 
   /** Opens the grid under the caret's line, where the table will go. */
   function openPicker() {
+    followTheme(picker);
     pickerOpen = true;
     setSize(3, 3);
     const id = editor.state.selection.head.blockId;
@@ -405,6 +411,87 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
     e.preventDefault();
     return true;
   }
+
+  // The URL field that choosing "Image" opens when there are no uploads. The
+  // focus goes into it; Enter or Insert puts the image where the caret was,
+  // Escape (or Enter with nothing typed) closes it.
+  const urlBox = part('div', 'levit-image-url');
+  urlBox.setAttribute('role', 'group');
+  urlBox.setAttribute('aria-label', m.image);
+  urlBox.style.display = 'none';
+  const urlField = document.createElement('input');
+  urlField.type = 'url';
+  urlField.className = 'levit-bubble-link-input';
+  urlField.placeholder = 'https://';
+  urlField.setAttribute('aria-label', m.imageUrlPrompt);
+  const urlInsert = part('button', 'levit-bubble-btn', m.insert) as HTMLButtonElement;
+  urlInsert.type = 'button';
+  urlBox.append(urlField, urlInsert);
+  // Where the caret was: the field has the focus while it is open.
+  let urlAt: EditorSelection | null = null;
+
+  function openUrlField() {
+    followTheme(urlBox);
+    urlAt = editor.state.selection;
+    const id = urlAt.head.blockId;
+    const line = editor.container.querySelector(`[data-block-id="${CSS.escape(id)}"]`);
+    const rect = (line ?? editor.container).getBoundingClientRect();
+    urlField.value = '';
+    urlField.removeAttribute('aria-invalid');
+    urlBox.style.display = 'flex';
+    const width = urlBox.getBoundingClientRect().width;
+    const left = Math.max(10, Math.min(rect.left, window.innerWidth - width - 10));
+    urlBox.style.top = `${rect.bottom + 6 + window.scrollY}px`;
+    urlBox.style.left = `${left + window.scrollX}px`;
+    urlField.focus();
+  }
+
+  /** Closes the field and puts the focus and caret back in the editor. */
+  function closeUrlField() {
+    if (urlBox.style.display === 'none') return;
+    const at = urlAt;
+    urlAt = null;
+    urlBox.style.display = 'none';
+    if (!at) return;
+    editor.container.focus({ preventScroll: true });
+    editor.dispatch(editor.state.tr.setSelection(at));
+  }
+
+  function insertUrl() {
+    const src = urlField.value.trim();
+    if (src && !sanitizeImageSrc(src)) {
+      urlField.setAttribute('aria-invalid', 'true');
+      urlField.focus();
+      return;
+    }
+    closeUrlField();
+    if (src) editor.chain().insertImage({ src }).run();
+  }
+
+  urlField.addEventListener('keydown', (e) => {
+    if (e.isComposing) return;
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      insertUrl();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      closeUrlField();
+    }
+  });
+  urlField.addEventListener('input', () => urlField.removeAttribute('aria-invalid'));
+  urlInsert.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    insertUrl();
+  });
+  urlInsert.addEventListener('click', (e) => {
+    if (e.detail === 0) insertUrl();
+  });
+  // Focus going anywhere else closes it, leaving the caret where it is.
+  urlBox.addEventListener('focusout', (e) => {
+    if (e.relatedTarget instanceof Node && urlBox.contains(e.relatedTarget)) return;
+    urlAt = null;
+    urlBox.style.display = 'none';
+  });
 
   let positionTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -497,7 +584,7 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
   // Capture phase: run before the editor's own keydown handler, so Enter picks
   // the menu item instead of splitting the block.
   editor.container.addEventListener('keydown', handleKeyDown, true);
-  document.body.append(menu, picker);
+  document.body.append(menu, picker, urlBox);
 
   const instance: SlashMenuInstance = {
     element: menu,
@@ -515,6 +602,7 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
       editor.container.removeEventListener('keydown', handleKeyDown, true);
       menu.remove();
       picker.remove();
+      urlBox.remove();
     },
   };
   slashMenus.set(editor, instance);
