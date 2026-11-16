@@ -522,20 +522,25 @@ export class LevitEditor {
     this.guard?.ignorePending();
   }
 
+  /** What markSelectedImage last looked at, and the image it marked. */
+  private markedImage: { id: string | null; doc: DocumentData; el: HTMLElement | null } | null = null;
+
   /**
    * Marks the selected image (data-selected) for theme.css, and the editor
    * while one is (levit-image-selected), which hides the caret.
    */
   private markSelectedImage(): void {
-    const { selection } = this.state;
+    const { selection, doc } = this.state;
     const id = selection.isCollapsed ? selection.head.blockId : null;
+    // Render and the selection notice both ask after one change: once is enough.
+    const last = this.markedImage;
+    if (last && last.id === id && last.doc === doc && (!last.el || last.el.isConnected)) return;
     const el = id ? this.container.querySelector<HTMLElement>(`:scope > [data-block-id="${CSS.escape(id)}"]`) : null;
     const selected = el && isImageElement(el) ? el : null;
-    for (const old of this.container.querySelectorAll<HTMLElement>(':scope > [data-selected]')) {
-      if (old !== selected) old.removeAttribute('data-selected');
-    }
+    if (last?.el && last.el !== selected) last.el.removeAttribute('data-selected');
     selected?.setAttribute('data-selected', '');
     this.container.classList.toggle('levit-image-selected', !!selected);
+    this.markedImage = { id, doc, el: selected };
   }
 
   chain(): ChainedCommands {

@@ -117,7 +117,7 @@ export function domSelectionToEditorSelection(container: HTMLElement): EditorSel
     anchor: isBackward ? end : start,
     head: isBackward ? start : end,
     // A range around one image (or divider) is the caret on it.
-    isCollapsed: sel.isCollapsed || (start.blockId === end.blockId && start.offset === end.offset),
+    isCollapsed: sel.isCollapsed || (start.blockId === end.blockId && start.offset === end.offset && isAtomBlock(container, start.blockId)),
   };
 }
 
@@ -204,6 +204,12 @@ export function positionToDOMPoint(
     return { node: container, offset: isStart ? index : index + 1 };
   }
   return findDOMPoint(blockEl, offset);
+}
+
+/** True when the block with this id is drawn as one piece without text (an image, a divider). */
+function isAtomBlock(container: HTMLElement, blockId: string): boolean {
+  const el = container.querySelector(`[data-block-id="${CSS.escape(blockId)}"]`);
+  return el?.getAttribute('contenteditable') === 'false';
 }
 
 /** True for the element of an image block, which can be selected as a whole. */

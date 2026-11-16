@@ -217,7 +217,7 @@ describe('image toolbar', () => {
     const imgEl = figure.querySelector('img')!;
     const rect = (top: number) => ({ top, bottom: top + 100, left: 40, right: 240, width: 200, height: 100, x: 40, y: top, toJSON() {} }) as DOMRect;
     const spy = vi.spyOn(imgEl, 'getBoundingClientRect').mockReturnValue(rect(300));
-    vi.spyOn(toolbar.element, 'getBoundingClientRect').mockReturnValue({ height: 36 } as DOMRect);
+    vi.spyOn(toolbar.element, 'getBoundingClientRect').mockReturnValue({ height: 36, width: 300 } as DOMRect);
     place('i');
     expect(toolbar.element.style.top).toBe(`${300 - 36 - 8 + window.scrollY}px`);
     expect(toolbar.element.style.left).toBe(`${40 + window.scrollX}px`);
@@ -241,5 +241,38 @@ describe('image toolbar', () => {
     const el = toolbar.element;
     editor.destroy();
     expect(document.body.contains(el)).toBe(false);
+  });
+
+  it('stays inside the window on the right, for a right-aligned image', () => {
+    make();
+    const imgEl = element.querySelector('figure img')!;
+    vi.spyOn(imgEl, 'getBoundingClientRect').mockReturnValue({ top: 300, bottom: 400, left: window.innerWidth - 100, right: window.innerWidth, width: 100, height: 100 } as DOMRect);
+    vi.spyOn(toolbar.element, 'getBoundingClientRect').mockReturnValue({ height: 36, width: 300 } as DOMRect);
+    place('i');
+    expect(toolbar.element.style.left).toBe(`${window.innerWidth - 300 - 10 + window.scrollX}px`);
+  });
+
+  it('its buttons do nothing while the editor is locked, as during an AI answer', () => {
+    make();
+    place('i');
+    editor.setEditable(false);
+    press(button('Medium'));
+    press(button('Delete image'));
+    expect(attrs()).toEqual({ src: 'https://x.test/a.png', alt: 'A dot' });
+    expect(isShown()).toBe(false);
+  });
+
+  it('saving alt text for an image that went away leaves the caret in the document', () => {
+    make();
+    place('i');
+    press(button('Alt text'));
+    // Someone else deletes the image meanwhile.
+    const tr = editor.state.tr;
+    tr.setSelection({ anchor: { blockId: 'i', offset: 0 }, head: { blockId: 'i', offset: 0 }, isCollapsed: true }).deleteForward();
+    editor.dispatch(tr);
+    altField().focus();
+    key(altField(), 'Enter');
+    const ids = editor.state.doc.blocks.map((b) => b.id);
+    expect(ids).toContain(editor.state.selection.head.blockId);
   });
 });

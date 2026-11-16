@@ -208,3 +208,56 @@ describe('image settings in HTML, Markdown and the AI schema', () => {
     expect(validateDocument(doc(img('i', { align: 'justify' }))).valid).toBe(false);
   });
 });
+
+describe('review fixes: selecting images', () => {
+  it('an arrow the slash menu\'s size grid took does not also select an image', async () => {
+    const { createSlashMenu } = await import('../../src/plugins/slash-menu');
+    make([para('a', 'one'), img('i'), para('b', '')]);
+    const menu = createSlashMenu(editor);
+    put('b', 0);
+    menu.getItems().find((i) => i.id === 'table')!.action(editor);
+    key('ArrowLeft');
+    expect(head()).toEqual(['b', 0, true]);
+    menu.destroy();
+  });
+
+  it('copy puts the selected image on the clipboard with its settings, and cut removes it', () => {
+    make([para('a', 'one'), img('i', { size: 'medium', align: 'center' }), para('b', 'two')]);
+    put('i');
+    const copy = new DataTransfer();
+    const e = new ClipboardEvent('copy', { clipboardData: copy, bubbles: true, cancelable: true });
+    element.dispatchEvent(e);
+    expect(e.defaultPrevented).toBe(true);
+    const html = copy.getData('text/html');
+    expect(html).toContain('data-size="medium"');
+    expect(html).toContain('data-align="center"');
+    expect(html).not.toContain('data-selected');
+    expect(htmlToDocument(html).blocks.find((b) => b.type === 'image')?.attrs).toMatchObject({ size: 'medium', align: 'center' });
+
+    element.dispatchEvent(new ClipboardEvent('cut', { clipboardData: new DataTransfer(), bubbles: true, cancelable: true }));
+    expect(editor.state.doc.blocks.map((b) => b.id)).toEqual(['a', 'b']);
+  });
+
+  it('a pasted figure keeps the size and alignment written on it', () => {
+    const doc = htmlToDocument('<figure data-size="small" data-align="right"><img src="https://x.test/a.png" alt="A"></figure>');
+    expect(doc.blocks[0].attrs).toEqual({ src: 'https://x.test/a.png', alt: 'A', size: 'small', align: 'right' });
+  });
+
+  it('from an image with only dividers after it, the arrows go to the divider, so the end can be reached', () => {
+    make([para('a', 'one'), img('i'), hr('h')]);
+    put('i');
+    key('ArrowDown');
+    expect(head()).toEqual(['h', 0, true]);
+  });
+
+  it('a range that is not around an image or divider is not read as a caret', () => {
+    make([para('a', 'one'), para('b', '')]);
+    // Around the <br> of an empty line: both ends are the start of the line.
+    const range = document.createRange();
+    range.setStart(figure('b'), 0);
+    range.setEnd(figure('b'), 1);
+    getSelection()!.removeAllRanges();
+    getSelection()!.addRange(range);
+    expect(domSelectionToEditorSelection(element)?.isCollapsed).toBe(false);
+  });
+});

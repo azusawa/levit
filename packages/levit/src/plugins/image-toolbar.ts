@@ -1,5 +1,6 @@
 import { LevitEditor } from '../core/editor.js';
 import type { ImageAlign, ImageSize } from '../core/model/image.js';
+import { caretAt, findBlockIndex } from '../core/model/document.js';
 import { rovingToolbar } from './toolbar-keys.js';
 import { lineIcon } from './toolbar-icons.js';
 
@@ -62,6 +63,12 @@ export function createImageToolbar(editor: LevitEditor): ImageToolbarInstance {
     { icon: 'delete', title: m.deleteImage, action: () => editor.chain().deleteForward().run(), group: true },
   ];
 
+  /** Runs a button's action, unless the editor is locked (as while an AI answer streams in). */
+  function run(action: () => void, focusTarget?: unknown) {
+    if (editor.isEditable) action();
+    update(focusTarget);
+  }
+
   // The buttons give way to the alt text field.
   const buttonRow = document.createElement('div');
   buttonRow.className = 'levit-image-toolbar-buttons';
@@ -83,16 +90,14 @@ export function createImageToolbar(editor: LevitEditor): ImageToolbarInstance {
     // The mouse acts on mousedown so the editor keeps its selection.
     btn.addEventListener('mousedown', (e) => {
       e.preventDefault();
-      b.action();
-      update();
+      run(b.action);
     });
     // Enter or Space on a focused button sends a click without a mouse. The
     // browser can move focus to the editor as the selection goes back around
     // the image; a keyboard user stays on the button.
     btn.addEventListener('click', (e) => {
       if (e.detail !== 0) return;
-      b.action();
-      update(menu);
+      run(b.action, menu);
       if (menu.style.display !== 'none' && buttonRow.hidden === false && !menu.contains(document.activeElement)) btn.focus();
     });
     buttonRow.appendChild(btn);
@@ -146,10 +151,15 @@ export function createImageToolbar(editor: LevitEditor): ImageToolbarInstance {
     const keyboard = altFromKeyboard;
     closeAltField();
     if (!id) return;
-    const caret = { anchor: { blockId: id, offset: 0 }, head: { blockId: id, offset: 0 }, isCollapsed: true };
     editor.container.focus({ preventScroll: true });
-    editor.dispatch(editor.state.tr.setSelection(caret));
-    if (save) editor.chain().updateImage({ alt: altField.value.trim() }).run();
+    // The image may have gone meanwhile (a collaborator, an undo): then the
+    // caret stays where it is.
+    if (findBlockIndex(editor.state.doc, id) !== -1) {
+      editor.dispatch(editor.state.tr.setSelection(caretAt(id)));
+      if (save && editor.isEditable) editor.chain().updateImage({ alt: altField.value.trim() }).run();
+    } else {
+      editor.focus();
+    }
     update();
     if (keyboard) altButton.focus();
   }
@@ -221,7 +231,10 @@ export function createImageToolbar(editor: LevitEditor): ImageToolbarInstance {
     const above = rect.top - height - 8;
     const top = above >= 10 ? above : rect.bottom + 8;
     menu.style.top = `${top + window.scrollY}px`;
-    menu.style.left = `${Math.max(10, rect.left) + window.scrollX}px`;
+    // Inside the window, also for an image on the right.
+    const width = menu.getBoundingClientRect().width;
+    const left = Math.max(10, Math.min(rect.left, window.innerWidth - width - 10));
+    menu.style.left = `${left + window.scrollX}px`;
   }
 
   const onFocusOut = (e: FocusEvent) => update(e.relatedTarget);

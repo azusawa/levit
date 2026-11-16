@@ -345,8 +345,11 @@ function readBlockElement(el: Element, ctx: Context, out: BlockNode[]): void {
     const src = sanitizeImageSrc(el.getAttribute('src'));
     if (src) {
       const attrs: Record<string, string> = { src, alt: el.getAttribute('alt') ?? '' };
-      const size = normalizeImageSize(el.getAttribute('data-size'));
-      const align = normalizeImageAlign(el.getAttribute('data-align'));
+      // On the <img> as Levit writes it, or on a <figure> around it (Levit's
+      // own editor, copied by the browser).
+      const setting = (name: string) => el.getAttribute(name) ?? el.closest('figure')?.getAttribute(name);
+      const size = normalizeImageSize(setting('data-size'));
+      const align = normalizeImageAlign(setting('data-align'));
       if (size) attrs.size = size;
       if (align) attrs.align = align;
       out.push(createBlock('image', attrs));

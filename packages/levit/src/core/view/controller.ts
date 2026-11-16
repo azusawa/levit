@@ -1,6 +1,6 @@
 import { LevitEditor } from '../editor.js';
-import { findBlockIndex, getBlockText, isListItem, sliceDocument } from '../model/document.js';
-import type { BlockNode, EditorSelection } from '../model/types.js';
+import { caretAt, findBlockIndex, getBlockText, isListItem, sliceDocument } from '../model/document.js';
+import type { BlockNode } from '../model/types.js';
 import { readClipboard, writeClipboard } from './clipboard.js';
 import { tableAt } from '../model/table.js';
 import { matchesShortcut } from '../plugin/plugin.js';
@@ -12,11 +12,6 @@ import {
   positionFromPoint,
 } from './selection.js';
 
-const caretAt = (blockId: string, offset: number): EditorSelection => ({
-  anchor: { blockId, offset },
-  head: { blockId, offset },
-  isCollapsed: true,
-});
 
 type Chain = ReturnType<LevitEditor['chain']>;
 
@@ -415,13 +410,18 @@ export class InputController {
   }
 
   private handleCut(e: ClipboardEvent): void {
-    if (this.writeSelection(e)) this.editor.chain().deleteSelection().run();
+    if (!this.writeSelection(e)) return;
+    // A selected image is a caret on it: deleting forward removes it.
+    if (this.editor.getSelectedImage()) this.editor.chain().deleteForward().run();
+    else this.editor.chain().deleteSelection().run();
   }
 
-  /** Puts the selection on the clipboard in Levit's own HTML. */
+  /** Puts the selection (or the selected image) on the clipboard in Levit's own HTML. */
   private writeSelection(e: ClipboardEvent): boolean {
     this.syncSelectionFromDOM();
-    const blocks = sliceDocument(this.editor.state.doc, this.editor.state.selection);
+    const { doc, selection } = this.editor.state;
+    const image = this.editor.getSelectedImage() ? doc.blocks[findBlockIndex(doc, selection.head.blockId)] : null;
+    const blocks = image ? [image] : sliceDocument(doc, selection);
     if (blocks.length === 0 || !e.clipboardData) return false;
     e.preventDefault();
     writeClipboard(e.clipboardData, blocks, this.editor.schema.plugins);
@@ -480,7 +480,8 @@ export class InputController {
    */
   private imageArrowKey(e: KeyboardEvent): boolean {
     const dir = { ArrowLeft: -1, ArrowUp: -1, ArrowRight: 1, ArrowDown: 1 }[e.key];
-    if (!dir || e.shiftKey || e.altKey || e.metaKey || e.ctrlKey) return false;
+    // A menu that took the key (the slash menu's size grid) keeps it.
+    if (!dir || e.defaultPrevented || e.shiftKey || e.altKey || e.metaKey || e.ctrlKey) return false;
     const { doc, selection } = this.editor.state;
     if (!selection.isCollapsed) return false;
     const index = findBlockIndex(doc, selection.head.blockId);
@@ -490,10 +491,12 @@ export class InputController {
     const atomic = (b: BlockNode) => this.editor.schema.isAtom(b.type);
 
     if (isImage(block)) {
-      // The nearest block that is not a divider, in the key's direction.
+      // The nearest block that is not a divider, in the key's direction, or
+      // the divider next to it when only dividers are left (typing on one
+      // writes in a new line after it).
       let i = index + dir;
       while (doc.blocks[i] && atomic(doc.blocks[i]) && !isImage(doc.blocks[i])) i += dir;
-      const next = doc.blocks[i];
+      const next = doc.blocks[i] ?? doc.blocks[index + dir];
       e.preventDefault();
       if (!next) return true;
       const offset = dir < 0 && !atomic(next) ? getBlockText(next).length : 0;

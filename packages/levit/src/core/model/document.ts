@@ -191,6 +191,11 @@ export function orderedSelection(doc: DocumentData, selection: EditorSelection):
   return forward ? { from: { ...anchor }, to: { ...head } } : { from: { ...head }, to: { ...anchor } };
 }
 
+/** A collapsed selection: the caret at one place. */
+export function caretAt(blockId: string, offset = 0): EditorSelection {
+  return { anchor: { blockId, offset }, head: { blockId, offset }, isCollapsed: true };
+}
+
 /**
  * Copies the blocks covered by a selection, cut to the selected text.
  * Returns an empty array for a collapsed selection.
