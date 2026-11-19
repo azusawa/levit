@@ -95,7 +95,26 @@ describe('replaceMatches', () => {
     const state = stateOf(doc(para('a', text('x y x'))));
     const tr = state.tr;
     replaceMatches(tr, findMatches(state.doc, 'x'), 'zz');
-    expect(tr.apply().selection.head).toEqual({ blockId: 'a', offset: 6 });
+    // 'zz y zz': after the second 'zz'.
+    expect(tr.apply().selection.head).toEqual({ blockId: 'a', offset: 7 });
+  });
+
+  it('puts the caret after the last replaced text when earlier ones in its block change length', () => {
+    const state = stateOf(doc(para('a', text('a a a'))));
+    const tr = state.tr;
+    replaceMatches(tr, findMatches(state.doc, 'a'), 'bbb');
+    const next = tr.apply();
+    expect(next.doc.blocks[0].content).toEqual([text('bbb bbb bbb')]);
+    expect(next.selection.head).toEqual({ blockId: 'a', offset: 11 });
+  });
+
+  it('replaces a place once when matches repeat or overlap', () => {
+    const state = stateOf(doc(para('a', text('abcdef'))));
+    const tr = state.tr;
+    const abc = { blockId: 'a', from: 0, to: 3, text: 'abc' };
+    const cde = { blockId: 'a', from: 2, to: 5, text: 'cde' };
+    expect(replaceMatches(tr, [abc, abc, cde], 'X')).toBe(1);
+    expect(tr.apply().doc.blocks[0].content).toEqual([text('Xdef')]);
   });
 
   it('changes nothing without matches', () => {

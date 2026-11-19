@@ -264,6 +264,53 @@ describe('search panel', () => {
     expect(panel.isOpen).toBe(false);
   });
 
+  it('leaves AltGr keys that type a character (AltGr+F is "[" on a Hungarian keyboard)', () => {
+    make();
+    editor.focus();
+    const e = key(element, '[', { code: 'KeyF', ctrlKey: true, altKey: true });
+    expect(e.defaultPrevented).toBe(false);
+    expect(panel.isOpen).toBe(false);
+  });
+
+  it('leaves Cmd+Ctrl+F (full screen) to the Mac', () => {
+    vi.spyOn(navigator, 'platform', 'get').mockReturnValue('MacIntel');
+    make();
+    editor.focus();
+    const e = key(element, 'f', { metaKey: true, ctrlKey: true });
+    expect(e.defaultPrevented).toBe(false);
+    expect(panel.isOpen).toBe(false);
+  });
+
+  it('keeps the panel open on an Escape that cancels an IME composition', () => {
+    make();
+    panel.open();
+    key(field('Find'), 'Escape', { isComposing: true });
+    key(field('Find'), 'Escape', { keyCode: 229 } as KeyboardEventInit);
+    expect(panel.isOpen).toBe(true);
+  });
+
+  it('scrolls to the next match after its own Replace', () => {
+    const scroll = vi.fn();
+    vi.spyOn(Element.prototype, 'scrollIntoView').mockImplementation(scroll);
+    make();
+    panel.open({ replace: true });
+    type(field('Find'), 'cat');
+    scroll.mockClear();
+    panel.replace('dog');
+    expect(scroll).toHaveBeenCalled();
+  });
+
+  it('hides replacing once the editor becomes read-only while open', () => {
+    make();
+    panel.open({ replace: true });
+    type(field('Find'), 'cat');
+    editor.setEditable(false);
+    click(button('Replace all'));
+    expect(texts()).toEqual(['the cat sat', 'a Cat and a cat']);
+    expect(field('Replace with').closest<HTMLElement>('.levit-search-replace')!.hidden).toBe(true);
+    expect(button('Show replace').hidden).toBe(true);
+  });
+
   it('closes with the close button', () => {
     make();
     panel.open();

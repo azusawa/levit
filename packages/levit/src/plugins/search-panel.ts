@@ -1,6 +1,6 @@
 import type { LevitEditor } from '../core/editor.js';
 import type { EditorPosition } from '../core/model/types.js';
-import { findMatches, replaceMatches, type SearchMatch } from '../core/model/search.js';
+import { blockIndexes, findMatches, replaceMatches, type SearchMatch } from '../core/model/search.js';
 import { findBlockIndex, getBlockText, orderedSelection } from '../core/model/document.js';
 import { matchesShortcut } from '../core/plugin/plugin.js';
 import { buildSearchPanelView, createMatchPainter, type SearchPanelView } from './search-panel-view.js';
@@ -44,14 +44,22 @@ interface PanelActions {
   refocus(replace: boolean): void;
 }
 
-/** Mod+F or Mod+Alt+F, or null. On a Mac, Ctrl+F moves the caret and is left alone. */
+/**
+ * Mod+F or Mod+Alt+F, or null. Mod is Cmd on a Mac and Ctrl elsewhere, with
+ * the other key up: on a Mac Ctrl+F moves the caret and Cmd+Ctrl+F goes full
+ * screen. AltGr (Ctrl+Alt on Windows) types characters, so off a Mac only a
+ * key that gives "f" counts; on a Mac Alt changes the character itself.
+ */
 function findShortcut(e: KeyboardEvent, mac: boolean): 'find' | 'replace' | null {
-  if (mac && e.ctrlKey && !e.metaKey) return null;
+  if (mac ? e.ctrlKey : e.metaKey) return null;
+  if (e.getModifierState?.('AltGraph')) return null;
+  if (!mac && e.altKey && e.key.toLowerCase() !== 'f') return null;
   if (matchesShortcut(e, SHORTCUT_REPLACE)) return 'replace';
   return matchesShortcut(e, SHORTCUT_FIND) ? 'find' : null;
 }
 
-const isPlainEnter = (e: KeyboardEvent) => e.key === 'Enter' && !e.isComposing && e.keyCode !== IME_KEY_CODE;
+/** A key that belongs to an IME composition, like the Enter or Escape that ends it. */
+const isComposing = (e: KeyboardEvent) => e.isComposing || e.keyCode === IME_KEY_CODE;
 
 function bindPanelEvents(view: SearchPanelView, actions: PanelActions, mac: boolean): void {
   view.findField.addEventListener('input', actions.search);
@@ -64,6 +72,8 @@ function bindPanelEvents(view: SearchPanelView, actions: PanelActions, mac: bool
   view.replaceAllButton.addEventListener('click', actions.replaceAll);
 
   view.panel.addEventListener('keydown', (e) => {
+    // Enter commits and Escape cancels the composition, nothing more.
+    if (isComposing(e)) return;
     const shortcut = findShortcut(e, mac);
     if (e.key === 'Escape') {
       e.preventDefault();
@@ -72,8 +82,8 @@ function bindPanelEvents(view: SearchPanelView, actions: PanelActions, mac: bool
       // Not the browser's own find bar.
       e.preventDefault();
       actions.refocus(shortcut === 'replace');
-    } else if (!isPlainEnter(e)) {
-      // An Enter that ends a composition only commits the text.
+    } else if (e.key !== 'Enter') {
+      // Other keys type in the fields.
     } else if (e.target === view.findField) {
       e.preventDefault();
       actions.step(e.shiftKey ? -1 : 1);
@@ -106,10 +116,10 @@ function selectedText(editor: LevitEditor): string {
 /** Index of the first match at or after `start`, or -1 when there are none. */
 function firstFrom(editor: LevitEditor, matches: readonly SearchMatch[], start: EditorPosition): number {
   if (matches.length === 0) return -1;
-  const doc = editor.state.doc;
-  const startIndex = findBlockIndex(doc, start.blockId);
+  const indexes = blockIndexes(editor.state.doc);
+  const startIndex = indexes.get(start.blockId) ?? -1;
   const index = matches.findIndex((match) => {
-    const block = findBlockIndex(doc, match.blockId);
+    const block = indexes.get(match.blockId) ?? -1;
     return block > startIndex || (block === startIndex && match.from >= start.offset);
   });
   return Math.max(index, 0);
@@ -191,6 +201,13 @@ export function createSearchPanel(editor: LevitEditor): SearchPanelInstance {
     panel.classList.toggle('is-replacing', canReplace);
   }
 
+  /** False when the editor cannot be edited (also later than open), hiding replacing then. */
+  function canEdit(): boolean {
+    view.toggle.hidden = !editor.isEditable;
+    if (!editor.isEditable) setReplaceShown(false);
+    return editor.isEditable;
+  }
+
   function focusFind() {
     findField.focus();
     findField.select();
@@ -199,9 +216,7 @@ export function createSearchPanel(editor: LevitEditor): SearchPanelInstance {
   function open(options: { replace?: boolean } = {}) {
     const query = selectedText(editor);
     if (query) findField.value = query;
-    view.toggle.hidden = !editor.isEditable;
-    if (options.replace) setReplaceShown(true);
-    else if (!editor.isEditable) setReplaceShown(false);
+    if (canEdit() && options.replace) setReplaceShown(true);
     isOpen = true;
     panel.hidden = false;
     origin = caret();
@@ -227,7 +242,7 @@ export function createSearchPanel(editor: LevitEditor): SearchPanelInstance {
   }
 
   function replace(text = replaceField.value) {
-    if (!isOpen || !editor.isEditable || current === -1) return;
+    if (!isOpen || !canEdit() || current === -1) return;
     const match = matches[current];
     const tr = editor.state.tr;
     if (replaceMatches(tr, [match], text) === 0) return;
@@ -236,7 +251,7 @@ export function createSearchPanel(editor: LevitEditor): SearchPanelInstance {
   }
 
   function replaceAll(text = replaceField.value): number {
-    if (!isOpen || !editor.isEditable || matches.length === 0) return 0;
+    if (!isOpen || !canEdit() || matches.length === 0) return 0;
     const tr = editor.state.tr;
     const count = replaceMatches(tr, matches, text);
     if (count === 0) return 0;
@@ -279,9 +294,11 @@ export function createSearchPanel(editor: LevitEditor): SearchPanelInstance {
   const stops = [
     editor.on('update', () => {
       if (!isOpen) return;
+      // After the panel's own replace, show the next match; after other changes, stay put.
+      const own = afterReplace !== null;
       const from = afterReplace ?? currentStart() ?? origin;
       afterReplace = null;
-      search(from, false);
+      search(from, own);
     }),
   ];
   window.addEventListener('resize', onMove);

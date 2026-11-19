@@ -1,6 +1,6 @@
 import type { DocumentData, InlineNode } from './types.js';
 import type { Transaction } from '../state/transaction.js';
-import { findBlockIndex, getBlockText, normalizeInlineNodes, splitBlockContent } from './document.js';
+import { getBlockText, normalizeInlineNodes, splitBlockContent } from './document.js';
 
 /** Where a piece of found text is: offsets in the text of one block. */
 export interface SearchMatch {
@@ -56,38 +56,57 @@ export function findMatches(doc: DocumentData, query: string, options: SearchOpt
   return matches;
 }
 
+/** Each block's index by id, made once so matches need no scan of the document each. */
+export function blockIndexes(doc: DocumentData): Map<string, number> {
+  return new Map(doc.blocks.map((block, index) => [block.id, index]));
+}
+
 /** True when the block still has the found text at the match's place. */
-function stillThere(doc: DocumentData, match: SearchMatch): boolean {
-  const index = findBlockIndex(doc, match.blockId);
-  if (index === -1 || match.from < 0 || match.from >= match.to) return false;
+function stillThere(doc: DocumentData, indexes: Map<string, number>, match: SearchMatch): boolean {
+  const index = indexes.get(match.blockId);
+  if (index === undefined || match.from < 0 || match.from >= match.to) return false;
   return getBlockText(doc.blocks[index]).slice(match.from, match.to) === match.text;
+}
+
+/** The matches in document order, without any that repeat or overlap an earlier one. */
+function apart(matches: readonly SearchMatch[], indexes: Map<string, number>): SearchMatch[] {
+  const ordered = [...matches].sort(
+    (a, b) => indexes.get(a.blockId)! - indexes.get(b.blockId)! || a.from - b.from
+  );
+  return ordered.reduce<SearchMatch[]>((kept, match) => {
+    const last = kept[kept.length - 1];
+    const overlaps = last !== undefined && last.blockId === match.blockId && match.from < last.to;
+    return overlaps ? kept : [...kept, match];
+  }, []);
 }
 
 /**
  * Replaces matches (from findMatches) with `text` in one change, so one undo
  * brings them all back. The new text takes the marks of the first letter it
  * replaces. Matches whose text is no longer at their place (the document
- * changed since findMatches) are skipped. The caret
- * goes after the last replaced text. Returns how many were replaced.
+ * changed since findMatches) are skipped, and so are matches that repeat or
+ * overlap an earlier one. The caret goes after the last replaced text.
+ * Returns how many were replaced.
  */
 export function replaceMatches(tr: Transaction, matches: readonly SearchMatch[], text: string): number {
-  const valid = matches.filter((m) => stillThere(tr.doc, m));
-  if (valid.length === 0) return 0;
+  const indexes = blockIndexes(tr.doc);
+  const kept = apart(matches.filter((m) => stillThere(tr.doc, indexes, m)), indexes);
+  if (kept.length === 0) return 0;
   // From the end, so earlier offsets in a block stay right.
-  const ordered = [...valid].sort((a, b) => {
-    const blockOrder = findBlockIndex(tr.doc, b.blockId) - findBlockIndex(tr.doc, a.blockId);
-    return blockOrder !== 0 ? blockOrder : b.from - a.from;
-  });
-  for (const match of ordered) {
-    const block = tr.editBlock(match.blockId)!;
+  for (const match of [...kept].reverse()) {
+    const block = tr.editBlock(indexes.get(match.blockId)!)!;
     const [left, rest] = splitBlockContent(block, match.from);
     const [middle, right] = splitBlockContent({ ...block, content: rest }, match.to - match.from);
     const replaced: InlineNode[] = text ? [{ text, marks: [...(middle[0]?.marks ?? [])] }] : [];
     block.content = normalizeInlineNodes([...left, ...replaced, ...right]);
   }
-  const last = ordered[0];
-  const caret = { blockId: last.blockId, offset: last.from + text.length };
+  const last = kept[kept.length - 1];
+  // Earlier matches in the same block moved the last one by their change in length.
+  const shift = kept
+    .filter((m) => m !== last && m.blockId === last.blockId)
+    .reduce((sum, m) => sum + text.length - (m.to - m.from), 0);
+  const caret = { blockId: last.blockId, offset: last.from + shift + text.length };
   tr.setSelection({ anchor: caret, head: { ...caret }, isCollapsed: true });
   tr.docChanged = true;
-  return valid.length;
+  return kept.length;
 }

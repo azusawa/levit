@@ -268,7 +268,8 @@ search.replaceAll('new');                      // returns how many
 // Without the panel (matches stay in one block and do not overlap):
 const found = findMatches(editor.state.doc, 'levit', { caseSensitive: false }); // [{ blockId, from, to, text }]
 const tr = editor.state.tr;
-replaceMatches(tr, found, 'Levit');            // returns how many; skips a match whose text is no longer at its place
+replaceMatches(tr, found, 'Levit');            // returns how many; skips a match whose text is no longer at its place,
+                                               // or that repeats or overlaps an earlier one
 editor.dispatch(tr);
 editor.chain().setCodeBlock('ts').run();       // setCodeLanguage('py') changes it, '' clears it
 editor.chain().selectAll().run();
