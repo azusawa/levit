@@ -15,6 +15,7 @@ import {
   createSlashMenu,
   createTableToolbar,
   createImageToolbar,
+  createSearchPanel,
   sameContent,
   type DocumentData,
   type EditorOptions,
@@ -23,7 +24,7 @@ import {
 
 export type { Editor };
 
-/** Editor options, plus whether to add the bubble and slash menus and the table toolbar. */
+/** Editor options, plus whether to add the menus, the toolbars and the search panel. */
 export interface UseLevitEditorOptions extends Omit<EditorOptions, 'element'> {
   /** Show the formatting toolbar on selected text. Default: true. */
   bubbleMenu?: boolean;
@@ -33,6 +34,8 @@ export interface UseLevitEditorOptions extends Omit<EditorOptions, 'element'> {
   tableToolbar?: boolean;
   /** Show the image toolbar above the selected image. Default: true. */
   imageToolbar?: boolean;
+  /** Open a find and replace panel with Mod+F. Default: true. */
+  searchPanel?: boolean;
   /** Called once the editor exists. */
   onReady?: (editor: Editor) => void;
 }
@@ -54,7 +57,7 @@ export function useLevitEditor(options: UseLevitEditorOptions = {}): {
 
   useEffect(() => {
     if (!element) return;
-    const { bubbleMenu = true, slashMenu = true, tableToolbar = true, imageToolbar = true, ...editorOptions } = latest.current;
+    const { bubbleMenu = true, slashMenu = true, tableToolbar = true, imageToolbar = true, searchPanel = true, ...editorOptions } = latest.current;
     const instance = createLevitEditor(element, {
       ...editorOptions,
       onChange: (ed) => latest.current.onChange?.(ed),
@@ -69,6 +72,7 @@ export function useLevitEditor(options: UseLevitEditorOptions = {}): {
       slashMenu && createSlashMenu(instance),
       tableToolbar && createTableToolbar(instance),
       imageToolbar && createImageToolbar(instance),
+      searchPanel && createSearchPanel(instance),
     ];
     setEditor(instance);
     latest.current.onReady?.(instance);

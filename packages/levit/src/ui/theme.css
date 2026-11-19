@@ -32,6 +32,8 @@
   --levit-code-text: #0f172a;
   --levit-quote-border: #cbd5e1;
   --levit-highlight: #fef08a;
+  --levit-search-match: rgba(250, 204, 21, 0.4);
+  --levit-search-current: rgba(249, 115, 22, 0.55);
   --levit-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
   --levit-radius: 8px;
   --levit-table-toolbar-room: 44px;
@@ -82,6 +84,8 @@
   --levit-code-text: #e2e8f0;
   --levit-quote-border: #334155;
   --levit-highlight: rgba(234, 179, 8, 0.35);
+  --levit-search-match: rgba(234, 179, 8, 0.3);
+  --levit-search-current: rgba(249, 115, 22, 0.6);
   --levit-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
   --levit-color-gray: #94a3b8;
   --levit-color-brown: #d4a27f;
@@ -130,6 +134,8 @@
     --levit-code-text: #e2e8f0;
     --levit-quote-border: #334155;
     --levit-highlight: rgba(234, 179, 8, 0.35);
+    --levit-search-match: rgba(234, 179, 8, 0.3);
+    --levit-search-current: rgba(249, 115, 22, 0.6);
     --levit-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
     --levit-color-gray: #94a3b8;
     --levit-color-brown: #d4a27f;
@@ -950,6 +956,128 @@ figure.levit-block-image img::selection {
   font-size: 12px;
   color: var(--levit-text-muted);
   text-align: center;
+}
+
+/* Find and replace (createSearchPanel): a panel at the top right of the
+   editor. Matches are painted with the CSS Custom Highlight API, which
+   draws over the text without changing it. */
+.levit-search {
+  position: absolute;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background-color: var(--levit-surface);
+  color: var(--levit-text);
+  border: 1px solid var(--levit-border);
+  box-shadow: var(--levit-shadow);
+  border-radius: var(--levit-radius);
+  padding: 4px;
+  font: 13px/1.4 var(--levit-font-sans);
+  animation: levitFadeIn 0.15s ease-out;
+}
+
+.levit-search[hidden],
+.levit-search-row[hidden],
+.levit-search-btn[hidden] {
+  display: none;
+}
+
+.levit-search-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* The replace field lines up under the find field, past the toggle. */
+.levit-search-replace {
+  padding-left: 30px;
+}
+
+.levit-search-input {
+  width: 180px;
+  min-width: 0;
+  height: 28px;
+  padding: 0 8px;
+  background-color: var(--levit-bg);
+  color: var(--levit-text);
+  border: 1px solid var(--levit-border);
+  border-radius: 4px;
+  font: inherit;
+}
+
+.levit-search-input:focus {
+  outline: none;
+  border-color: var(--levit-primary);
+}
+
+.levit-search-status {
+  min-width: 64px;
+  padding: 0 6px;
+  color: var(--levit-text-muted);
+  font-size: 12px;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.levit-search-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--levit-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.levit-search-btn svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.1s ease;
+}
+
+.levit-search-btn:hover {
+  background-color: var(--levit-border);
+}
+
+.levit-search-btn:focus-visible {
+  outline: 2px solid var(--levit-primary);
+  outline-offset: -2px;
+}
+
+.levit-search-btn[aria-pressed="true"] {
+  color: var(--levit-primary);
+  background-color: var(--levit-selection);
+}
+
+.levit-search-btn[aria-expanded="true"] svg {
+  transform: rotate(90deg);
+}
+
+.levit-search-case {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.levit-search-text-btn {
+  padding: 0 8px;
+  white-space: nowrap;
+}
+
+.levit-editor-root ::highlight(levit-search) {
+  background-color: var(--levit-search-match);
+}
+
+.levit-editor-root ::highlight(levit-search-current) {
+  background-color: var(--levit-search-current);
 }
 
 @keyframes levitFadeIn {

@@ -158,3 +158,24 @@ describe('the line color row of the palette', () => {
     expect(css).toMatch(/\.levit-image-url\s*\{[^}]*gap:/);
   });
 });
+
+describe('search panel', () => {
+  it('floats over the page in the menu colors and hides when closed', () => {
+    expect(css).toMatch(/\.levit-search\s*\{[^}]*position:\s*absolute[^}]*background-color:\s*var\(--levit-surface\)/);
+    expect(css).toMatch(/\.levit-search\[hidden\],\s*\.levit-search-row\[hidden\],\s*\.levit-search-btn\[hidden\]\s*\{[^}]*display:\s*none/);
+  });
+
+  it('paints the matches, and the current one more strongly, in theme colors', () => {
+    expect(css).toMatch(/\.levit-editor-root ::highlight\(levit-search\)\s*\{[^}]*background-color:\s*var\(--levit-search-match\)/);
+    expect(css).toMatch(/\.levit-editor-root ::highlight\(levit-search-current\)\s*\{[^}]*background-color:\s*var\(--levit-search-current\)/);
+    for (const theme of [light, dark, autoDark]) {
+      expect(theme.has('--levit-search-match')).toBe(true);
+      expect(theme.has('--levit-search-current')).toBe(true);
+    }
+  });
+
+  it('marks the match case button when it is on, and shows keyboard focus', () => {
+    expect(css).toMatch(/\.levit-search-btn\[aria-pressed="true"\]\s*\{[^}]*var\(--levit-primary\)/);
+    expect(css).toMatch(/\.levit-search-btn:focus-visible[^{]*\{[^}]*outline/);
+  });
+});

@@ -105,6 +105,21 @@ export const en = {
   lineColor: 'Line color',
   otherLineColor: 'Other line color',
 
+  // Find and replace
+  findAndReplace: 'Find and replace',
+  find: 'Find',
+  replaceWith: 'Replace with',
+  replace: 'Replace',
+  replaceAll: 'Replace all',
+  previousMatch: 'Previous match',
+  nextMatch: 'Next match',
+  matchCase: 'Match case',
+  showReplace: 'Show replace',
+  closeSearch: 'Close',
+  searchCount: '{current} of {total}',
+  noResults: 'No results',
+  replacedCount: '{count} replaced',
+
   // Blocks
   markDone: 'Mark as done',
   markNotDone: 'Mark as not done',
@@ -228,6 +243,21 @@ export const ko: LevitMessages = {
   lineColor: '선 색',
   otherLineColor: '다른 선 색',
 
+  // 찾기와 바꾸기
+  findAndReplace: '찾기와 바꾸기',
+  find: '찾기',
+  replaceWith: '바꿀 내용',
+  replace: '바꾸기',
+  replaceAll: '모두 바꾸기',
+  previousMatch: '이전 항목',
+  nextMatch: '다음 항목',
+  matchCase: '대소문자 구분',
+  showReplace: '바꾸기 보기',
+  closeSearch: '닫기',
+  searchCount: '{total}개 중 {current}번째',
+  noResults: '결과 없음',
+  replacedCount: '{count}개 바꿈',
+
   markDone: '완료로 표시',
   markNotDone: '미완료로 표시',
   codeLanguagePrompt: '코드 언어',
@@ -346,6 +376,21 @@ export const ja: LevitMessages = {
   tableColor: '表の色',
   lineColor: '線の色',
   otherLineColor: 'ほかの線の色',
+
+  // 検索と置換
+  findAndReplace: '検索と置換',
+  find: '検索',
+  replaceWith: '置換後の文字列',
+  replace: '置換',
+  replaceAll: 'すべて置換',
+  previousMatch: '前の一致',
+  nextMatch: '次の一致',
+  matchCase: '大文字と小文字を区別',
+  showReplace: '置換を表示',
+  closeSearch: '閉じる',
+  searchCount: '{total}件中{current}件目',
+  noResults: '一致なし',
+  replacedCount: '{count}件を置換しました',
 
   markDone: '完了にする',
   markNotDone: '未完了にする',

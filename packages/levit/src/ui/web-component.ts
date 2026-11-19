@@ -7,6 +7,7 @@ import { createBubbleMenu } from '../plugins/bubble-menu.js';
 import { createSlashMenu } from '../plugins/slash-menu.js';
 import { createTableToolbar } from '../plugins/table-toolbar.js';
 import { createImageToolbar } from '../plugins/image-toolbar.js';
+import { createSearchPanel } from '../plugins/search-panel.js';
 
 type Menu = { element: HTMLElement; destroy(): void };
 
@@ -16,6 +17,7 @@ const MENUS: Record<string, (editor: LevitEditor) => Menu> = {
   'slash-menu': createSlashMenu,
   'table-toolbar': createTableToolbar,
   'image-toolbar': createImageToolbar,
+  'search-panel': createSearchPanel,
 };
 
 // On the server (SSR) there is no HTMLElement. Fall back to an empty class so
@@ -106,8 +108,8 @@ export class LevitEditorElement extends BaseElement {
 
   /**
    * Menus, as the React and Vue components add them; bubble-menu="false",
-   * slash-menu="false", table-toolbar="false" or image-toolbar="false"
-   * leaves one out. They live in <body>, so they get the element's theme
+   * slash-menu="false", table-toolbar="false", image-toolbar="false" or
+   * search-panel="false" leaves one out. They live in <body>, so they get the element's theme
    * themselves.
    */
   private syncMenus(): void {
