@@ -395,3 +395,33 @@ describe('images are documented', () => {
     }
   });
 });
+
+describe('find and replace is documented', () => {
+  const api = ['createSearchPanel', 'search-panel="false"', 'searchPanel', 'findMatches(', 'replaceMatches('];
+
+  it('README and llms.txt cover the panel, its keys and the API', () => {
+    for (const file of ['README.md', 'llms.txt']) {
+      const text = read(file);
+      for (const part of api) expect(text, `${file} ${part}`).toContain(part);
+      for (const key of ['Mod+F', 'Mod+Alt+F']) expect(text, `${file} ${key}`).toContain(key);
+    }
+    for (const word of ['찾기와 바꾸기', '모두 바꾸기', '대소문자 구분']) expect(read('README.md'), word).toContain(word);
+    for (const word of ['Find and replace', 'Replace all', 'Match case', 'CSS Custom Highlight API']) {
+      expect(read('llms.txt'), word).toContain(word);
+    }
+  });
+
+  it('the site guide and docs cover it in every language', () => {
+    const words: Record<string, string[]> = {
+      en: ['Find and replace', 'Replace all', 'Match case'],
+      ko: ['찾기와 바꾸기', '모두 바꾸기', '대소문자 구분'],
+      ja: ['検索と置換', 'すべて置換', '大文字と小文字を区別'],
+    };
+    for (const lang of ['en', 'ko', 'ja']) {
+      const guide = read(`site/content/${lang}/guide.md`);
+      for (const word of words[lang]) expect(guide, `${lang} guide ${word}`).toContain(word);
+      const docs = read(`site/content/${lang}/docs.md`);
+      for (const part of api) expect(docs, `${lang} docs ${part}`).toContain(part);
+    }
+  });
+});

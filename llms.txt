@@ -21,19 +21,20 @@ Levit is a web editor library designed from scratch on standard Web APIs (DOM, S
   });
 </script>
 ```
-The element adds the bubble and slash menus and the table and image toolbars
-(`bubble-menu="false"` / `slash-menu="false"` / `table-toolbar="false"` /
-`image-toolbar="false"` leave them out, also later). Attributes: `placeholder`,
+The element adds the bubble and slash menus, the table and image toolbars and
+the find and replace panel (`bubble-menu="false"` / `slash-menu="false"` /
+`table-toolbar="false"` / `image-toolbar="false"` / `search-panel="false"`
+leave them out, also later). Attributes: `placeholder`,
 `lang` (ko/ja; a later change builds a new `el.editor` with the same document),
 `color-picker="false"` (no color picker in the palettes; also a rebuild),
 `theme` (dark/light, also on the menus), `value` (initial JSON). Methods:
 getJSON(), setJSON(), getText(), focus(); `el.editor` is the full LevitEditor.
 Moving the element keeps the same editor; after removal getJSON() still works.
-createBubbleMenu/createSlashMenu/createTableToolbar/createImageToolbar return the editor's existing menu if it has one.
+createBubbleMenu/createSlashMenu/createTableToolbar/createImageToolbar/createSearchPanel return the editor's existing menu if it has one.
 
 ### Vanilla JavaScript / TypeScript
 ```ts
-import { createLevitEditor, createBubbleMenu, createSlashMenu, createTableToolbar, createImageToolbar } from '@yonailab/levit';
+import { createLevitEditor, createBubbleMenu, createSlashMenu, createTableToolbar, createImageToolbar, createSearchPanel } from '@yonailab/levit';
 import '@yonailab/levit/levit.css';
 
 const container = document.getElementById('editor');
@@ -47,6 +48,7 @@ createBubbleMenu(editor);
 createSlashMenu(editor);   // "/" at the start of a line or after a space; typing after it filters
 createTableToolbar(editor);   // buttons above the table the caret is in
 createImageToolbar(editor);   // buttons above the selected image
+createSearchPanel(editor);   // find and replace, opened with Mod+F
 ```
 
 ## 2. Document Data Schema (JSON)
@@ -249,6 +251,25 @@ editor.getSelectedImage();                     // { src, alt, size: 'small' | 'm
 // "Small", "Medium", "Full width" (pressed again: its own size), "Align left",
 // "Center", "Align right", "Delete image". HTML export keeps data-size and
 // data-align with a style that shows them without Levit's CSS.
+
+// Find and replace. createSearchPanel(editor) opens with Mod+F in the editor
+// (Mod+Alt+F also shows the replace field): "Find and replace" panel with the
+// fields "Find" and "Replace with", "Match case" (Aa; off by default), "Previous
+// match" / "Next match" (also Shift+Enter / Enter), "Replace" (Enter in the
+// replace field; then goes to the next match) and "Replace all" (one undo
+// step). Escape closes it and selects the current match. Replaced text keeps
+// the marks of the first letter it replaces. Matches are painted with the
+// CSS Custom Highlight API (--levit-search-match, --levit-search-current);
+// browsers without it still count, move and replace. Read-only: find only.
+const search = createSearchPanel(editor);
+search.open({ replace: true });                // isOpen, matches, current, next(), previous()
+search.replace('new');                         // the current match
+search.replaceAll('new');                      // returns how many
+// Without the panel (matches stay in one block and do not overlap):
+const found = findMatches(editor.state.doc, 'levit', { caseSensitive: false }); // [{ blockId, from, to, text }]
+const tr = editor.state.tr;
+replaceMatches(tr, found, 'Levit');            // returns how many; skips a match whose text is no longer at its place
+editor.dispatch(tr);
 editor.chain().setCodeBlock('ts').run();       // setCodeLanguage('py') changes it, '' clears it
 editor.chain().selectAll().run();
 ```
@@ -478,9 +499,9 @@ const { ref, editor } = useLevitEditor({ placeholder: 'Write' });   // <div ref=
 <LevitEditor v-model="doc" :messages="ko" @ready="(editor) => {}" @error="(e) => {}" />
 <!-- const { element, editor } = useLevitEditor(options)  →  <div ref="element" /> -->
 ```
-Both add the bubble and slash menus and the table and image toolbars unless
-turned off (`bubbleMenu`, `slashMenu`, `tableToolbar`, `imageToolbar` set to
-false), take `colors` and
+Both add the bubble and slash menus, the table and image toolbars and the
+find and replace panel unless turned off (`bubbleMenu`, `slashMenu`,
+`tableToolbar`, `imageToolbar`, `searchPanel` set to false), take `colors` and
 `colorPicker` like the editor options, and a value that comes
 back from onChange / v-model does not reset the caret. The React package is
 marked 'use client'.

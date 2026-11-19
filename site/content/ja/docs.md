@@ -38,14 +38,14 @@ Levit は ESM 専用です。バンドラーか `import` で使ってくださ�
 </script>
 ```
 
-この要素は `placeholder`、`lang`（組み込みメッセージは `ko` か `ja`。後から変えると同じ内容で新しい `editor` を作るので、イベントは付け直してください）、`theme`（`dark` か `light`）、初期値の `value`（ドキュメント JSON）属性を読みます。React・Vue のコンポーネントと同じく、バブルメニュー、スラッシュメニュー、表ツールバー、画像ツールバーが標準で付き、`bubble-menu="false"`、`slash-menu="false"`、`table-toolbar="false"`、`image-toolbar="false"` で外せます。`color-picker="false"` は色パレットからカラーピッカーを外します。`getJSON()`、`setJSON()`、`getText()`、`focus()` メソッドと、エディタ本体を持つ `editor` プロパティもあります。要素をページ内の別の場所へ移しても同じエディタのままで、取り除いた後も `getJSON()` でドキュメントを取得できます。
+この要素は `placeholder`、`lang`（組み込みメッセージは `ko` か `ja`。後から変えると同じ内容で新しい `editor` を作るので、イベントは付け直してください）、`theme`（`dark` か `light`）、初期値の `value`（ドキュメント JSON）属性を読みます。React・Vue のコンポーネントと同じく、バブルメニュー、スラッシュメニュー、表ツールバー、画像ツールバー、検索と置換パネルが標準で付き、`bubble-menu="false"`、`slash-menu="false"`、`table-toolbar="false"`、`image-toolbar="false"`、`search-panel="false"` で外せます。`color-picker="false"` は色パレットからカラーピッカーを外します。`getJSON()`、`setJSON()`、`getText()`、`focus()` メソッドと、エディタ本体を持つ `editor` プロパティもあります。要素をページ内の別の場所へ移しても同じエディタのままで、取り除いた後も `getJSON()` でドキュメントを取得できます。
 
 ### JavaScript / TypeScript
 
 `createLevitEditor` は任意の要素をエディタにします。バブルツールバー（テキスト選択時に表示）、スラッシュメニュー（`/`）、表ツールバー（キャレットのある表の上に表示）は別々に付けるので、使うものだけを読み込めます。
 
 ```ts
-import { createLevitEditor, createBubbleMenu, createSlashMenu, createTableToolbar, createImageToolbar } from '@yonailab/levit';
+import { createLevitEditor, createBubbleMenu, createSlashMenu, createTableToolbar, createImageToolbar, createSearchPanel } from '@yonailab/levit';
 import '@yonailab/levit/levit.css';
 
 const editor = createLevitEditor(document.getElementById('editor')!, {
@@ -56,6 +56,7 @@ createBubbleMenu(editor);
 createSlashMenu(editor);
 createTableToolbar(editor);
 createImageToolbar(editor);
+createSearchPanel(editor);
 ```
 
 ### 読み込みと保存
@@ -309,6 +310,35 @@ editor.destroy();
 
 ほかにも `editor.commands`（プラグインのコマンド）、`editor.messages` と `editor.t(key, values)`（使用中のメッセージ）、別の場所で作った状態を一度に適用する `editor.replaceState(state)`、エラーを `onError` かコンソールに送る `editor.reportError(error)` があります。
 
+## 検索と置換
+
+`createSearchPanel(editor)` はエディターの右上に**検索と置換**パネルを付けます。エディターで `Mod+F` を押すとブラウザーの検索の代わりにこのパネルが開き、`Mod+Alt+F` は置換の欄まで開きます。`<levit-editor>` と React・Vue のコンポーネントには標準で付きます（`search-panel="false"`、`searchPanel={false}` で外します）。
+
+- 選択したテキストがあれば、それで検索します。カーソルの後の最初の一致が現在の一致になり、`5件中2件目` のように表示します。
+- `Enter` と `Shift+Enter` で次・前の一致へ移ります（最後から最初に戻ります）。`Esc` で閉じると現在の一致が選択されます。
+- **置換**（置換の欄で `Enter`）は現在の一致を置き換えて次へ進みます。**すべて置換**は一度の変更なので、元に戻す一回で戻ります。新しいテキストは置き換えた最初の文字の書式を引き継ぎます。
+- **大文字と小文字を区別**（`Aa`）は標準ではオフです。
+- 一致は CSS Custom Highlight API で塗るので、ドキュメントと DOM はそのままです。色は `--levit-search-match`、`--levit-search-current` で変えます。この API がないブラウザーでは塗りませんが、件数の表示・移動・置換は同じように動きます。
+- 読み取り専用のエディターでは検索だけができます。
+
+```ts
+const search = createSearchPanel(editor);
+search.open({ replace: true });
+search.matches;               // [{ blockId, from, to, text }, ...]
+search.current;               // 現在の一致の番号、なければ -1
+search.replaceAll('Levit');   // 置き換えた件数
+```
+
+パネルなしで使うときは、`findMatches(doc, query, { caseSensitive })` が一致（それぞれ一つのブロックの中、重なりなし）を返し、`replaceMatches(tr, matches, text)` がトランザクションの中で置き換えます。その間にドキュメントが変わり、その位置に見つけたテキストがなくなった一致は飛ばします。
+
+```ts
+import { findMatches, replaceMatches } from '@yonailab/levit';
+
+const tr = editor.state.tr;
+replaceMatches(tr, findMatches(editor.state.doc, 'levit'), 'Levit');
+editor.dispatch(tr);
+```
+
 ## イベント
 
 `editor.on` はハンドラーを解除する関数を返します。
@@ -354,7 +384,7 @@ export function Note() {
 
 - `value` と `onChange` を併用すると制御コンポーネント、`defaultValue` だけなら非制御コンポーネントです。
 - `onChange` は `(value, editor)` を受け取ります。
-- `bubbleMenu={false}`、`slashMenu={false}`、`tableToolbar={false}`、`imageToolbar={false}` でメニューを無効にします。`colors`、`colorPicker` はエディターのオプションと同じです。
+- `bubbleMenu={false}`、`slashMenu={false}`、`tableToolbar={false}`、`imageToolbar={false}`、`searchPanel={false}` でメニューを無効にします。`colors`、`colorPicker` はエディターのオプションと同じです。
 - `ref` か `onReady` でエディタのインスタンスを受け取ります。`className`、`style`、`id` は要素に渡されます。
 - `'use client'` が付いているので、Next.js の App Router でそのまま使えます。
 
@@ -392,7 +422,7 @@ const doc = ref<DocumentData>();
 ```
 
 - props：`placeholder`、`plugins`、`messages`、`uploadImage`、`highlightCode`
-- `:bubble-menu="false"`、`:slash-menu="false"`、`:table-toolbar="false"`、`:image-toolbar="false"` でメニューを無効にします。
+- `:bubble-menu="false"`、`:slash-menu="false"`、`:table-toolbar="false"`、`:image-toolbar="false"`、`:search-panel="false"` でメニューを無効にします。
 - `@ready` でエディタのインスタンスを、`@error` でアップロード失敗などのエラーを受け取ります。
 - コンポーネントの ref からも `editor` にアクセスできます。
 

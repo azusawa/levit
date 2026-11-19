@@ -152,6 +152,15 @@ When you paste, the editor keeps the structure and cleans up the rest:
 
 You can drag text from another app or window and drop it where you want it. Dragging text to move it within the editor is not supported yet; cut and paste instead.
 
+## Find and replace
+
+Press **Mod+F** in the editor to open **Find and replace** at its top right, in place of the browser's find bar. Selected text becomes what you look for.
+
+- Every match is highlighted, and the panel shows which one you are on, like `2 of 5`. **Enter** goes to the next match and **Shift+Enter** to the previous one.
+- **Match case** (`Aa`) finds only text with the same capital letters.
+- Press **Mod+Alt+F**, or the `▸` button, for the **Replace with** field. **Replace** changes the current match and moves on; **Replace all** changes every match at once, and one undo brings them all back. The new text keeps the formatting of the text it replaces.
+- **Escape** closes the panel and selects the match you were on.
+
 ## Undo and redo
 
 - **Mod+Z** — Undo
@@ -222,6 +231,8 @@ You can use the editor without a mouse, and screen readers announce the editor, 
 - **Mod+Z** — Undo
 - **Mod+Shift+Z** or **Mod+Y** — Redo
 - **Mod+A** — Select all
+- **Mod+F** — Find
+- **Mod+Alt+F** — Find and replace
 - **Alt+F10** — Move to the formatting toolbar (in a code block: to the language label)
 - **Escape** — Close a menu, leave the toolbar, or stop the AI
 - **Mod+Shift+Enter** — Accept AI suggestions

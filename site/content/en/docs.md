@@ -38,14 +38,14 @@ Without a build step, load the script and the stylesheet and use the `<levit-edi
 </script>
 ```
 
-The element reads `placeholder`, `lang` (`ko` or `ja` for built-in messages; changing it later builds a new `editor` with the same text, so attach handlers again), `theme` (`dark` or `light`) and an initial `value` (document JSON). It comes with the bubble and slash menus and the table and image toolbars, like the React and Vue components; `bubble-menu="false"`, `slash-menu="false"`, `table-toolbar="false"` or `image-toolbar="false"` leaves one out. `color-picker="false"` leaves the color picker out of the color palettes. It also has `getJSON()`, `setJSON()`, `getText()`, `focus()`, and an `editor` property with the full editor. Moving the element in the page keeps the same editor, and after removal `getJSON()` still returns the document.
+The element reads `placeholder`, `lang` (`ko` or `ja` for built-in messages; changing it later builds a new `editor` with the same text, so attach handlers again), `theme` (`dark` or `light`) and an initial `value` (document JSON). It comes with the bubble and slash menus, the table and image toolbars and the find and replace panel, like the React and Vue components; `bubble-menu="false"`, `slash-menu="false"`, `table-toolbar="false"`, `image-toolbar="false"` or `search-panel="false"` leaves one out. `color-picker="false"` leaves the color picker out of the color palettes. It also has `getJSON()`, `setJSON()`, `getText()`, `focus()`, and an `editor` property with the full editor. Moving the element in the page keeps the same editor, and after removal `getJSON()` still returns the document.
 
 ### JavaScript or TypeScript
 
 `createLevitEditor` turns any element into an editor. The bubble toolbar (shown on selected text), the slash menu (`/`) and the table toolbar (shown above the table the caret is in) are separate, so you only load what you use.
 
 ```ts
-import { createLevitEditor, createBubbleMenu, createSlashMenu, createTableToolbar, createImageToolbar } from '@yonailab/levit';
+import { createLevitEditor, createBubbleMenu, createSlashMenu, createTableToolbar, createImageToolbar, createSearchPanel } from '@yonailab/levit';
 import '@yonailab/levit/levit.css';
 
 const editor = createLevitEditor(document.getElementById('editor')!, {
@@ -56,6 +56,7 @@ createBubbleMenu(editor);
 createSlashMenu(editor);
 createTableToolbar(editor);
 createImageToolbar(editor);
+createSearchPanel(editor);
 ```
 
 ### Load and save
@@ -310,6 +311,35 @@ editor.destroy();
 
 Also available: `editor.commands` (plugin commands), `editor.messages` and `editor.t(key, values)` (texts in use), `editor.replaceState(state)` to apply a state built elsewhere in one step, and `editor.reportError(error)`, which sends an error to `onError` or the console.
 
+## Find and replace
+
+`createSearchPanel(editor)` adds a **Find and replace** panel at the top right of the editor. `Mod+F` in the editor opens it in place of the browser's find bar, and `Mod+Alt+F` opens it with the replace field. `<levit-editor>` and the React and Vue components add it for you (`search-panel="false"` and `searchPanel={false}` leave it out).
+
+- Selected text becomes the query. The first match after the caret is the current one, and the panel shows which it is, like `2 of 5`.
+- `Enter` and `Shift+Enter` go to the next and previous match, wrapping round. `Escape` closes the panel and selects the current match.
+- **Replace** (or `Enter` in the replace field) replaces the current match and goes to the next. **Replace all** replaces them in one change, so one undo brings them back. The new text keeps the marks of the first letter it replaces.
+- **Match case** (`Aa`) is off by default.
+- Matches are painted with the CSS Custom Highlight API, so the document and its DOM stay the same. Set `--levit-search-match` and `--levit-search-current` to change the colors. Browsers without the API do not paint them, but count, move and replace the same.
+- A read-only editor only finds.
+
+```ts
+const search = createSearchPanel(editor);
+search.open({ replace: true });
+search.matches;               // [{ blockId, from, to, text }, ...]
+search.current;               // index of the current match, or -1
+search.replaceAll('Levit');   // how many were replaced
+```
+
+Without the panel, `findMatches(doc, query, { caseSensitive })` returns the matches (each inside one block, none overlapping), and `replaceMatches(tr, matches, text)` replaces them in a transaction. A match whose text is no longer at its place (the document changed in between) is skipped:
+
+```ts
+import { findMatches, replaceMatches } from '@yonailab/levit';
+
+const tr = editor.state.tr;
+replaceMatches(tr, findMatches(editor.state.doc, 'levit'), 'Levit');
+editor.dispatch(tr);
+```
+
 ## Events
 
 `editor.on` returns a function that removes the handler.
@@ -355,7 +385,7 @@ export function Note() {
 
 - `value` with `onChange` makes a controlled component; `defaultValue` alone an uncontrolled one.
 - `onChange` receives `(value, editor)`.
-- `bubbleMenu={false}`, `slashMenu={false}`, `tableToolbar={false}` and `imageToolbar={false}` turn the menus off. `colors` and `colorPicker` work as the editor options.
+- `bubbleMenu={false}`, `slashMenu={false}`, `tableToolbar={false}`, `imageToolbar={false}` and `searchPanel={false}` turn the menus off. `colors` and `colorPicker` work as the editor options.
 - `ref` or `onReady` gives you the editor instance. `className`, `style` and `id` go to the element.
 - The package is marked `'use client'`, so it works in the Next.js App Router.
 
@@ -393,7 +423,7 @@ const doc = ref<DocumentData>();
 ```
 
 - Props: `placeholder`, `plugins`, `messages`, `uploadImage`, `highlightCode`.
-- `:bubble-menu="false"`, `:slash-menu="false"`, `:table-toolbar="false"` and `:image-toolbar="false"` turn the menus off.
+- `:bubble-menu="false"`, `:slash-menu="false"`, `:table-toolbar="false"`, `:image-toolbar="false"` and `:search-panel="false"` turn the menus off.
 - `@ready` gives you the editor; `@error` receives errors such as a failed upload.
 - The component ref also exposes `editor`.
 

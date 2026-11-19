@@ -50,6 +50,7 @@
    - **표**: 슬래시 메뉴의 `/table`(또는 `/표`)을 고르면 크기 격자가 열려 마우스나 방향키로 크기를 고릅니다. `/table 4x3`처럼 크기(열×행)를 적으면 바로 들어갑니다. `| Name | Price |`처럼 Markdown 표 한 줄을 쓰고 Enter를 눌러도 표가 되고, `Name, Price` 같은 줄들을 선택해 버블 메뉴의 **표로 바꾸기**를 눌러도 됩니다(칸은 탭, 없으면 쉼표로 나눔). `Tab`으로 다음 칸, `Shift+Tab`으로 앞 칸으로 가고, 마지막 칸에서 `Tab`을 누르면 행이 늘어납니다. 커서가 표 안에 있으면 표 위에 **표 도구 막대**가 떠서, 행·열 추가와 삭제, 머리글 행, 표 삭제를 버튼으로 할 수 있습니다(`Alt+F10`으로 키보드 이동). 표 아래와 오른쪽에 나오는 얇은 `+` 막대를 누르면 맨 아래에 행 추가, 맨 오른쪽에 열 추가가 됩니다. 칸 안에서 `Mod+Enter`는 아래에 행 추가, `Mod+Alt+Enter`는 오른쪽에 열 추가, `Mod+Shift+Backspace`는 행 삭제, `Mod+Alt+Backspace`는 열 삭제입니다(Mod는 Mac의 Cmd, 그 밖의 Ctrl). 칸 안에서 `/`를 눌러도 같은 메뉴가 나옵니다. 웹페이지·스프레드시트의 표와 Markdown 표를 붙여 넣어도 표로 들어옵니다.
    - **색**: 글을 선택하고 버블 메뉴의 `A` 버튼을 누르면 **글자색**과 **형광펜 색**을 고르는 팔레트가 열립니다. 회색·갈색·주황·노랑·초록·파랑·보라·분홍·빨강 9색이 있고, 줄 끝의 색상 피커로 아무 색이나 고를 수도 있습니다. 표 도구 막대의 **표 색**으로 칸 배경(**칸 색**)과 표의 선(**선 색**)을 칠합니다. 팔레트에서 고른 색은 다크 모드에서 읽기 좋은 색으로 바뀝니다. Google Docs나 Word에서 붙여 넣은 색은 가장 가까운 팔레트 색이 됩니다.
    - **구분선**(`---`)과 **이미지**: 이미지는 슬래시 메뉴의 `/이미지`(`/image`)로 URL을 넣거나, `uploadImage`를 연결하면 파일 선택·붙여넣기·끌어다 놓기로 올립니다. 이미지를 클릭하거나 바로 옆에서 `←`·`→`로 고르면 위에 **이미지 도구 막대**가 떠서 **대체 텍스트**, 크기(**작게**·**중간**·**전체 폭**), 정렬(왼쪽·가운데·오른쪽), 삭제를 버튼으로 할 수 있습니다(`Alt+F10`으로 키보드 이동).
+   - **찾기와 바꾸기**: 에디터에서 `Mod+F`를 누르면 오른쪽 위에 찾기 칸이 열립니다. 찾은 곳이 모두 칠해지고 `Enter`·`Shift+Enter`로 다음·이전 항목으로 갑니다. `Mod+Alt+F`나 `▸` 버튼으로 바꿀 내용 칸을 열어 **바꾸기**, **모두 바꾸기**를 합니다(모두 바꾸기도 실행 취소 한 번으로 되돌아감). **대소문자 구분**은 `Aa` 버튼으로 켭니다.
    - **코드 블록 언어** 지정과 문법 강조 연결 지점(`highlightCode`)
    - `# `, `> `, ` ``` `, `- `, `* `, `1. `, `[ ] `, `---` 실시간 마크다운 단축키 자동 변환
    - 한글(CJK) IME 조합 중 글자 중복 입력 현상 완벽 방어
@@ -80,7 +81,7 @@ npm install @yonailab/levit
 
 ### 2. Vanilla JS / TypeScript에서 사용
 ```ts
-import { createLevitEditor, createBubbleMenu, createSlashMenu, createTableToolbar, createImageToolbar } from '@yonailab/levit';
+import { createLevitEditor, createBubbleMenu, createSlashMenu, createTableToolbar, createImageToolbar, createSearchPanel } from '@yonailab/levit';
 import '@yonailab/levit/levit.css';
 
 const container = document.getElementById('editor');
@@ -99,6 +100,7 @@ createBubbleMenu(editor);
 createSlashMenu(editor);   // 줄 첫머리나 띄어쓰기 뒤의 "/"로 열고, 이어서 입력하면 걸러짐
 createTableToolbar(editor);   // 커서가 있는 표 위에 표 도구 막대
 createImageToolbar(editor);   // 고른 이미지 위에 이미지 도구 막대
+createSearchPanel(editor);   // Mod+F로 여는 찾기와 바꾸기
 ```
 
 ### 3. 이미지 업로드와 문법 강조 (선택)
@@ -186,7 +188,7 @@ const doc = ref<DocumentData>();
 </script>
 ```
 
-- 버블 메뉴, 슬래시 메뉴, 표 도구 막대, 이미지 도구 막대가 기본으로 붙습니다. `bubble-menu="false"`, `slash-menu="false"`, `table-toolbar="false"`, `image-toolbar="false"`로 뺄 수 있습니다. React·Vue 컴포넌트에서는 `tableToolbar`, `imageToolbar` 옵션으로 끕니다.
+- 버블 메뉴, 슬래시 메뉴, 표 도구 막대, 이미지 도구 막대, 찾기와 바꾸기 패널이 기본으로 붙습니다. `bubble-menu="false"`, `slash-menu="false"`, `table-toolbar="false"`, `image-toolbar="false"`, `search-panel="false"`로 뺄 수 있습니다. React·Vue 컴포넌트에서는 `tableToolbar`, `imageToolbar`, `searchPanel` 옵션으로 끕니다.
 - `lang="ko"`/`"ja"`로 메뉴 언어를 정합니다. 나중에 바꾸면 같은 내용으로 새 `editor`를 만듭니다. 요소를 다른 곳으로 옮겨도 같은 에디터가 유지되고, 제거한 뒤에도 `getJSON()`으로 문서를 얻습니다.
 - 에디터 전체 기능은 `editor` 속성으로 씁니다(`el.editor.getJSON()` 등).
 
@@ -471,6 +473,31 @@ editor.getSelectedImage();   // { src, alt, size: 'medium' | null, align: 'cente
 - 정렬은 `'left'`(기본), `'center'`, `'right'`입니다.
 - **대체 텍스트**는 이미지를 볼 수 없는 사람(스크린 리더)에게 읽어 주는 설명입니다. 도구 막대의 **대체 텍스트**를 누르면 버튼 자리에 입력 칸이 나오고, Enter나 **저장**으로 저장, Esc로 취소합니다.
 - HTML로 내보내면 `data-size`·`data-align`과 함께 `style`도 써서, Levit CSS가 없는 곳에서도 크기와 정렬이 보입니다. Markdown에는 이를 나타낼 문법이 없어 이미지만 남습니다.
+
+### 찾기와 바꾸기
+
+`createSearchPanel(editor)`를 붙이면 에디터 안에서 `Mod+F`(Mac은 `Cmd+F`, 그 밖은 `Ctrl+F`)로 브라우저 찾기 대신 Levit의 찾기 칸이 열립니다. `Mod+Alt+F`는 바꿀 내용 칸까지 함께 엽니다.
+
+- 글을 선택한 채 열면 그 글로 찾습니다. 커서 다음에 있는 항목부터 시작하고, 칸 옆에 `5개 중 2번째`처럼 몇 번째인지 보여 줍니다.
+- `Enter`는 다음 항목, `Shift+Enter`는 이전 항목입니다(끝에서 처음으로 돌아감). `Esc`로 닫으면 지금 항목이 에디터에서 선택됩니다.
+- **바꾸기**(바꿀 내용 칸에서 `Enter`)는 지금 항목을 바꾸고 다음 항목으로 갑니다. **모두 바꾸기**는 한 번에 바꾸고, 실행 취소 한 번으로 모두 되돌립니다. 바꾼 글에는 원래 글 첫 글자의 서식(굵게, 링크, 색 등)이 그대로 남습니다.
+- 대소문자는 구분하지 않는 것이 기본입니다. **대소문자 구분**(`Aa`)을 누르면 정확히 같은 글만 찾습니다.
+- 찾은 곳은 CSS Custom Highlight API로 칠해서 문서와 화면의 글은 그대로입니다. 색은 `--levit-search-match`, 지금 항목은 `--levit-search-current`로 바꿉니다. 이 API가 없는 브라우저에서는 칠하지 않고, 개수 표시·이동·바꾸기는 똑같이 됩니다.
+- 읽기 전용(`setEditable(false)`)일 때는 찾기만 됩니다.
+
+```ts
+const search = createSearchPanel(editor);
+search.open({ replace: true });   // 코드에서 열기
+search.matches;                   // [{ blockId, from, to, text }, ...]
+search.replaceAll('새 글');        // 바꾼 개수
+
+// 화면 없이 쓰기
+import { findMatches, replaceMatches } from '@yonailab/levit';
+const found = findMatches(editor.state.doc, 'levit', { caseSensitive: false });
+const tr = editor.state.tr;
+replaceMatches(tr, found, 'Levit');
+editor.dispatch(tr);
+```
 
 ---
 

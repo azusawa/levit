@@ -38,14 +38,14 @@ Levit은 ESM 전용입니다. 번들러나 `import`로 사용하세요. 서버 �
 </script>
 ```
 
-이 요소는 `placeholder`, `lang`(내장 문구는 `ko` 또는 `ja`. 나중에 바꾸면 같은 내용으로 새 `editor`를 만들므로 이벤트는 다시 붙이세요), `theme`(`dark` 또는 `light`), 초기값 `value`(문서 JSON) 속성을 읽습니다. React·Vue 컴포넌트처럼 버블 메뉴, 슬래시 메뉴, 표 도구 막대, 이미지 도구 막대가 기본으로 붙고, `bubble-menu="false"`, `slash-menu="false"`, `table-toolbar="false"`, `image-toolbar="false"`로 뺄 수 있습니다. `color-picker="false"`는 색 팔레트에서 색상 피커를 뺍니다. `getJSON()`, `setJSON()`, `getText()`, `focus()` 메서드와, 에디터 인스턴스 전체를 담은 `editor` 속성도 있습니다. 요소를 페이지의 다른 곳으로 옮겨도 같은 에디터가 유지되고, 제거한 뒤에도 `getJSON()`으로 문서를 얻을 수 있습니다.
+이 요소는 `placeholder`, `lang`(내장 문구는 `ko` 또는 `ja`. 나중에 바꾸면 같은 내용으로 새 `editor`를 만들므로 이벤트는 다시 붙이세요), `theme`(`dark` 또는 `light`), 초기값 `value`(문서 JSON) 속성을 읽습니다. React·Vue 컴포넌트처럼 버블 메뉴, 슬래시 메뉴, 표 도구 막대, 이미지 도구 막대, 찾기와 바꾸기 패널이 기본으로 붙고, `bubble-menu="false"`, `slash-menu="false"`, `table-toolbar="false"`, `image-toolbar="false"`, `search-panel="false"`로 뺄 수 있습니다. `color-picker="false"`는 색 팔레트에서 색상 피커를 뺍니다. `getJSON()`, `setJSON()`, `getText()`, `focus()` 메서드와, 에디터 인스턴스 전체를 담은 `editor` 속성도 있습니다. 요소를 페이지의 다른 곳으로 옮겨도 같은 에디터가 유지되고, 제거한 뒤에도 `getJSON()`으로 문서를 얻을 수 있습니다.
 
 ### JavaScript / TypeScript
 
 `createLevitEditor`는 어떤 요소든 에디터로 만듭니다. 버블 툴바(글을 선택하면 표시), 슬래시 메뉴(`/`), 표 도구 막대(커서가 있는 표 위에 표시)는 따로 붙이므로, 쓰는 것만 불러오면 됩니다.
 
 ```ts
-import { createLevitEditor, createBubbleMenu, createSlashMenu, createTableToolbar, createImageToolbar } from '@yonailab/levit';
+import { createLevitEditor, createBubbleMenu, createSlashMenu, createTableToolbar, createImageToolbar, createSearchPanel } from '@yonailab/levit';
 import '@yonailab/levit/levit.css';
 
 const editor = createLevitEditor(document.getElementById('editor')!, {
@@ -56,6 +56,7 @@ createBubbleMenu(editor);
 createSlashMenu(editor);
 createTableToolbar(editor);
 createImageToolbar(editor);
+createSearchPanel(editor);
 ```
 
 ### 불러오기와 저장
@@ -309,6 +310,35 @@ editor.destroy();
 
 이 밖에도 `editor.commands`(플러그인 명령), `editor.messages`와 `editor.t(key, values)`(사용 중인 문구), 다른 곳에서 만든 상태를 한 번에 적용하는 `editor.replaceState(state)`, 오류를 `onError`나 콘솔로 보내는 `editor.reportError(error)`가 있습니다.
 
+## 찾기와 바꾸기
+
+`createSearchPanel(editor)`는 에디터 오른쪽 위에 **찾기와 바꾸기** 패널을 붙입니다. 에디터에서 `Mod+F`를 누르면 브라우저 찾기 대신 이 패널이 열리고, `Mod+Alt+F`는 바꿀 내용 칸까지 엽니다. `<levit-editor>`와 React·Vue 컴포넌트에는 기본으로 붙습니다(`search-panel="false"`, `searchPanel={false}`로 뺌).
+
+- 선택한 글이 있으면 그 글로 찾습니다. 커서 다음의 첫 항목이 지금 항목이 되고, `5개 중 2번째`처럼 보여 줍니다.
+- `Enter`와 `Shift+Enter`로 다음·이전 항목으로 갑니다(끝에서 처음으로 돌아감). `Esc`로 닫으면 지금 항목이 선택됩니다.
+- **바꾸기**(바꿀 내용 칸에서 `Enter`)는 지금 항목을 바꾸고 다음으로 갑니다. **모두 바꾸기**는 한 번의 변경이라 실행 취소 한 번으로 되돌아옵니다. 새 글은 바꾼 글 첫 글자의 서식을 이어받습니다.
+- **대소문자 구분**(`Aa`)은 기본으로 꺼져 있습니다.
+- 찾은 곳은 CSS Custom Highlight API로 칠하므로 문서와 DOM은 그대로입니다. 색은 `--levit-search-match`, `--levit-search-current`로 바꿉니다. 이 API가 없는 브라우저에서는 칠하지 않지만 개수 표시·이동·바꾸기는 똑같이 됩니다.
+- 읽기 전용 에디터에서는 찾기만 됩니다.
+
+```ts
+const search = createSearchPanel(editor);
+search.open({ replace: true });
+search.matches;               // [{ blockId, from, to, text }, ...]
+search.current;               // 지금 항목의 번호, 없으면 -1
+search.replaceAll('Levit');   // 바꾼 개수
+```
+
+패널 없이 쓸 때는 `findMatches(doc, query, { caseSensitive })`가 찾은 곳을(각각 한 블록 안, 서로 겹치지 않음) 돌려주고, `replaceMatches(tr, matches, text)`가 트랜잭션 안에서 바꿉니다. 그사이 문서가 바뀌어 그 자리에 찾은 글이 없으면 그 항목은 건너뜁니다.
+
+```ts
+import { findMatches, replaceMatches } from '@yonailab/levit';
+
+const tr = editor.state.tr;
+replaceMatches(tr, findMatches(editor.state.doc, 'levit'), 'Levit');
+editor.dispatch(tr);
+```
+
 ## 이벤트
 
 `editor.on`은 핸들러를 해제하는 함수를 돌려줍니다.
@@ -354,7 +384,7 @@ export function Note() {
 
 - `value`와 `onChange`를 함께 쓰면 제어 컴포넌트, `defaultValue`만 쓰면 비제어 컴포넌트입니다.
 - `onChange`는 `(value, editor)`를 받습니다.
-- `bubbleMenu={false}`, `slashMenu={false}`, `tableToolbar={false}`, `imageToolbar={false}`로 메뉴를 끕니다. `colors`, `colorPicker`는 에디터 옵션과 같습니다.
+- `bubbleMenu={false}`, `slashMenu={false}`, `tableToolbar={false}`, `imageToolbar={false}`, `searchPanel={false}`로 메뉴를 끕니다. `colors`, `colorPicker`는 에디터 옵션과 같습니다.
 - `ref`나 `onReady`로 에디터 인스턴스를 받습니다. `className`, `style`, `id`는 요소에 전달됩니다.
 - `'use client'`가 지정되어 있어 Next.js App Router에서 바로 쓸 수 있습니다.
 
@@ -392,7 +422,7 @@ const doc = ref<DocumentData>();
 ```
 
 - props: `placeholder`, `plugins`, `messages`, `uploadImage`, `highlightCode`
-- `:bubble-menu="false"`, `:slash-menu="false"`, `:table-toolbar="false"`, `:image-toolbar="false"`로 메뉴를 끕니다.
+- `:bubble-menu="false"`, `:slash-menu="false"`, `:table-toolbar="false"`, `:image-toolbar="false"`, `:search-panel="false"`로 메뉴를 끕니다.
 - `@ready`로 에디터 인스턴스를, `@error`로 업로드 실패 같은 오류를 받습니다.
 - 컴포넌트 ref의 `editor`로도 인스턴스에 접근할 수 있습니다.
 
