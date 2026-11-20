@@ -56,7 +56,9 @@ export function createBubbleMenu(editor: LevitEditor): BubbleMenuInstance {
     label: '',
     title,
     align,
-    action: () => editor.chain().setTextAlign(align).run(),
+    action: () => {
+      if (editor.canSetTextAlign()) editor.chain().setTextAlign(align).run();
+    },
   });
 
   // `mark` buttons report whether the selection has that mark (aria-pressed),
@@ -172,12 +174,13 @@ export function createBubbleMenu(editor: LevitEditor): BubbleMenuInstance {
   /** Marks the buttons for formats the selection already has. */
   function refreshButtons() {
     const align = editor.getTextAlign();
+    const canAlign = editor.canSetTextAlign();
     buttons.forEach((b, i) => {
       if (b.align) {
         // Lists, code and tables cannot be aligned.
         buttonEls[i].setAttribute('aria-pressed', String(align === b.align));
         buttonEls[i].classList.toggle('is-active', align === b.align);
-        buttonEls[i].setAttribute('aria-disabled', String(align === null));
+        buttonEls[i].setAttribute('aria-disabled', String(!canAlign));
         return;
       }
       if (!b.mark) return;

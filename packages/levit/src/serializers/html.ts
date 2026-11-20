@@ -257,10 +257,27 @@ function attrsFor(ctx: Context): Record<string, any> {
  * alignment around it holds.
  */
 function alignOf(el: Element): string | null | undefined {
+  if (tagOf(el) === 'center') return 'center';
   const style = /(?:^|;)\s*text-align\s*:\s*([a-z-]+)/i.exec(el.getAttribute('style') ?? '');
   const value = (style?.[1] ?? el.getAttribute('align'))?.toLowerCase();
-  return value === undefined ? undefined : normalizeTextAlign(value);
+  if (value === undefined) return undefined;
+  if (value in PASTED_ALIGNS) return PASTED_ALIGNS[value];
+  // inherit, match-parent and values we do not know keep the alignment around it.
+  return normalizeTextAlign(value) ?? undefined;
 }
+
+/**
+ * Alignment values other editors and browsers write, for left-to-right text.
+ * Chrome writes -webkit-center when it copies centered text.
+ */
+const PASTED_ALIGNS: Record<string, string | null> = {
+  left: null,
+  start: null,
+  '-webkit-left': null,
+  '-webkit-center': 'center',
+  '-webkit-right': 'right',
+  end: 'right',
+};
 
 /** The context with the element's own alignment, when it sets one. */
 function alignedContext(el: Element, ctx: Context): Context {

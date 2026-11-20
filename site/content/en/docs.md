@@ -224,7 +224,8 @@ editor.chain().updateImage({ size: 'medium', align: 'center', alt: 'Sunset' }).r
 editor.chain().updateImage({ size: null, align: 'left' }).run(); // its own size, on the left (the default)
 editor.getSelectedImage();                  // { src, alt, size, align } of the selected image, or null
 editor.chain().setTextAlign('center').run();   // aligns the selected paragraphs, headings and quotes: 'left' (the default), 'center', 'right', 'justify'
-editor.getTextAlign();                      // the alignment of the caret's line, or null where lines cannot be aligned
+editor.getTextAlign();                      // the selected lines' alignment, or null when they differ or none can be aligned
+editor.canSetTextAlign();                   // true when the selection has a line that can be aligned
 editor.chain().setCodeBlock('ts').run();   // setCodeLanguage('py') changes it, '' clears it
 editor.chain().insertFragment(blocks).run(); // insert blocks at the caret, like a paste
 editor.chain().insertLineBreak().run();    // Shift+Enter

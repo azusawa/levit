@@ -79,6 +79,14 @@ describe('Floating Menus (Bubble Menu & Slash Menu)', () => {
     expect(editor.getJSON().blocks[1].attrs).toEqual({});
     expect(pressed()).toEqual([]);
     expect(button('Center').getAttribute('aria-disabled')).toBe('true');
+    button('Center').dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    expect(editor.getJSON().blocks[1].attrs).toEqual({});
+
+    // From the paragraph into the list item: the paragraph can still be aligned.
+    editor.dispatch(editor.state.tr.setSelection({ anchor: { blockId: 'a', offset: 0 }, head: { blockId: 'b', offset: 3 }, isCollapsed: false }));
+    press('Justify');
+    expect(editor.getJSON().blocks[0].attrs).toEqual({ align: 'justify' });
+    expect(pressed()).toEqual(['Justify']);
     bubbleMenu.destroy();
     editor.destroy();
   });

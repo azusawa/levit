@@ -481,7 +481,8 @@ editor.getSelectedImage();   // { src, alt, size: 'medium' | null, align: 'cente
 
 ```ts
 editor.chain().setTextAlign('center').run();   // 선택한 줄들. 'left'면 정렬을 뺌
-editor.getTextAlign();   // 'left' | 'center' | 'right' | 'justify', 정렬할 수 없는 블록이면 null
+editor.getTextAlign();   // 선택한 줄들의 정렬 'left' | 'center' | 'right' | 'justify', 서로 다르거나 정렬할 수 없으면 null
+editor.canSetTextAlign();   // 선택에 정렬할 수 있는 줄이 있으면 true
 ```
 
 - 버블 메뉴의 **왼쪽 정렬**, **가운데 정렬**, **오른쪽 정렬**, **양쪽 정렬** 버튼과 단축키 `Mod+Shift+L`·`E`·`R`·`J`(Google Docs와 같음)로도 바꿉니다.

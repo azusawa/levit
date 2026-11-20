@@ -45,14 +45,14 @@ const markSchema = (type: string, attrsSchema?: JSONSchema): JSONSchema => ({
   additionalProperties: false,
 });
 
+const ALIGN: JSONSchema = { enum: [...TEXT_ALIGNS], description: 'How the lines line up. Leave it out for the left.' };
+
 /**
  * The JSON Schema (2020-12) of a Levit document, with the blocks and marks of
  * the given plugins. Give it to an AI model (structured output or a tool
  * definition) so it writes documents in the right shape, and check what comes
  * back with validateDocument(), which also checks link and image URLs.
  */
-const ALIGN: JSONSchema = { enum: [...TEXT_ALIGNS], description: 'How the lines line up. Leave it out for the left.' };
-
 export function getDocumentSchema(options: SerializerOptions = {}): JSONSchema {
   const schema = schemaFor(options.plugins);
   const blocks: JSONSchema[] = [

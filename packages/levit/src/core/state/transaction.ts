@@ -24,7 +24,7 @@ import {
 import { normalizeCodeLanguage, sanitizeHref, sanitizeImageSrc } from '../model/sanitize.js';
 import { normalizeColor } from '../model/colors.js';
 import { normalizeImageAlign, normalizeImageSize, type ImageAlign, type ImageSize } from '../model/image.js';
-import { blockTextAlign, canAlignText, normalizeTextAlign, type TextAlign } from '../model/align.js';
+import { alignableIndexes, blockTextAlign, canAlignText, normalizeTextAlign, withTextAlign, type TextAlign } from '../model/align.js';
 import {
   lineEndOffset,
   lineStartOffset,
@@ -381,11 +381,13 @@ export class Transaction {
       return this;
     }
 
-    // Offset is 0 and it's the first block: if not paragraph, reset to paragraph
+    // Offset is 0 and it's the first block: if not paragraph, reset to
+    // paragraph (keeping the alignment, as setBlockType does).
     if (block.type !== 'paragraph') {
+      const align = blockTextAlign(block);
       const edited = this.edit(blockIdx);
       edited.type = 'paragraph';
-      edited.attrs = {};
+      edited.attrs = align ? { align } : {};
       this.docChanged = true;
     }
 
@@ -548,10 +550,7 @@ export class Transaction {
 
     if (pasted.length === 1) {
       // An empty paragraph takes the type of the pasted block, as below.
-      if (block.type === 'paragraph' && getBlockText(block) === '') {
-        block.type = pasted[0].type;
-        block.attrs = { ...pasted[0].attrs };
-      }
+      if (block.type === 'paragraph' && getBlockText(block) === '') this.takeBlockType(block, pasted[0]);
       const inserted = normalizeInlineNodes(pasted[0].content);
       block.content = normalizeInlineNodes([...left, ...inserted, ...right]);
       const caretOffset = offset + getBlockText(pasted[0]).length;
@@ -568,10 +567,7 @@ export class Transaction {
     const lastLength = getBlockText(last).length;
 
     // An empty paragraph takes the type of the first pasted block.
-    if (block.type === 'paragraph' && getBlockText(block) === '') {
-      block.type = first.type;
-      block.attrs = { ...first.attrs };
-    }
+    if (block.type === 'paragraph' && getBlockText(block) === '') this.takeBlockType(block, first);
     block.content = normalizeInlineNodes([...left, ...first.content]);
     last.content = normalizeInlineNodes([...last.content, ...right]);
     this.doc.blocks.splice(blockIdx + 1, 0, ...pasted.slice(1));
@@ -621,6 +617,17 @@ export class Transaction {
    * otherwise it goes after the caret's block, splitting it if needed. The
    * caret moves to the block after it, which is a new paragraph if needed.
    */
+  /**
+   * An empty paragraph becomes the pasted block's type. It keeps its own
+   * alignment unless the pasted block brings one (an aligned empty line,
+   * as after Enter on a centered title, stays aligned).
+   */
+  private takeBlockType(block: BlockNode, pasted: BlockNode): void {
+    const align = blockTextAlign(pasted) ?? (canAlignText(pasted.type) ? blockTextAlign(block) : null);
+    block.type = pasted.type;
+    block.attrs = withTextAlign({ ...pasted, attrs: { ...pasted.attrs } }, align);
+  }
+
   insertAtom(type: string, attrs: Record<string, any> = {}): this {
     // Only blocks without text go here, and images keep their src check.
     if (!this.isAtom(type)) return this;
@@ -1349,15 +1356,11 @@ export class Transaction {
   setTextAlign(align: TextAlign): this {
     const value = normalizeTextAlign(align);
     if (!value && align !== 'left') return this;
-    const { from, to } = this.normalizeSelectionOrder();
-    const fromIdx = findBlockIndex(this.doc, from.blockId);
-    const toIdx = findBlockIndex(this.doc, to.blockId);
-    if (fromIdx === -1 || toIdx === -1) return this;
-    for (let i = fromIdx; i <= toIdx; i++) {
+    for (const i of alignableIndexes(this.doc, this.selection)) {
+      // The stored value, so 'left' also clears a value Levit does not know.
       const block = this.doc.blocks[i];
-      if (!canAlignText(block.type) || blockTextAlign(block) === value) continue;
-      const { align: _old, ...rest } = block.attrs ?? {};
-      this.edit(i).attrs = value ? { ...rest, align: value } : rest;
+      if ((block.attrs?.align ?? null) === value) continue;
+      this.edit(i).attrs = withTextAlign(block, value);
       this.docChanged = true;
     }
     return this;

@@ -254,7 +254,8 @@ editor.getSelectedImage();                     // { src, alt, size: 'small' | 'm
 
 // Paragraph alignment: paragraphs, headings and quotes (not lists, code or tables).
 editor.chain().setTextAlign('center').run();   // 'left' (the default, takes it off), 'center', 'right', 'justify'
-editor.getTextAlign();                         // the caret's line: 'left' | 'center' | 'right' | 'justify', or null
+editor.getTextAlign();                         // the selected lines' shared alignment, or null when they differ or none can be aligned
+editor.canSetTextAlign();                      // true when the selection has a line that can be aligned
 // Kept as attrs.align. Keys: Mod+Shift+L, E, R, J. The bubble menu has "Align left",
 // "Center", "Align right", "Justify". Enter keeps the alignment on the new line.
 // HTML export writes style="text-align: ..."; Markdown has no alignment.

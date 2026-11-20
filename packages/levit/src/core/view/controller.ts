@@ -352,9 +352,9 @@ export class InputController {
     if (hadFocus) this.editor.focus();
   }
 
-  /** The alignment for an alignment shortcut, in a block that can be aligned, or null. */
+  /** The alignment for an alignment shortcut, when the selection has a line that can be aligned, or null. */
   private alignShortcut(e: KeyboardEvent): TextAlign | null {
-    if (!this.editor.isEditable || this.editor.getTextAlign() === null) return null;
+    if (!this.editor.isEditable || !this.editor.canSetTextAlign()) return null;
     const entries = Object.entries(TEXT_ALIGN_SHORTCUTS) as [TextAlign, string][];
     return entries.find(([, shortcut]) => matchesShortcut(e, shortcut))?.[0] ?? null;
   }

@@ -224,7 +224,8 @@ editor.chain().updateImage({ size: 'medium', align: 'center', alt: '夕焼け' }
 editor.chain().updateImage({ size: null, align: 'left' }).run(); // 本来のサイズ、左揃え（既定）
 editor.getSelectedImage();                  // 選んだ画像の { src, alt, size, align } か null
 editor.chain().setTextAlign('center').run();   // 選んだ段落・見出し・引用をそろえる: 'left'（既定）, 'center', 'right', 'justify'
-editor.getTextAlign();                      // カーソルの行のそろえ方。そろえられないブロックでは null
+editor.getTextAlign();                      // 選んだ行のそろえ方。行ごとに違うか、そろえられないときは null
+editor.canSetTextAlign();                   // 選択にそろえられる行があれば true
 editor.chain().setCodeBlock('ts').run();   // setCodeLanguage('py') で変更、'' で解除
 editor.chain().insertFragment(blocks).run(); // 貼り付けと同様にキャレット位置へブロックを挿入
 editor.chain().insertLineBreak().run();    // Shift+Enter

@@ -1,5 +1,5 @@
 import { BlockNode, DocumentData, EditorSelection, InlineMark } from './model/types.js';
-import { blockTextAlign, canAlignText, type TextAlign } from './model/align.js';
+import { alignableIndexes, selectionTextAlign, type TextAlign } from './model/align.js';
 import { EditorState } from './state/state.js';
 import { HistoryManager } from './state/history.js';
 import { Transaction, type ImageChanges } from './state/transaction.js';
@@ -759,14 +759,17 @@ export class LevitEditor {
   }
 
   /**
-   * The alignment of the block with the caret: 'left', 'center', 'right' or
-   * 'justify', or null when that block cannot be aligned (a list, code...).
+   * The alignment of the selected lines: 'left', 'center', 'right' or
+   * 'justify', or null when they differ or none can be aligned (lists,
+   * code, tables).
    */
   getTextAlign(): TextAlign | null {
-    const { doc, selection } = this.state;
-    const block = doc.blocks[findBlockIndex(doc, selection.head.blockId)];
-    if (!block || !canAlignText(block.type)) return null;
-    return blockTextAlign(block) ?? 'left';
+    return selectionTextAlign(this.state.doc, this.state.selection);
+  }
+
+  /** True when the selection has a line that can be aligned (a paragraph, heading or quote). */
+  canSetTextAlign(): boolean {
+    return alignableIndexes(this.state.doc, this.state.selection).length > 0;
   }
 
   /** True when the caret is in a table. */

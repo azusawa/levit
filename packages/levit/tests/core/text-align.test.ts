@@ -122,6 +122,57 @@ describe('setTextAlign', () => {
   });
 });
 
+describe('alignment through other edits (review)', () => {
+  it('text pasted or streamed into an empty aligned line keeps its alignment', () => {
+    make([para('a', '', { align: 'center' }), para('b', '', { align: 'right' })]);
+    put('a');
+    editor.chain().insertFragment([para('x', 'hello')]).run();
+    expect(attrs('a')).toEqual({ align: 'center' });
+    put('b');
+    editor.chain().insertFragment([para('y', 'one'), para('z', 'two')]).run();
+    expect(attrs('b')).toEqual({ align: 'right' });
+    // A pasted block with its own alignment brings it.
+    make([para('c', '', { align: 'center' })]);
+    put('c');
+    editor.chain().insertFragment([para('w', 'hi', { align: 'justify' })]).run();
+    expect(attrs('c')).toEqual({ align: 'justify' });
+  });
+
+  it('Backspace that turns the first heading into a paragraph keeps its alignment', () => {
+    make([heading('h', 'Title', { align: 'center' })]);
+    put('h', 0);
+    editor.chain().deleteBackward().run();
+    expect(editor.state.doc.blocks[0].type).toBe('paragraph');
+    expect(attrs('h')).toEqual({ align: 'center' });
+  });
+
+  it("'left' clears an alignment value Levit does not know", () => {
+    make([para('a', 'one', { align: 'left' }), para('b', 'two', { align: 'start' })]);
+    editor.dispatch(editor.state.tr.setSelection(range('a', 'b')));
+    editor.chain().setTextAlign('left').run();
+    expect([attrs('a'), attrs('b')]).toEqual([{}, {}]);
+  });
+
+  it('a selection reads as one alignment only when all its alignable lines share it', () => {
+    make([para('a', 'one', { align: 'center' }), bullet('l', 'item'), para('b', 'two', { align: 'center' }), para('c', 'three')]);
+    editor.dispatch(editor.state.tr.setSelection(range('a', 'b')));
+    expect(editor.getTextAlign()).toBe('center');
+    expect(editor.canSetTextAlign()).toBe(true);
+    editor.dispatch(editor.state.tr.setSelection(range('a', 'c')));
+    expect(editor.getTextAlign()).toBeNull();
+    expect(editor.canSetTextAlign()).toBe(true);
+    put('l');
+    expect(editor.canSetTextAlign()).toBe(false);
+  });
+
+  it('the shortcut works when the selection ends in a list but starts in a paragraph', () => {
+    make([para('a', 'one'), bullet('l', 'item')]);
+    editor.dispatch(editor.state.tr.setSelection(range('a', 'l')));
+    expect(key('E', { ctrlKey: true, shiftKey: true, code: 'KeyE' }).defaultPrevented).toBe(true);
+    expect(attrs('a')).toEqual({ align: 'center' });
+  });
+});
+
 describe('drawing the alignment', () => {
   it('sets text-align on the block, and clears it', () => {
     make([para('a', 'one', { align: 'justify' }), para('b', 'two')]);
@@ -215,6 +266,20 @@ describe('alignment in HTML, Markdown and the AI schema', () => {
       ['paragraph', { align: 'justify' }],
       ['paragraph', {}],
       ['bullet_list_item', {}],
+    ]);
+  });
+
+  it('reads the values browsers write when copying, and leaves inherit to the container', () => {
+    const doc = htmlToDocument(
+      '<p style="text-align: -webkit-center">a</p><p style="text-align: -webkit-right">b</p><p style="text-align: end">c</p>' +
+        '<div style="text-align: center"><p style="text-align: inherit">d</p></div><center>e</center>'
+    );
+    expect(doc.blocks.map((b) => b.attrs)).toEqual([
+      { align: 'center' },
+      { align: 'right' },
+      { align: 'right' },
+      { align: 'center' },
+      { align: 'center' },
     ]);
   });
 
