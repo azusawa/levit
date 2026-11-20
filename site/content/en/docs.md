@@ -223,6 +223,8 @@ editor.chain().insertImage({ src: 'https://example.com/a.png', alt: 'A' }).run()
 editor.chain().updateImage({ size: 'medium', align: 'center', alt: 'Sunset' }).run(); // the selected image
 editor.chain().updateImage({ size: null, align: 'left' }).run(); // its own size, on the left (the default)
 editor.getSelectedImage();                  // { src, alt, size, align } of the selected image, or null
+editor.chain().setTextAlign('center').run();   // aligns the selected paragraphs, headings and quotes: 'left' (the default), 'center', 'right', 'justify'
+editor.getTextAlign();                      // the alignment of the caret's line, or null where lines cannot be aligned
 editor.chain().setCodeBlock('ts').run();   // setCodeLanguage('py') changes it, '' clears it
 editor.chain().insertFragment(blocks).run(); // insert blocks at the caret, like a paste
 editor.chain().insertLineBreak().run();    // Shift+Enter

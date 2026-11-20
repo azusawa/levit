@@ -223,6 +223,8 @@ editor.chain().insertImage({ src: 'https://example.com/a.png', alt: 'A' }).run()
 editor.chain().updateImage({ size: 'medium', align: 'center', alt: '노을' }).run(); // 고른 이미지
 editor.chain().updateImage({ size: null, align: 'left' }).run(); // 원래 크기, 왼쪽 정렬(기본)
 editor.getSelectedImage();                  // 고른 이미지의 { src, alt, size, align } 또는 null
+editor.chain().setTextAlign('center').run();   // 선택한 문단·제목·인용 정렬: 'left'(기본), 'center', 'right', 'justify'
+editor.getTextAlign();                      // 커서가 있는 줄의 정렬, 정렬할 수 없는 블록이면 null
 editor.chain().setCodeBlock('ts').run();   // setCodeLanguage('py')로 변경, ''이면 해제
 editor.chain().insertFragment(blocks).run(); // 붙여넣기처럼 커서 위치에 블록 삽입
 editor.chain().insertLineBreak().run();    // Shift+Enter

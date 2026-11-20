@@ -55,6 +55,7 @@ Select some text and a small toolbar, the bubble menu, appears above it. Its but
 - **Link** — adds or edits a link (see below).
 - **Heading 1**, **Heading 2** — turn the whole line into a heading.
 - **Quote** — turns the whole line into a quote.
+- **Align left**, **Center**, **Align right**, **Justify** — line up the selected paragraphs, headings and quotes. The current alignment shows pressed. Lists, code blocks and tables are not aligned. Enter on an aligned line starts the next line with the same alignment.
 - **Convert to table** — turns the selected lines into a table, one row per line. Cells are split at tabs, or at commas when no line has a tab, so `Name, Price` becomes two cells.
 
 A button is shown as pressed when all the selected text already has that format; press it again to remove the format. To turn a heading or quote back into normal text, type `/` and choose **Text**.
@@ -222,6 +223,10 @@ You can use the editor without a mouse, and screen readers announce the editor, 
 - **Mod+U** — Underline
 - **Mod+Shift+X** — Strikethrough
 - **Mod+Shift+H** — Highlight
+- **Mod+Shift+L** — Align left
+- **Mod+Shift+E** — Center
+- **Mod+Shift+R** — Align right
+- **Mod+Shift+J** — Justify
 - **Tab** — Indent a list item; in a table, go to the next cell
 - **Shift+Tab** — Outdent a list item; in a table, go to the previous cell
 - **Mod+Enter** — Check or uncheck a task; in a table, add a row below

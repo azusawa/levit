@@ -252,6 +252,13 @@ editor.getSelectedImage();                     // { src, alt, size: 'small' | 'm
 // "Center", "Align right", "Delete image". HTML export keeps data-size and
 // data-align with a style that shows them without Levit's CSS.
 
+// Paragraph alignment: paragraphs, headings and quotes (not lists, code or tables).
+editor.chain().setTextAlign('center').run();   // 'left' (the default, takes it off), 'center', 'right', 'justify'
+editor.getTextAlign();                         // the caret's line: 'left' | 'center' | 'right' | 'justify', or null
+// Kept as attrs.align. Keys: Mod+Shift+L, E, R, J. The bubble menu has "Align left",
+// "Center", "Align right", "Justify". Enter keeps the alignment on the new line.
+// HTML export writes style="text-align: ..."; Markdown has no alignment.
+
 // Find and replace. createSearchPanel(editor) opens with Mod+F in the editor
 // (Mod+Alt+F also shows the replace field): "Find and replace" panel with the
 // fields "Find" and "Replace with", "Match case" (Aa; off by default), "Previous
