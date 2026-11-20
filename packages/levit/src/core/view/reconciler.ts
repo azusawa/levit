@@ -1,4 +1,5 @@
 import { colorCSS, HIGHLIGHT_FALLBACK, normalizeColor } from '../model/colors.js';
+import { blockTextAlign } from '../model/align.js';
 import { normalizeImageAlign, normalizeImageSize } from '../model/image.js';
 import { BlockNode, InlineMark, InlineNode } from '../model/types.js';
 import { EditorState } from '../state/state.js';
@@ -312,6 +313,13 @@ export class DOMReconciler {
     else delete el.dataset.size;
     if (align) el.dataset.align = align;
     else delete el.dataset.align;
+    // A paragraph's, heading's or quote's alignment.
+    const textAlign = blockTextAlign(block);
+    if (textAlign) el.style.textAlign = textAlign;
+    else if (el.style.textAlign) {
+      el.style.removeProperty('text-align');
+      if (el.getAttribute('style') === '') el.removeAttribute('style');
+    }
   }
 
   private updateBlockContent(el: HTMLElement, block: BlockNode): void {

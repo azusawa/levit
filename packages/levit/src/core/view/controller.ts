@@ -5,6 +5,7 @@ import { readClipboard, writeClipboard } from './clipboard.js';
 import { tableAt } from '../model/table.js';
 import { matchesShortcut } from '../plugin/plugin.js';
 import { TABLE_SHORTCUTS, type TableShortcutCommand } from './table-shortcuts.js';
+import { TEXT_ALIGN_SHORTCUTS, type TextAlign } from '../model/align.js';
 import {
   domRangeToEditorSelection,
   domSelectionToEditorSelection,
@@ -33,6 +34,10 @@ const INPUT_COMMANDS: Record<string, (chain: Chain) => Chain> = {
   formatItalic: (c) => c.toggleItalic(),
   formatUnderline: (c) => c.toggleUnderline(),
   formatStrikeThrough: (c) => c.toggleStrike(),
+  formatJustifyLeft: (c) => c.setTextAlign('left'),
+  formatJustifyCenter: (c) => c.setTextAlign('center'),
+  formatJustifyRight: (c) => c.setTextAlign('right'),
+  formatJustifyFull: (c) => c.setTextAlign('justify'),
 };
 
 /** IME input. The browser edits the DOM; the result is applied on compositionend. */
@@ -150,7 +155,7 @@ export class InputController {
         this.editor.redo();
         return;
       default:
-        // Unsupported (lists via execCommand, colors, alignment, deleteByDrag...).
+        // Unsupported (lists via execCommand, colors, deleteByDrag...).
         return;
     }
   }
@@ -225,6 +230,14 @@ export class InputController {
     if (isMod && e.key.toLowerCase() === 'u') {
       e.preventDefault();
       this.editor.chain().toggleUnderline().run();
+      return;
+    }
+
+    // Mod+Shift+L, E, R, J align the line left, center, right or justify.
+    const align = isMod && !e.defaultPrevented ? this.alignShortcut(e) : null;
+    if (align) {
+      e.preventDefault();
+      this.editor.chain().setTextAlign(align).run();
       return;
     }
 
@@ -337,6 +350,13 @@ export class InputController {
     const language = window.prompt(this.editor.messages.codeLanguagePrompt, pre?.getAttribute('data-language') ?? '');
     if (blockId && language !== null) this.editor.chain().setCodeLanguage(language, blockId).run();
     if (hadFocus) this.editor.focus();
+  }
+
+  /** The alignment for an alignment shortcut, in a block that can be aligned, or null. */
+  private alignShortcut(e: KeyboardEvent): TextAlign | null {
+    if (!this.editor.isEditable || this.editor.getTextAlign() === null) return null;
+    const entries = Object.entries(TEXT_ALIGN_SHORTCUTS) as [TextAlign, string][];
+    return entries.find(([, shortcut]) => matchesShortcut(e, shortcut))?.[0] ?? null;
   }
 
   /**

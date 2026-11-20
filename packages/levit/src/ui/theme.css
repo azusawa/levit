@@ -651,6 +651,24 @@ figure.levit-block-image img::selection {
   color: var(--levit-primary);
 }
 
+/* The alignment buttons draw line icons in the button's color. */
+.levit-bubble-align {
+  display: inline-flex;
+  align-items: center;
+}
+
+.levit-bubble-align svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
+.levit-bubble-align[aria-disabled="true"] {
+  opacity: 0.4;
+  cursor: default;
+}
+
 .levit-bubble-link-input {
   width: 240px;
   background: var(--levit-bg);

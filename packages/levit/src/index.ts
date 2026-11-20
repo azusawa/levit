@@ -38,6 +38,7 @@ export type { InputRule } from './core/plugin/input-rules.js';
 export { EditorState, type EditorStateConfig } from './core/state/state.js';
 export { Transaction, type ImageChanges } from './core/state/transaction.js';
 export type { ImageAlign, ImageSize } from './core/model/image.js';
+export type { TextAlign } from './core/model/align.js';
 export { HistoryManager, type HistoryItem } from './core/state/history.js';
 
 // Model & Types

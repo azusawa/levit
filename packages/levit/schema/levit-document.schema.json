@@ -39,7 +39,16 @@
             },
             "attrs": {
               "type": "object",
-              "properties": {},
+              "properties": {
+                "align": {
+                  "enum": [
+                    "center",
+                    "right",
+                    "justify"
+                  ],
+                  "description": "How the lines line up. Leave it out for the left."
+                }
+              },
               "additionalProperties": false
             },
             "content": {
@@ -72,6 +81,14 @@
                   "type": "integer",
                   "minimum": 1,
                   "maximum": 6
+                },
+                "align": {
+                  "enum": [
+                    "center",
+                    "right",
+                    "justify"
+                  ],
+                  "description": "How the lines line up. Leave it out for the left."
                 }
               },
               "required": [
@@ -104,7 +121,16 @@
             },
             "attrs": {
               "type": "object",
-              "properties": {},
+              "properties": {
+                "align": {
+                  "enum": [
+                    "center",
+                    "right",
+                    "justify"
+                  ],
+                  "description": "How the lines line up. Leave it out for the left."
+                }
+              },
               "additionalProperties": false
             },
             "content": {

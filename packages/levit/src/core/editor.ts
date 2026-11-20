@@ -1,4 +1,5 @@
 import { BlockNode, DocumentData, EditorSelection, InlineMark } from './model/types.js';
+import { blockTextAlign, canAlignText, type TextAlign } from './model/align.js';
 import { EditorState } from './state/state.js';
 import { HistoryManager } from './state/history.js';
 import { Transaction, type ImageChanges } from './state/transaction.js';
@@ -356,6 +357,12 @@ export class ChainedCommands {
 
   setHeading(level = 1): this {
     this.tr.setBlockType('heading', { level });
+    return this;
+  }
+
+  /** Aligns the selected paragraphs, headings and quotes; 'left' takes the alignment off. */
+  setTextAlign(align: TextAlign): this {
+    this.tr.setTextAlign(align);
     return this;
   }
 
@@ -749,6 +756,17 @@ export class LevitEditor {
       size: normalizeImageSize(block.attrs?.size),
       align: normalizeImageAlign(block.attrs?.align) ?? 'left',
     };
+  }
+
+  /**
+   * The alignment of the block with the caret: 'left', 'center', 'right' or
+   * 'justify', or null when that block cannot be aligned (a list, code...).
+   */
+  getTextAlign(): TextAlign | null {
+    const { doc, selection } = this.state;
+    const block = doc.blocks[findBlockIndex(doc, selection.head.blockId)];
+    if (!block || !canAlignText(block.type)) return null;
+    return blockTextAlign(block) ?? 'left';
   }
 
   /** True when the caret is in a table. */

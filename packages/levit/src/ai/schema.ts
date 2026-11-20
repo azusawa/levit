@@ -1,4 +1,5 @@
 import { normalizeColor } from '../core/model/colors.js';
+import { normalizeTextAlign, TEXT_ALIGNS } from '../core/model/align.js';
 import { IMAGE_ALIGNS, IMAGE_SIZES, normalizeImageAlign, normalizeImageSize } from '../core/model/image.js';
 import { schemaFor, type SerializerOptions } from '../core/plugin/plugin.js';
 import { MAX_LIST_INDENT } from '../core/model/document.js';
@@ -50,12 +51,14 @@ const markSchema = (type: string, attrsSchema?: JSONSchema): JSONSchema => ({
  * definition) so it writes documents in the right shape, and check what comes
  * back with validateDocument(), which also checks link and image URLs.
  */
+const ALIGN: JSONSchema = { enum: [...TEXT_ALIGNS], description: 'How the lines line up. Leave it out for the left.' };
+
 export function getDocumentSchema(options: SerializerOptions = {}): JSONSchema {
   const schema = schemaFor(options.plugins);
   const blocks: JSONSchema[] = [
-    blockSchema('paragraph', attrs()),
-    blockSchema('heading', attrs({ level: { type: 'integer', minimum: 1, maximum: 6 } }, ['level'])),
-    blockSchema('blockquote', attrs()),
+    blockSchema('paragraph', attrs({ align: ALIGN })),
+    blockSchema('heading', attrs({ level: { type: 'integer', minimum: 1, maximum: 6 }, align: ALIGN }, ['level'])),
+    blockSchema('blockquote', attrs({ align: ALIGN })),
     blockSchema('code_block', attrs({ language: { type: 'string', pattern: '^[A-Za-z0-9_+#.-]{1,32}$' } })),
     ...LIST_TYPES.map((type) => blockSchema(type, attrs({ indent: INDENT }))),
     blockSchema('task_list_item', attrs({ checked: { type: 'boolean' }, indent: INDENT }, ['checked'])),
@@ -243,14 +246,18 @@ const checkIndent: AttrCheck = (a, fail) => {
   }
 };
 
+const checkAlign: AttrCheck = (a, fail) => {
+  if (a.align !== undefined && !normalizeTextAlign(a.align)) fail('align', `must be one of ${TEXT_ALIGNS.join(', ')}`);
+};
+
 const both = (...checks: AttrCheck[]): AttrCheck => (a, fail) => checks.forEach((check) => check(a, fail));
 
 /** Attribute checks for each built-in block type. */
 const BLOCK_ATTRS: Record<string, AttrCheck> = {
-  paragraph: onlyKeys([]),
-  blockquote: onlyKeys([]),
+  paragraph: both(onlyKeys(['align']), checkAlign),
+  blockquote: both(onlyKeys(['align']), checkAlign),
   horizontal_rule: onlyKeys([]),
-  heading: both(onlyKeys(['level']), (a, fail) => {
+  heading: both(onlyKeys(['level', 'align']), checkAlign, (a, fail) => {
     if (!(Number.isInteger(a.level) && (a.level as number) >= 1 && (a.level as number) <= 6)) fail('level', 'must be an integer from 1 to 6');
   }),
   code_block: both(onlyKeys(['language']), (a, fail) => {

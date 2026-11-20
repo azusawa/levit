@@ -24,6 +24,7 @@ import {
 import { normalizeCodeLanguage, sanitizeHref, sanitizeImageSrc } from '../model/sanitize.js';
 import { normalizeColor } from '../model/colors.js';
 import { normalizeImageAlign, normalizeImageSize, type ImageAlign, type ImageSize } from '../model/image.js';
+import { blockTextAlign, canAlignText, normalizeTextAlign, type TextAlign } from '../model/align.js';
 import {
   lineEndOffset,
   lineStartOffset,
@@ -1081,7 +1082,9 @@ export class Transaction {
       if (type === 'task_list_item') attrs.checked = false;
     }
     type ??= 'paragraph';
-    attrs ??= {};
+    // The new line keeps the alignment (a centered title goes on centered).
+    const align = blockTextAlign(block);
+    attrs ??= align && canAlignText(type) ? { align } : {};
 
     const [left, right] = splitBlockContent(block, offset);
     block.content = left;
@@ -1330,8 +1333,31 @@ export class Transaction {
       const current = this.doc.blocks[i].type;
       if (this.isAtom(current) || isTableCell(current)) continue;
       const block = this.edit(i);
+      // An alignment stays when the new type can have one too.
+      const align = canAlignText(type) ? blockTextAlign(block) : null;
       block.type = type;
-      block.attrs = { ...attrs };
+      block.attrs = align ? { ...attrs, align } : { ...attrs };
+      this.docChanged = true;
+    }
+    return this;
+  }
+
+  /**
+   * Aligns the selected paragraphs, headings and quotes; 'left' takes the
+   * alignment off. Other blocks and values it does not know are left alone.
+   */
+  setTextAlign(align: TextAlign): this {
+    const value = normalizeTextAlign(align);
+    if (!value && align !== 'left') return this;
+    const { from, to } = this.normalizeSelectionOrder();
+    const fromIdx = findBlockIndex(this.doc, from.blockId);
+    const toIdx = findBlockIndex(this.doc, to.blockId);
+    if (fromIdx === -1 || toIdx === -1) return this;
+    for (let i = fromIdx; i <= toIdx; i++) {
+      const block = this.doc.blocks[i];
+      if (!canAlignText(block.type) || blockTextAlign(block) === value) continue;
+      const { align: _old, ...rest } = block.attrs ?? {};
+      this.edit(i).attrs = value ? { ...rest, align: value } : rest;
       this.docChanged = true;
     }
     return this;

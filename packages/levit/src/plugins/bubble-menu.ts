@@ -3,6 +3,8 @@ import { normalizeLinkInput } from '../core/model/sanitize.js';
 import type { EditorSelection } from '../core/model/types.js';
 import { rovingToolbar } from './toolbar-keys.js';
 import { createColorPanel } from './color-panel.js';
+import { lineIcon } from './toolbar-icons.js';
+import type { TextAlign } from '../core/model/align.js';
 
 export interface BubbleMenuInstance {
   element: HTMLElement;
@@ -12,6 +14,14 @@ export interface BubbleMenuInstance {
 }
 
 const bubbleMenus = new WeakMap<LevitEditor, BubbleMenuInstance>();
+
+/** Line icons for the alignment buttons: four lines, lined up each way. */
+const ALIGN_ICONS: Record<TextAlign, string[]> = {
+  left: ['M2 3.5h12M2 6.5h8M2 9.5h12M2 12.5h8'],
+  center: ['M2 3.5h12M4 6.5h8M2 9.5h12M4 12.5h8'],
+  right: ['M2 3.5h12M6 6.5h8M2 9.5h12M6 12.5h8'],
+  justify: ['M2 3.5h12M2 6.5h12M2 9.5h12M2 12.5h8'],
+};
 
 /** The bubble menu of an editor. An editor has one: calling this again returns it. */
 export function createBubbleMenu(editor: LevitEditor): BubbleMenuInstance {
@@ -42,8 +52,16 @@ export function createBubbleMenu(editor: LevitEditor): BubbleMenuInstance {
   let savedSelection: EditorSelection | null = null;
   let lastRect: DOMRect | null = null;
 
-  // `mark` buttons report whether the selection has that mark (aria-pressed).
-  const buttons: { label: string; title: string; mark?: string; color?: true; action: () => void }[] = [
+  const alignButton = (align: TextAlign, title: string) => ({
+    label: '',
+    title,
+    align,
+    action: () => editor.chain().setTextAlign(align).run(),
+  });
+
+  // `mark` buttons report whether the selection has that mark (aria-pressed),
+  // and `align` buttons whether its lines have that alignment.
+  const buttons: { label: string; title: string; mark?: string; align?: TextAlign; color?: true; action: () => void }[] = [
     { label: 'B', title: m.bold, mark: 'bold', action: () => editor.chain().toggleBold().run() },
     { label: 'I', title: m.italic, mark: 'italic', action: () => editor.chain().toggleItalic().run() },
     { label: 'U', title: m.underline, mark: 'underline', action: () => editor.chain().toggleUnderline().run() },
@@ -56,6 +74,10 @@ export function createBubbleMenu(editor: LevitEditor): BubbleMenuInstance {
     { label: 'H2', title: m.heading2, action: () => editor.chain().setHeading(2).run() },
     { label: '”', title: m.quote, action: () => editor.chain().setBlockType('blockquote').run() },
     { label: '▦', title: m.convertToTable, action: () => editor.chain().convertToTable().run() },
+    alignButton('left', m.alignLeft),
+    alignButton('center', m.alignCenter),
+    alignButton('right', m.alignRight),
+    alignButton('justify', m.alignJustify),
     // Buttons from plugins, like the AI plugin's "Improve writing".
     ...editor.schema.bubbleItems.map((item) => ({
       label: item.label,
@@ -70,7 +92,12 @@ export function createBubbleMenu(editor: LevitEditor): BubbleMenuInstance {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'levit-bubble-btn';
-    btn.textContent = b.label;
+    if (b.align) {
+      btn.classList.add('levit-bubble-align');
+      btn.appendChild(lineIcon(ALIGN_ICONS[b.align], 'levit-bubble-fill'));
+    } else {
+      btn.textContent = b.label;
+    }
     btn.title = b.title;
     btn.setAttribute('aria-label', b.title);
     // The mouse acts on mousedown so the editor keeps its selection.
@@ -144,7 +171,15 @@ export function createBubbleMenu(editor: LevitEditor): BubbleMenuInstance {
 
   /** Marks the buttons for formats the selection already has. */
   function refreshButtons() {
+    const align = editor.getTextAlign();
     buttons.forEach((b, i) => {
+      if (b.align) {
+        // Lists, code and tables cannot be aligned.
+        buttonEls[i].setAttribute('aria-pressed', String(align === b.align));
+        buttonEls[i].classList.toggle('is-active', align === b.align);
+        buttonEls[i].setAttribute('aria-disabled', String(align === null));
+        return;
+      }
       if (!b.mark) return;
       const on = b.mark === 'link' ? editor.getActiveLink() !== null : editor.isActive(b.mark);
       buttonEls[i].setAttribute('aria-pressed', String(on));

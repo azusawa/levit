@@ -47,6 +47,42 @@ describe('Floating Menus (Bubble Menu & Slash Menu)', () => {
     editor.destroy();
   });
 
+  it('the bubble menu aligns the selected lines and shows the alignment they have', () => {
+    const editor = new LevitEditor({
+      element: container,
+      initialContent: createDocument([
+        createBlock('paragraph', { align: 'right' }, [createTextNode('one')], 'a'),
+        createBlock('bullet_list_item', {}, [createTextNode('two')], 'b'),
+      ]),
+    });
+    const bubbleMenu = createBubbleMenu(editor);
+    editor.focus();
+    const select = (id: string) =>
+      editor.dispatch(editor.state.tr.setSelection({ anchor: { blockId: id, offset: 0 }, head: { blockId: id, offset: 3 }, isCollapsed: false }));
+    const button = (label: string) => bubbleMenu.element.querySelector(`button[aria-label="${label}"]`)!;
+    const press = (label: string) => button(label).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+    const pressed = () =>
+      ['Align left', 'Center', 'Align right', 'Justify'].filter((l) => button(l).getAttribute('aria-pressed') === 'true');
+
+    select('a');
+    press('Center');
+    expect(editor.getJSON().blocks[0].attrs).toEqual({ align: 'center' });
+    expect(pressed()).toEqual(['Center']);
+    expect(button('Justify').querySelector('svg')).not.toBeNull();
+    press('Align left');
+    expect(editor.getJSON().blocks[0].attrs).toEqual({});
+    expect(pressed()).toEqual(['Align left']);
+
+    // A list item cannot be aligned: the buttons say so and do nothing.
+    select('b');
+    press('Center');
+    expect(editor.getJSON().blocks[1].attrs).toEqual({});
+    expect(pressed()).toEqual([]);
+    expect(button('Center').getAttribute('aria-disabled')).toBe('true');
+    bubbleMenu.destroy();
+    editor.destroy();
+  });
+
   it('creates slash menu with standard command items', () => {
     const editor = new LevitEditor({ element: container });
     const slashMenu = createSlashMenu(editor);

@@ -13,6 +13,7 @@ import { cellContent, createCell, tableAtIndex, type TablePosition } from '../co
 import { defaultSchema, schemaFor, type BlockSpec, type Schema, type SerializerOptions } from '../core/plugin/plugin.js';
 import { normalizeCodeLanguage, normalizeHeadingLevel, sanitizeHref, sanitizeImageSrc } from '../core/model/sanitize.js';
 import { IMAGE_WIDTHS, normalizeImageAlign, normalizeImageSize } from '../core/model/image.js';
+import { blockTextAlign, canAlignText, normalizeTextAlign } from '../core/model/align.js';
 
 /** The element that holds each kind of list item, and how it is opened. */
 const LISTS: Record<string, { tag: string; open: string }> = {
@@ -35,6 +36,12 @@ function imageSettings(block: BlockNode): string {
   if (size) style.push(`width: ${IMAGE_WIDTHS[size]}`);
   if (align) style.push(`margin-left: auto${align === 'center' ? '; margin-right: auto' : ''}`);
   return `${size ? ` data-size="${size}"` : ''}${align ? ` data-align="${align}"` : ''} style="${style.join('; ')}"`;
+}
+
+/** A paragraph's, heading's or quote's alignment, as a style attribute. */
+function alignStyle(block: BlockNode): string {
+  const align = blockTextAlign(block);
+  return align ? ` style="text-align: ${align}"` : '';
 }
 
 export function documentToHTML(doc: DocumentData, options: SerializerOptions = {}): string {
@@ -78,11 +85,11 @@ export function documentToHTML(doc: DocumentData, options: SerializerOptions = {
     switch (block.type) {
       case 'heading': {
         const level = normalizeHeadingLevel(block.attrs?.level);
-        html += `<h${level}>${contentHtml}</h${level}>`;
+        html += `<h${level}${alignStyle(block)}>${contentHtml}</h${level}>`;
         break;
       }
       case 'blockquote':
-        html += `<blockquote>${contentHtml}</blockquote>`;
+        html += `<blockquote${alignStyle(block)}>${contentHtml}</blockquote>`;
         break;
       case 'horizontal_rule':
         html += '<hr>';
@@ -111,7 +118,7 @@ export function documentToHTML(doc: DocumentData, options: SerializerOptions = {
         const spec = schema.blocks.get(block.type);
         if (spec) html += spec.toHTML ? spec.toHTML(block, contentHtml) : spec.atom ? '' : `<p>${contentHtml}</p>`;
         // A block type nobody defined keeps its text, if it has any.
-        else if (BUILT_IN_HTML_BLOCKS.has(block.type) || contentHtml !== '') html += `<p>${contentHtml}</p>`;
+        else if (BUILT_IN_HTML_BLOCKS.has(block.type) || contentHtml !== '') html += `<p${alignStyle(block)}>${contentHtml}</p>`;
         break;
       }
     }
@@ -230,14 +237,35 @@ const BLOCK_TAGS = new Set([
   ...CONTAINER_TAGS, ...LEAF_TAGS, 'blockquote', 'pre', 'ul', 'ol', 'li', 'hr', 'img',
 ]);
 
-/** The block type for loose content, and the nesting level of the list we are in. */
-type Context = { type: string; depth?: number; checked?: boolean };
+/**
+ * The block type for loose content, the nesting level of the list we are in,
+ * and the alignment of the element around it.
+ */
+type Context = { type: string; depth?: number; checked?: boolean; align?: string | null };
 
 /** Attributes for a block made in this context: nested list items get their level. */
 function attrsFor(ctx: Context): Record<string, any> {
   const attrs: Record<string, any> = ctx.type.endsWith('list_item') && ctx.depth ? { indent: ctx.depth } : {};
   if (ctx.type === 'task_list_item') attrs.checked = ctx.checked === true;
+  if (ctx.align && canAlignText(ctx.type)) attrs.align = ctx.align;
   return attrs;
+}
+
+/**
+ * An element's alignment: its text-align style or align attribute. Left (or
+ * start) is the default and gives null; undefined means it sets none, so the
+ * alignment around it holds.
+ */
+function alignOf(el: Element): string | null | undefined {
+  const style = /(?:^|;)\s*text-align\s*:\s*([a-z-]+)/i.exec(el.getAttribute('style') ?? '');
+  const value = (style?.[1] ?? el.getAttribute('align'))?.toLowerCase();
+  return value === undefined ? undefined : normalizeTextAlign(value);
+}
+
+/** The context with the element's own alignment, when it sets one. */
+function alignedContext(el: Element, ctx: Context): Context {
+  const align = alignOf(el);
+  return align === undefined ? ctx : { ...ctx, align };
 }
 
 /**
@@ -333,8 +361,9 @@ function readBlocks(parent: Node, ctx: Context, out: BlockNode[]): void {
   flush();
 }
 
-function readBlockElement(el: Element, ctx: Context, out: BlockNode[]): void {
+function readBlockElement(el: Element, outer: Context, out: BlockNode[]): void {
   const tag = tagOf(el);
+  const ctx = alignedContext(el, outer);
   const claimed = claimBlock(el);
 
   if (claimed) {
@@ -362,7 +391,7 @@ function readBlockElement(el: Element, ctx: Context, out: BlockNode[]): void {
   } else if (tag === 'table') {
     readTable(el, out);
   } else if (tag === 'blockquote') {
-    readBlocks(el, { type: 'blockquote' }, out);
+    readBlocks(el, { type: 'blockquote', align: ctx.align }, out);
   } else if (tag === 'ul' || tag === 'ol') {
     // A list inside another list (usually inside its <li>) is one level deeper.
     const depth = ctx.depth === undefined ? 0 : ctx.depth + 1;
@@ -466,7 +495,10 @@ function codeLanguageOf(pre: Element): string | null {
 
 function readLeaf(el: Element, tag: string, ctx: Context, out: BlockNode[]): void {
   const content = readInline(Array.from(el.childNodes));
-  if (/^h[1-6]$/.test(tag)) out.push(createBlock('heading', { level: parseInt(tag[1], 10) }, content));
+  if (/^h[1-6]$/.test(tag)) {
+    const level = parseInt(tag[1], 10);
+    out.push(createBlock('heading', ctx.align ? { level, align: ctx.align } : { level }, content));
+  }
   // An explicit block is kept even when empty (e.g. <p><br></p> spacing).
   else out.push(createBlock(ctx.type, attrsFor(ctx), content));
 }
