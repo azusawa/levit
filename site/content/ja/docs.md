@@ -38,14 +38,14 @@ Levit は ESM 専用です。バンドラーか `import` で使ってくださ�
 </script>
 ```
 
-この要素は `placeholder`、`lang`（組み込みメッセージは `ko` か `ja`。後から変えると同じ内容で新しい `editor` を作るので、イベントは付け直してください）、`theme`（`dark` か `light`）、初期値の `value`（ドキュメント JSON）属性を読みます。React・Vue のコンポーネントと同じく、バブルメニュー、スラッシュメニュー、表ツールバー、画像ツールバー、検索と置換パネルが標準で付き、`bubble-menu="false"`、`slash-menu="false"`、`table-toolbar="false"`、`image-toolbar="false"`、`search-panel="false"` で外せます。`color-picker="false"` は色パレットからカラーピッカーを外します。`getJSON()`、`setJSON()`、`getText()`、`focus()` メソッドと、エディタ本体を持つ `editor` プロパティもあります。要素をページ内の別の場所へ移しても同じエディタのままで、取り除いた後も `getJSON()` でドキュメントを取得できます。
+この要素は `placeholder`、`lang`（組み込みメッセージは `ko` か `ja`。後から変えると同じ内容で新しい `editor` を作るので、イベントは付け直してください）、`theme`（`dark` か `light`）、初期値の `value`（ドキュメント JSON）属性を読みます。React・Vue のコンポーネントと同じく、バブルメニュー、スラッシュメニュー、表ツールバー、画像ツールバー、検索と置換パネル、ブロックハンドルが標準で付き、`bubble-menu="false"`、`slash-menu="false"`、`table-toolbar="false"`、`image-toolbar="false"`、`search-panel="false"`、`block-handle="false"` で外せます。`color-picker="false"` は色パレットからカラーピッカーを外します。`getJSON()`、`setJSON()`、`getText()`、`focus()` メソッドと、エディタ本体を持つ `editor` プロパティもあります。要素をページ内の別の場所へ移しても同じエディタのままで、取り除いた後も `getJSON()` でドキュメントを取得できます。
 
 ### JavaScript / TypeScript
 
 `createLevitEditor` は任意の要素をエディタにします。バブルツールバー（テキスト選択時に表示）、スラッシュメニュー（`/`）、表ツールバー（キャレットのある表の上に表示）は別々に付けるので、使うものだけを読み込めます。
 
 ```ts
-import { createLevitEditor, createBubbleMenu, createSlashMenu, createTableToolbar, createImageToolbar, createSearchPanel } from '@yonailab/levit';
+import { createLevitEditor, createBubbleMenu, createSlashMenu, createTableToolbar, createImageToolbar, createSearchPanel, createBlockHandle } from '@yonailab/levit';
 import '@yonailab/levit/levit.css';
 
 const editor = createLevitEditor(document.getElementById('editor')!, {
@@ -57,6 +57,7 @@ createSlashMenu(editor);
 createTableToolbar(editor);
 createImageToolbar(editor);
 createSearchPanel(editor);
+createBlockHandle(editor);
 ```
 
 ### 読み込みと保存
@@ -226,6 +227,10 @@ editor.getSelectedImage();                  // 選んだ画像の { src, alt, si
 editor.chain().setTextAlign('center').run();   // 選んだ段落・見出し・引用をそろえる: 'left'（既定）, 'center', 'right', 'justify'
 editor.getTextAlign();                      // 選んだ行のそろえ方。行ごとに違うか、そろえられないときは null
 editor.canSetTextAlign();                   // 選択にそろえられる行があれば true
+editor.chain().moveBlocksUp().run();       // 選択したブロックを一つ上へ（moveBlocksDown は下へ）。表はまるごと、リスト項目は入れ子の項目と一緒に
+editor.chain().moveBlock(blockId, 0).run(); // ブロックを位置（ブロックの間の番号、0 は先頭）へ移動
+editor.chain().duplicateBlock(blockId).run(); // すぐ下に複製（新しい id、コメントは除く）を入れ、カーソルを複製へ
+editor.chain().deleteBlock(blockId).run();  // id を省くと選択したブロック
 editor.chain().setCodeBlock('ts').run();   // setCodeLanguage('py') で変更、'' で解除
 editor.chain().insertFragment(blocks).run(); // 貼り付けと同様にキャレット位置へブロックを挿入
 editor.chain().insertLineBreak().run();    // Shift+Enter
@@ -313,6 +318,12 @@ editor.destroy();
 
 ほかにも `editor.commands`（プラグインのコマンド）、`editor.messages` と `editor.t(key, values)`（使用中のメッセージ）、別の場所で作った状態を一度に適用する `editor.replaceState(state)`、エラーを `onError` かコンソールに送る `editor.reportError(error)` があります。
 
+## ブロックハンドル
+
+`createBlockHandle(editor)` はマウスを置いたブロックの左にハンドル（⋮⋮、名前は**ブロックメニュー**）を表示します。ハンドルをドラッグするとブロックを移動でき、置かれる位置は線で示されます。クリックするとブロックメニューが開き、別のブロックへの**変換**、**上へ移動**、**下へ移動**、**複製**、**削除**ができます。選択したブロックのうちの一つのハンドルなら、選択したブロックすべてに適用されます。メニューは矢印キー、`Home`、`End`、`Enter`、`Esc` でも使えます。`<levit-editor>` と React・Vue のコンポーネントには標準で付きます（`block-handle="false"`、`blockHandle={false}` で外します）。
+
+`Mod+Shift+↑`・`↓`（Notion と同じ）はハンドルを使わずに選択したブロックを移動します。ドキュメントの先頭や末尾ではブラウザー本来の動作（先頭・末尾まで選択）のままです。表はまるごと、リスト項目は入れ子の項目と一緒に動き、一回の移動は元に戻す一回で戻ります。
+
 ## 検索と置換
 
 `createSearchPanel(editor)` はエディターの右上に**検索と置換**パネルを付けます。エディターで `Mod+F` を押すとブラウザーの検索の代わりにこのパネルが開き、`Mod+Alt+F` は置換の欄まで開きます。`<levit-editor>` と React・Vue のコンポーネントには標準で付きます（`search-panel="false"`、`searchPanel={false}` で外します）。
@@ -387,7 +398,7 @@ export function Note() {
 
 - `value` と `onChange` を併用すると制御コンポーネント、`defaultValue` だけなら非制御コンポーネントです。
 - `onChange` は `(value, editor)` を受け取ります。
-- `bubbleMenu={false}`、`slashMenu={false}`、`tableToolbar={false}`、`imageToolbar={false}`、`searchPanel={false}` でメニューを無効にします。`colors`、`colorPicker` はエディターのオプションと同じです。
+- `bubbleMenu={false}`、`slashMenu={false}`、`tableToolbar={false}`、`imageToolbar={false}`、`searchPanel={false}`、`blockHandle={false}` でメニューを無効にします。`colors`、`colorPicker` はエディターのオプションと同じです。
 - `ref` か `onReady` でエディタのインスタンスを受け取ります。`className`、`style`、`id` は要素に渡されます。
 - `'use client'` が付いているので、Next.js の App Router でそのまま使えます。
 
@@ -425,7 +436,7 @@ const doc = ref<DocumentData>();
 ```
 
 - props：`placeholder`、`plugins`、`messages`、`uploadImage`、`highlightCode`
-- `:bubble-menu="false"`、`:slash-menu="false"`、`:table-toolbar="false"`、`:image-toolbar="false"`、`:search-panel="false"` でメニューを無効にします。
+- `:bubble-menu="false"`、`:slash-menu="false"`、`:table-toolbar="false"`、`:image-toolbar="false"`、`:search-panel="false"`、`:block-handle="false"` でメニューを無効にします。
 - `@ready` でエディタのインスタンスを、`@error` でアップロード失敗などのエラーを受け取ります。
 - コンポーネントの ref からも `editor` にアクセスできます。
 
@@ -769,6 +780,7 @@ Web Components は `lang` 属性で言語を選びます。`<levit-editor lang="
 - `Cmd/Ctrl+Z` で取り消し、`Cmd/Ctrl+Shift+Z` または `Ctrl+Y` でやり直します。
 - リスト内では `Tab` で 1 段ネストし、`Shift+Tab` で戻します。リストの外では `Tab` は通常どおりフォーカスを移動します。
 - `Cmd/Ctrl+Enter` でタスクのチェックを切り替えます。
+- `Cmd/Ctrl+Shift+↑`・`↓` で選択したブロックを移動します。
 - `Alt+Backspace`（macOS）または `Ctrl+Backspace` で単語を、`Cmd+Backspace`（macOS）で行頭までを削除します。
 
 ### スクリーンリーダー

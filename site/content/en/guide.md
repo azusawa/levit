@@ -140,6 +140,12 @@ Choose **Divider** in the slash menu, or type `---` on an empty line.
 
 To delete an image or a divider, put the caret at the start of the block right after it and press Backspace, or at the end of the block right before it and press Delete.
 
+## Moving blocks
+
+Hover over a block and a handle (⋮⋮) appears on its left. Drag the handle to move the block; a blue line shows where it will go. Click the handle for the block menu, where you can turn the block into another type, move it up or down, duplicate it or delete it. If the block is part of your selection, the menu acts on every selected block.
+
+From the keyboard, **Mod+Shift+Up** and **Mod+Shift+Down** move the block with the caret, or the selected blocks, one place. A table moves as a whole, and a list item takes the items nested under it along. One undo puts a block back.
+
 ## Copy, paste and drag
 
 Copy and cut keep your formatting, lists and links, so you can paste them into other apps or into another Levit editor.
@@ -227,6 +233,8 @@ You can use the editor without a mouse, and screen readers announce the editor, 
 - **Mod+Shift+E** — Center
 - **Mod+Shift+R** — Align right
 - **Mod+Shift+J** — Justify
+- **Mod+Shift+Up** — Move the block up
+- **Mod+Shift+Down** — Move the block down
 - **Tab** — Indent a list item; in a table, go to the next cell
 - **Shift+Tab** — Outdent a list item; in a table, go to the previous cell
 - **Mod+Enter** — Check or uncheck a task; in a table, add a row below

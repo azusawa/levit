@@ -21,20 +21,20 @@ Levit is a web editor library designed from scratch on standard Web APIs (DOM, S
   });
 </script>
 ```
-The element adds the bubble and slash menus, the table and image toolbars and
-the find and replace panel (`bubble-menu="false"` / `slash-menu="false"` /
-`table-toolbar="false"` / `image-toolbar="false"` / `search-panel="false"`
-leave them out, also later). Attributes: `placeholder`,
+The element adds the bubble and slash menus, the table and image toolbars,
+the find and replace panel and the block handle (`bubble-menu="false"` /
+`slash-menu="false"` / `table-toolbar="false"` / `image-toolbar="false"` /
+`search-panel="false"` / `block-handle="false"` leave them out, also later). Attributes: `placeholder`,
 `lang` (ko/ja; a later change builds a new `el.editor` with the same document),
 `color-picker="false"` (no color picker in the palettes; also a rebuild),
 `theme` (dark/light, also on the menus), `value` (initial JSON). Methods:
 getJSON(), setJSON(), getText(), focus(); `el.editor` is the full LevitEditor.
 Moving the element keeps the same editor; after removal getJSON() still works.
-createBubbleMenu/createSlashMenu/createTableToolbar/createImageToolbar/createSearchPanel return the editor's existing menu if it has one.
+createBubbleMenu/createSlashMenu/createTableToolbar/createImageToolbar/createSearchPanel/createBlockHandle return the editor's existing menu if it has one.
 
 ### Vanilla JavaScript / TypeScript
 ```ts
-import { createLevitEditor, createBubbleMenu, createSlashMenu, createTableToolbar, createImageToolbar, createSearchPanel } from '@yonailab/levit';
+import { createLevitEditor, createBubbleMenu, createSlashMenu, createTableToolbar, createImageToolbar, createSearchPanel, createBlockHandle } from '@yonailab/levit';
 import '@yonailab/levit/levit.css';
 
 const container = document.getElementById('editor');
@@ -49,6 +49,7 @@ createSlashMenu(editor);   // "/" at the start of a line or after a space; typin
 createTableToolbar(editor);   // buttons above the table the caret is in
 createImageToolbar(editor);   // buttons above the selected image
 createSearchPanel(editor);   // find and replace, opened with Mod+F
+createBlockHandle(editor);   // a ⋮⋮ handle next to the block under the mouse: drag to move, click for the block menu
 ```
 
 ## 2. Document Data Schema (JSON)
@@ -259,6 +260,16 @@ editor.canSetTextAlign();                      // true when the selection has a 
 // Kept as attrs.align. Keys: Mod+Shift+L, E, R, J. The bubble menu has "Align left",
 // "Center", "Align right", "Justify". Enter keeps the alignment on the new line.
 // HTML export writes style="text-align: ..."; Markdown has no alignment.
+
+// Moving blocks. A table moves whole; a list item takes its nested items along.
+editor.chain().moveBlocksUp().run();           // the selected blocks one place up; moveBlocksDown() down. Keys: Mod+Shift+Up / Down
+editor.chain().moveBlock(blockId, 0).run();    // to a place: an index between blocks, 0 before the first (inside a table: before it)
+editor.chain().duplicateBlock(blockId).run();  // a copy (new ids, no comments) below it, with the caret in the copy
+editor.chain().deleteBlock(blockId).run();     // without an id: the selected blocks
+// createBlockHandle(editor): a "Block menu" button (⋮⋮) next to the block under the mouse.
+// Drag it to move the block (a line shows where it goes); click it for the menu:
+// "Turn into" (Text, Heading 1-3, lists, Quote, Code Block), "Move up", "Move down",
+// "Duplicate", "Delete". On a block in the selection, the menu acts on all selected blocks.
 
 // Find and replace. createSearchPanel(editor) opens with Mod+F in the editor
 // (Mod+Alt+F also shows the replace field): "Find and replace" panel with the
@@ -508,9 +519,10 @@ const { ref, editor } = useLevitEditor({ placeholder: 'Write' });   // <div ref=
 <LevitEditor v-model="doc" :messages="ko" @ready="(editor) => {}" @error="(e) => {}" />
 <!-- const { element, editor } = useLevitEditor(options)  →  <div ref="element" /> -->
 ```
-Both add the bubble and slash menus, the table and image toolbars and the
-find and replace panel unless turned off (`bubbleMenu`, `slashMenu`,
-`tableToolbar`, `imageToolbar`, `searchPanel` set to false), take `colors` and
+Both add the bubble and slash menus, the table and image toolbars, the
+find and replace panel and the block handle unless turned off (`bubbleMenu`,
+`slashMenu`, `tableToolbar`, `imageToolbar`, `searchPanel`, `blockHandle` set
+to false), take `colors` and
 `colorPicker` like the editor options, and a value that comes
 back from onChange / v-model does not reset the caret. The React package is
 marked 'use client'.

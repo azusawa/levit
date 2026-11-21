@@ -38,14 +38,14 @@ Levit은 ESM 전용입니다. 번들러나 `import`로 사용하세요. 서버 �
 </script>
 ```
 
-이 요소는 `placeholder`, `lang`(내장 문구는 `ko` 또는 `ja`. 나중에 바꾸면 같은 내용으로 새 `editor`를 만들므로 이벤트는 다시 붙이세요), `theme`(`dark` 또는 `light`), 초기값 `value`(문서 JSON) 속성을 읽습니다. React·Vue 컴포넌트처럼 버블 메뉴, 슬래시 메뉴, 표 도구 막대, 이미지 도구 막대, 찾기와 바꾸기 패널이 기본으로 붙고, `bubble-menu="false"`, `slash-menu="false"`, `table-toolbar="false"`, `image-toolbar="false"`, `search-panel="false"`로 뺄 수 있습니다. `color-picker="false"`는 색 팔레트에서 색상 피커를 뺍니다. `getJSON()`, `setJSON()`, `getText()`, `focus()` 메서드와, 에디터 인스턴스 전체를 담은 `editor` 속성도 있습니다. 요소를 페이지의 다른 곳으로 옮겨도 같은 에디터가 유지되고, 제거한 뒤에도 `getJSON()`으로 문서를 얻을 수 있습니다.
+이 요소는 `placeholder`, `lang`(내장 문구는 `ko` 또는 `ja`. 나중에 바꾸면 같은 내용으로 새 `editor`를 만들므로 이벤트는 다시 붙이세요), `theme`(`dark` 또는 `light`), 초기값 `value`(문서 JSON) 속성을 읽습니다. React·Vue 컴포넌트처럼 버블 메뉴, 슬래시 메뉴, 표 도구 막대, 이미지 도구 막대, 찾기와 바꾸기 패널, 블록 핸들이 기본으로 붙고, `bubble-menu="false"`, `slash-menu="false"`, `table-toolbar="false"`, `image-toolbar="false"`, `search-panel="false"`, `block-handle="false"`로 뺄 수 있습니다. `color-picker="false"`는 색 팔레트에서 색상 피커를 뺍니다. `getJSON()`, `setJSON()`, `getText()`, `focus()` 메서드와, 에디터 인스턴스 전체를 담은 `editor` 속성도 있습니다. 요소를 페이지의 다른 곳으로 옮겨도 같은 에디터가 유지되고, 제거한 뒤에도 `getJSON()`으로 문서를 얻을 수 있습니다.
 
 ### JavaScript / TypeScript
 
 `createLevitEditor`는 어떤 요소든 에디터로 만듭니다. 버블 툴바(글을 선택하면 표시), 슬래시 메뉴(`/`), 표 도구 막대(커서가 있는 표 위에 표시)는 따로 붙이므로, 쓰는 것만 불러오면 됩니다.
 
 ```ts
-import { createLevitEditor, createBubbleMenu, createSlashMenu, createTableToolbar, createImageToolbar, createSearchPanel } from '@yonailab/levit';
+import { createLevitEditor, createBubbleMenu, createSlashMenu, createTableToolbar, createImageToolbar, createSearchPanel, createBlockHandle } from '@yonailab/levit';
 import '@yonailab/levit/levit.css';
 
 const editor = createLevitEditor(document.getElementById('editor')!, {
@@ -57,6 +57,7 @@ createSlashMenu(editor);
 createTableToolbar(editor);
 createImageToolbar(editor);
 createSearchPanel(editor);
+createBlockHandle(editor);
 ```
 
 ### 불러오기와 저장
@@ -226,6 +227,10 @@ editor.getSelectedImage();                  // 고른 이미지의 { src, alt, s
 editor.chain().setTextAlign('center').run();   // 선택한 문단·제목·인용 정렬: 'left'(기본), 'center', 'right', 'justify'
 editor.getTextAlign();                      // 선택한 줄들의 정렬, 서로 다르거나 정렬할 수 없으면 null
 editor.canSetTextAlign();                   // 선택에 정렬할 수 있는 줄이 있으면 true
+editor.chain().moveBlocksUp().run();       // 선택한 블록들을 한 칸 위로(moveBlocksDown은 아래로). 표는 통째로, 목록 항목은 중첩 항목과 함께
+editor.chain().moveBlock(blockId, 0).run(); // 블록을 자리(블록 사이의 번호, 0은 맨 앞)로 옮김
+editor.chain().duplicateBlock(blockId).run(); // 바로 아래에 복사본(새 id, 댓글은 빼고)을 넣고 커서를 그리로
+editor.chain().deleteBlock(blockId).run();  // id를 빼면 선택한 블록들
 editor.chain().setCodeBlock('ts').run();   // setCodeLanguage('py')로 변경, ''이면 해제
 editor.chain().insertFragment(blocks).run(); // 붙여넣기처럼 커서 위치에 블록 삽입
 editor.chain().insertLineBreak().run();    // Shift+Enter
@@ -313,6 +318,12 @@ editor.destroy();
 
 이 밖에도 `editor.commands`(플러그인 명령), `editor.messages`와 `editor.t(key, values)`(사용 중인 문구), 다른 곳에서 만든 상태를 한 번에 적용하는 `editor.replaceState(state)`, 오류를 `onError`나 콘솔로 보내는 `editor.reportError(error)`가 있습니다.
 
+## 블록 핸들
+
+`createBlockHandle(editor)`는 마우스를 올린 블록 왼쪽에 핸들(⋮⋮, 이름은 **블록 메뉴**)을 보여 줍니다. 핸들을 끌어 놓으면 블록이 옮겨지고, 놓일 자리는 선으로 보입니다. 핸들을 누르면 블록 메뉴가 열려 다른 블록으로 **바꾸기**, **위로 옮기기**, **아래로 옮기기**, **복제**, **삭제**를 합니다. 선택한 블록 중 하나의 핸들이면 선택한 블록 모두에 적용됩니다. 메뉴는 방향키, `Home`, `End`, `Enter`, `Esc`로도 씁니다. `<levit-editor>`와 React·Vue 컴포넌트에는 기본으로 붙습니다(`block-handle="false"`, `blockHandle={false}`로 뺌).
+
+`Mod+Shift+↑`·`↓`(Notion과 같음)는 핸들 없이 선택한 블록을 옮깁니다. 문서 맨 위나 맨 아래에서는 브라우저의 원래 동작(처음·끝까지 선택)을 그대로 둡니다. 표는 통째로, 목록 항목은 그 아래 중첩 항목과 함께 움직이고, 옮기기 한 번은 실행 취소 한 번으로 되돌아갑니다.
+
 ## 찾기와 바꾸기
 
 `createSearchPanel(editor)`는 에디터 오른쪽 위에 **찾기와 바꾸기** 패널을 붙입니다. 에디터에서 `Mod+F`를 누르면 브라우저 찾기 대신 이 패널이 열리고, `Mod+Alt+F`는 바꿀 내용 칸까지 엽니다. `<levit-editor>`와 React·Vue 컴포넌트에는 기본으로 붙습니다(`search-panel="false"`, `searchPanel={false}`로 뺌).
@@ -387,7 +398,7 @@ export function Note() {
 
 - `value`와 `onChange`를 함께 쓰면 제어 컴포넌트, `defaultValue`만 쓰면 비제어 컴포넌트입니다.
 - `onChange`는 `(value, editor)`를 받습니다.
-- `bubbleMenu={false}`, `slashMenu={false}`, `tableToolbar={false}`, `imageToolbar={false}`, `searchPanel={false}`로 메뉴를 끕니다. `colors`, `colorPicker`는 에디터 옵션과 같습니다.
+- `bubbleMenu={false}`, `slashMenu={false}`, `tableToolbar={false}`, `imageToolbar={false}`, `searchPanel={false}`, `blockHandle={false}`로 메뉴를 끕니다. `colors`, `colorPicker`는 에디터 옵션과 같습니다.
 - `ref`나 `onReady`로 에디터 인스턴스를 받습니다. `className`, `style`, `id`는 요소에 전달됩니다.
 - `'use client'`가 지정되어 있어 Next.js App Router에서 바로 쓸 수 있습니다.
 
@@ -425,7 +436,7 @@ const doc = ref<DocumentData>();
 ```
 
 - props: `placeholder`, `plugins`, `messages`, `uploadImage`, `highlightCode`
-- `:bubble-menu="false"`, `:slash-menu="false"`, `:table-toolbar="false"`, `:image-toolbar="false"`, `:search-panel="false"`로 메뉴를 끕니다.
+- `:bubble-menu="false"`, `:slash-menu="false"`, `:table-toolbar="false"`, `:image-toolbar="false"`, `:search-panel="false"`, `:block-handle="false"`로 메뉴를 끕니다.
 - `@ready`로 에디터 인스턴스를, `@error`로 업로드 실패 같은 오류를 받습니다.
 - 컴포넌트 ref의 `editor`로도 인스턴스에 접근할 수 있습니다.
 
@@ -769,6 +780,7 @@ editor.t('codeLanguageLabel', { language: 'ts' }); // 플레이스홀더를 채�
 - `Cmd/Ctrl+Z`는 실행 취소, `Cmd/Ctrl+Shift+Z` 또는 `Ctrl+Y`는 다시 실행입니다.
 - 목록에서 `Tab`은 한 단계 들여쓰고 `Shift+Tab`은 내어 씁니다. 목록 밖에서 `Tab`은 평소처럼 포커스를 옮깁니다.
 - `Cmd/Ctrl+Enter`는 체크리스트 항목을 체크하거나 해제합니다.
+- `Cmd/Ctrl+Shift+↑`·`↓`는 선택한 블록을 옮깁니다.
 - `Alt+Backspace`(macOS) 또는 `Ctrl+Backspace`는 단어를, `Cmd+Backspace`(macOS)는 줄 맨 앞까지 지웁니다.
 
 ### 스크린 리더

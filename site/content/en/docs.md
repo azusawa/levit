@@ -38,14 +38,14 @@ Without a build step, load the script and the stylesheet and use the `<levit-edi
 </script>
 ```
 
-The element reads `placeholder`, `lang` (`ko` or `ja` for built-in messages; changing it later builds a new `editor` with the same text, so attach handlers again), `theme` (`dark` or `light`) and an initial `value` (document JSON). It comes with the bubble and slash menus, the table and image toolbars and the find and replace panel, like the React and Vue components; `bubble-menu="false"`, `slash-menu="false"`, `table-toolbar="false"`, `image-toolbar="false"` or `search-panel="false"` leaves one out. `color-picker="false"` leaves the color picker out of the color palettes. It also has `getJSON()`, `setJSON()`, `getText()`, `focus()`, and an `editor` property with the full editor. Moving the element in the page keeps the same editor, and after removal `getJSON()` still returns the document.
+The element reads `placeholder`, `lang` (`ko` or `ja` for built-in messages; changing it later builds a new `editor` with the same text, so attach handlers again), `theme` (`dark` or `light`) and an initial `value` (document JSON). It comes with the bubble and slash menus, the table and image toolbars, the find and replace panel and the block handle, like the React and Vue components; `bubble-menu="false"`, `slash-menu="false"`, `table-toolbar="false"`, `image-toolbar="false"`, `search-panel="false"` or `block-handle="false"` leaves one out. `color-picker="false"` leaves the color picker out of the color palettes. It also has `getJSON()`, `setJSON()`, `getText()`, `focus()`, and an `editor` property with the full editor. Moving the element in the page keeps the same editor, and after removal `getJSON()` still returns the document.
 
 ### JavaScript or TypeScript
 
 `createLevitEditor` turns any element into an editor. The bubble toolbar (shown on selected text), the slash menu (`/`) and the table toolbar (shown above the table the caret is in) are separate, so you only load what you use.
 
 ```ts
-import { createLevitEditor, createBubbleMenu, createSlashMenu, createTableToolbar, createImageToolbar, createSearchPanel } from '@yonailab/levit';
+import { createLevitEditor, createBubbleMenu, createSlashMenu, createTableToolbar, createImageToolbar, createSearchPanel, createBlockHandle } from '@yonailab/levit';
 import '@yonailab/levit/levit.css';
 
 const editor = createLevitEditor(document.getElementById('editor')!, {
@@ -57,6 +57,7 @@ createSlashMenu(editor);
 createTableToolbar(editor);
 createImageToolbar(editor);
 createSearchPanel(editor);
+createBlockHandle(editor);
 ```
 
 ### Load and save
@@ -226,6 +227,10 @@ editor.getSelectedImage();                  // { src, alt, size, align } of the 
 editor.chain().setTextAlign('center').run();   // aligns the selected paragraphs, headings and quotes: 'left' (the default), 'center', 'right', 'justify'
 editor.getTextAlign();                      // the selected lines' alignment, or null when they differ or none can be aligned
 editor.canSetTextAlign();                   // true when the selection has a line that can be aligned
+editor.chain().moveBlocksUp().run();       // moves the selected blocks one place up (moveBlocksDown: down); a table moves whole, a list item with its nested items
+editor.chain().moveBlock(blockId, 0).run(); // moves a block to a place: an index between blocks, 0 before the first
+editor.chain().duplicateBlock(blockId).run(); // a copy below it (new ids, no comments), with the caret in it
+editor.chain().deleteBlock(blockId).run();  // without an id: the selected blocks
 editor.chain().setCodeBlock('ts').run();   // setCodeLanguage('py') changes it, '' clears it
 editor.chain().insertFragment(blocks).run(); // insert blocks at the caret, like a paste
 editor.chain().insertLineBreak().run();    // Shift+Enter
@@ -314,6 +319,12 @@ editor.destroy();
 
 Also available: `editor.commands` (plugin commands), `editor.messages` and `editor.t(key, values)` (texts in use), `editor.replaceState(state)` to apply a state built elsewhere in one step, and `editor.reportError(error)`, which sends an error to `onError` or the console.
 
+## Block handle
+
+`createBlockHandle(editor)` shows a handle (⋮⋮, labelled **Block menu**) next to the block under the mouse. Drag it to move the block; a line shows where it will go. Click it for the block menu: **Turn into** another block type, **Move up**, **Move down**, **Duplicate** and **Delete**. When the block is part of the selection, the menu acts on all selected blocks. The menu works with the arrow keys, `Home`, `End`, `Enter` and `Escape`. `<levit-editor>` and the React and Vue components add it for you (`block-handle="false"` and `blockHandle={false}` leave it out).
+
+`Mod+Shift+Up` and `Mod+Shift+Down` (as in Notion) move the selected blocks without the handle. At the top or bottom of the document they keep the browser's own meaning (select to the start or end). A table moves whole, a list item takes its nested items along, and each move is one undo step.
+
 ## Find and replace
 
 `createSearchPanel(editor)` adds a **Find and replace** panel at the top right of the editor. `Mod+F` in the editor opens it in place of the browser's find bar, and `Mod+Alt+F` opens it with the replace field. `<levit-editor>` and the React and Vue components add it for you (`search-panel="false"` and `searchPanel={false}` leave it out).
@@ -388,7 +399,7 @@ export function Note() {
 
 - `value` with `onChange` makes a controlled component; `defaultValue` alone an uncontrolled one.
 - `onChange` receives `(value, editor)`.
-- `bubbleMenu={false}`, `slashMenu={false}`, `tableToolbar={false}`, `imageToolbar={false}` and `searchPanel={false}` turn the menus off. `colors` and `colorPicker` work as the editor options.
+- `bubbleMenu={false}`, `slashMenu={false}`, `tableToolbar={false}`, `imageToolbar={false}`, `searchPanel={false}` and `blockHandle={false}` turn the menus off. `colors` and `colorPicker` work as the editor options.
 - `ref` or `onReady` gives you the editor instance. `className`, `style` and `id` go to the element.
 - The package is marked `'use client'`, so it works in the Next.js App Router.
 
@@ -426,7 +437,7 @@ const doc = ref<DocumentData>();
 ```
 
 - Props: `placeholder`, `plugins`, `messages`, `uploadImage`, `highlightCode`.
-- `:bubble-menu="false"`, `:slash-menu="false"`, `:table-toolbar="false"`, `:image-toolbar="false"` and `:search-panel="false"` turn the menus off.
+- `:bubble-menu="false"`, `:slash-menu="false"`, `:table-toolbar="false"`, `:image-toolbar="false"`, `:search-panel="false"` and `:block-handle="false"` turn the menus off.
 - `@ready` gives you the editor; `@error` receives errors such as a failed upload.
 - The component ref also exposes `editor`.
 
@@ -770,6 +781,7 @@ The web component picks its language from the `lang` attribute: `<levit-editor l
 - `Cmd/Ctrl+Z` undoes; `Cmd/Ctrl+Shift+Z` or `Ctrl+Y` redoes.
 - In a list, `Tab` nests an item and `Shift+Tab` moves it back. Outside lists, `Tab` keeps moving focus.
 - `Cmd/Ctrl+Enter` checks or unchecks a task.
+- `Cmd/Ctrl+Shift+Up` and `Down` move the selected blocks.
 - `Alt+Backspace` (macOS) or `Ctrl+Backspace` deletes a word; `Cmd+Backspace` (macOS) deletes to the line start.
 
 ### Screen readers

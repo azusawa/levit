@@ -51,6 +51,7 @@
    - **색**: 글을 선택하고 버블 메뉴의 `A` 버튼을 누르면 **글자색**과 **형광펜 색**을 고르는 팔레트가 열립니다. 회색·갈색·주황·노랑·초록·파랑·보라·분홍·빨강 9색이 있고, 줄 끝의 색상 피커로 아무 색이나 고를 수도 있습니다. 표 도구 막대의 **표 색**으로 칸 배경(**칸 색**)과 표의 선(**선 색**)을 칠합니다. 팔레트에서 고른 색은 다크 모드에서 읽기 좋은 색으로 바뀝니다. Google Docs나 Word에서 붙여 넣은 색은 가장 가까운 팔레트 색이 됩니다.
    - **구분선**(`---`)과 **이미지**: 이미지는 슬래시 메뉴의 `/이미지`(`/image`)로 URL을 넣거나, `uploadImage`를 연결하면 파일 선택·붙여넣기·끌어다 놓기로 올립니다. 이미지를 클릭하거나 바로 옆에서 `←`·`→`로 고르면 위에 **이미지 도구 막대**가 떠서 **대체 텍스트**, 크기(**작게**·**중간**·**전체 폭**), 정렬(왼쪽·가운데·오른쪽), 삭제를 버튼으로 할 수 있습니다(`Alt+F10`으로 키보드 이동).
    - **문단 정렬**: 문단, 제목, 인용을 왼쪽·가운데·오른쪽·양쪽으로 정렬합니다. 버블 메뉴의 정렬 버튼이나 `Mod+Shift+L`·`E`·`R`·`J`로 바꾸고, 정렬된 줄에서 Enter를 누르면 새 줄도 같은 정렬로 이어집니다.
+   - **블록 옮기기**: 블록 왼쪽의 `⋮⋮` 핸들을 끌어 옮기거나 `Mod+Shift+↑`·`↓`로 옮깁니다. 핸들을 누르면 **블록 메뉴**가 열려 다른 블록으로 바꾸기, 위·아래로 옮기기, 복제, 삭제를 합니다. 표는 통째로, 목록 항목은 그 아래 중첩 항목과 함께 움직입니다.
    - **찾기와 바꾸기**: 에디터에서 `Mod+F`를 누르면 오른쪽 위에 찾기 칸이 열립니다. 찾은 곳이 모두 칠해지고 `Enter`·`Shift+Enter`로 다음·이전 항목으로 갑니다. `Mod+Alt+F`나 `▸` 버튼으로 바꿀 내용 칸을 열어 **바꾸기**, **모두 바꾸기**를 합니다(모두 바꾸기도 실행 취소 한 번으로 되돌아감). **대소문자 구분**은 `Aa` 버튼으로 켭니다.
    - **코드 블록 언어** 지정과 문법 강조 연결 지점(`highlightCode`)
    - `# `, `> `, ` ``` `, `- `, `* `, `1. `, `[ ] `, `---` 실시간 마크다운 단축키 자동 변환
@@ -82,7 +83,7 @@ npm install @yonailab/levit
 
 ### 2. Vanilla JS / TypeScript에서 사용
 ```ts
-import { createLevitEditor, createBubbleMenu, createSlashMenu, createTableToolbar, createImageToolbar, createSearchPanel } from '@yonailab/levit';
+import { createLevitEditor, createBubbleMenu, createSlashMenu, createTableToolbar, createImageToolbar, createSearchPanel, createBlockHandle } from '@yonailab/levit';
 import '@yonailab/levit/levit.css';
 
 const container = document.getElementById('editor');
@@ -102,6 +103,7 @@ createSlashMenu(editor);   // 줄 첫머리나 띄어쓰기 뒤의 "/"로 열고
 createTableToolbar(editor);   // 커서가 있는 표 위에 표 도구 막대
 createImageToolbar(editor);   // 고른 이미지 위에 이미지 도구 막대
 createSearchPanel(editor);   // Mod+F로 여는 찾기와 바꾸기
+createBlockHandle(editor);   // 블록 왼쪽의 ⋮⋮ 핸들: 끌어서 옮기고, 누르면 블록 메뉴
 ```
 
 ### 3. 이미지 업로드와 문법 강조 (선택)
@@ -189,7 +191,7 @@ const doc = ref<DocumentData>();
 </script>
 ```
 
-- 버블 메뉴, 슬래시 메뉴, 표 도구 막대, 이미지 도구 막대, 찾기와 바꾸기 패널이 기본으로 붙습니다. `bubble-menu="false"`, `slash-menu="false"`, `table-toolbar="false"`, `image-toolbar="false"`, `search-panel="false"`로 뺄 수 있습니다. React·Vue 컴포넌트에서는 `tableToolbar`, `imageToolbar`, `searchPanel` 옵션으로 끕니다.
+- 버블 메뉴, 슬래시 메뉴, 표 도구 막대, 이미지 도구 막대, 찾기와 바꾸기 패널, 블록 핸들이 기본으로 붙습니다. `bubble-menu="false"`, `slash-menu="false"`, `table-toolbar="false"`, `image-toolbar="false"`, `search-panel="false"`, `block-handle="false"`로 뺄 수 있습니다. React·Vue 컴포넌트에서는 `tableToolbar`, `imageToolbar`, `searchPanel`, `blockHandle` 옵션으로 끕니다.
 - `lang="ko"`/`"ja"`로 메뉴 언어를 정합니다. 나중에 바꾸면 같은 내용으로 새 `editor`를 만듭니다. 요소를 다른 곳으로 옮겨도 같은 에디터가 유지되고, 제거한 뒤에도 `getJSON()`으로 문서를 얻습니다.
 - 에디터 전체 기능은 `editor` 속성으로 씁니다(`el.editor.getJSON()` 등).
 
@@ -488,6 +490,21 @@ editor.canSetTextAlign();   // 선택에 정렬할 수 있는 줄이 있으면 t
 - 버블 메뉴의 **왼쪽 정렬**, **가운데 정렬**, **오른쪽 정렬**, **양쪽 정렬** 버튼과 단축키 `Mod+Shift+L`·`E`·`R`·`J`(Google Docs와 같음)로도 바꿉니다.
 - 문서에는 `attrs.align`(`'center'`, `'right'`, `'justify'`)으로 남고, 왼쪽은 따로 적지 않습니다.
 - HTML로 내보내면 `style="text-align: center"`로 쓰고, 붙여 넣은 HTML의 `text-align`이나 `align` 속성도 읽습니다. Markdown에는 정렬 문법이 없어 글자만 남습니다.
+
+### 블록 옮기기
+
+`createBlockHandle(editor)`를 붙이면 마우스를 올린 블록 왼쪽에 `⋮⋮` 핸들이 나옵니다. 핸들을 끌어 놓으면 블록이 그 자리로 옮겨지고(파란 선이 놓일 자리를 보여 줌), 핸들을 누르면 **블록 메뉴**가 열립니다.
+
+- 블록 메뉴에서는 본문·제목·목록·인용·코드 블록으로 **바꾸기**, **위로 옮기기**, **아래로 옮기기**, **복제**, **삭제**를 합니다. 선택한 블록들 중 하나의 핸들을 누르면 선택한 블록 모두에 적용됩니다. 메뉴는 방향키, `Home`·`End`, `Enter`, `Esc`로도 씁니다.
+- 키보드로는 `Mod+Shift+↑`·`↓`(Notion과 같음)로 커서가 있는 블록이나 선택한 블록들을 한 칸씩 옮깁니다. 문서 맨 위나 맨 아래에서는 브라우저의 원래 동작(처음·끝까지 선택)을 그대로 둡니다.
+- 표는 통째로 움직이고, 목록 항목은 그 아래 중첩 항목과 함께 움직입니다. 옮기기 한 번은 실행 취소 한 번으로 되돌아갑니다.
+
+```ts
+editor.chain().moveBlocksUp().run();   // 선택한 블록들을 한 칸 위로(moveBlocksDown은 아래로)
+editor.chain().moveBlock(blockId, 0).run();   // 블록을 자리(블록 사이의 번호, 0은 맨 앞)로 옮김
+editor.chain().duplicateBlock(blockId).run();   // 바로 아래에 복사본(새 id, 댓글은 빼고)을 넣고 커서를 그리로
+editor.chain().deleteBlock(blockId).run();   // 블록을 지움. id를 빼면 선택한 블록들
+```
 
 ### 찾기와 바꾸기
 
