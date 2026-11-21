@@ -313,6 +313,30 @@ describe('review fixes: binding', () => {
     expect(json(b)).toEqual(json(a));
   });
 
+  it('moves a block in a long document while others’ changes wait', () => {
+    const blocks = Array.from({ length: 1200 }, (_, i) => para(`p${i}`, `line ${i}`));
+    const { a, b } = pair(blocks);
+    b.dispatch(b.state.tr.setSelection(caret('p5', 0)));
+    b.container.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }));
+    a.dispatch(a.state.tr.setSelection(caret('p1', 0)).insertText('!'));
+    b.dispatch(b.state.tr.moveBlock('p0', 1200));
+    expect(texts(a).slice(0, 2)).toEqual(['!line 1', 'line 2']);
+    expect(texts(a)[1199]).toBe('line 0');
+    b.container.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true }));
+    expect(json(b)).toEqual(json(a));
+  });
+
+  it('does not bring back a block someone else removed while it moves', () => {
+    const { a, b } = pair([para('a', 'one'), para('b', 'two'), para('c', 'three')]);
+    b.dispatch(b.state.tr.setSelection(caret('b', 0)));
+    b.container.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }));
+    a.dispatch(a.state.tr.deleteBlock('a'));
+    b.dispatch(b.state.tr.moveBlock('a', 3));
+    expect(texts(a)).toEqual(['two', 'three']);
+    b.container.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true }));
+    expect(json(b)).toEqual(json(a));
+  });
+
   it('stops when the editor is destroyed', () => {
     const { a, b } = pair();
     const before = b.state;

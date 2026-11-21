@@ -442,10 +442,31 @@ function movedIds(before: readonly BlockNode[], after: readonly BlockNode[]): Se
   const keptBefore = before.filter((b) => afterIds.has(b.id));
   const keptAfter = after.filter((b) => beforeIds.has(b.id));
   if (keptBefore.every((b, i) => b.id === keptAfter[i].id)) return new Set();
-  const inOrder = new Set(keptPairs(keptBefore, keptAfter).map(([i]) => keptBefore[i].id));
-  // Too long to compare (keptPairs gave up): the blocks stay where they are.
-  if (inOrder.size === 0) return new Set();
+  // Both hold the same ids, so the longest run in order is the longest
+  // increasing run of new places, found for any length.
+  const placeOf = new Map(keptAfter.map((b, i) => [b.id, i]));
+  const inOrder = new Set(longestIncreasing(keptBefore.map((b) => placeOf.get(b.id)!)).map((i) => keptBefore[i].id));
   return new Set(keptBefore.filter((b) => !inOrder.has(b.id)).map((b) => b.id));
+}
+
+/** The indexes of a longest strictly increasing run in the values (patience sorting). */
+function longestIncreasing(values: readonly number[]): number[] {
+  const tails: number[] = [];
+  const previous = new Array<number>(values.length).fill(-1);
+  values.forEach((value, i) => {
+    let lo = 0;
+    let hi = tails.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (values[tails[mid]] < value) lo = mid + 1;
+      else hi = mid;
+    }
+    if (lo > 0) previous[i] = tails[lo - 1];
+    tails[lo] = i;
+  });
+  const run: number[] = [];
+  for (let i = tails.length ? tails[tails.length - 1] : -1; i !== -1; i = previous[i]) run.push(i);
+  return run.reverse();
 }
 
 interface Rebase {
@@ -516,13 +537,17 @@ function writeBlocks(yblocks: YBlocks, before: readonly BlockNode[], after: read
     const indexOf = (id: string) => yblocks.toArray().findIndex((ymap) => ymap.get('id') === id);
     const moved = movedIds(before, after);
     const afterIds = new Set(after.map((b) => b.id));
+    // Moved blocks someone else removed meanwhile stay removed.
+    const gone = new Set<string>();
     for (const old of before) {
       if (afterIds.has(old.id) && !moved.has(old.id)) continue;
       const at = indexOf(old.id);
       if (at !== -1) yblocks.delete(at, 1);
+      else if (moved.has(old.id)) gone.add(old.id);
     }
     const beforeById = new Map(before.filter((b) => !moved.has(b.id)).map((b) => [b.id, b]));
     after.forEach((block, j) => {
+      if (gone.has(block.id)) return;
       const old = beforeById.get(block.id);
       if (old) {
         update(rebase.byId(block.id), old, block, (index) => rebase.mapIndex(block.id, index));

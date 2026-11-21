@@ -55,8 +55,11 @@ function unitAbove(blocks: readonly BlockNode[], start: number): BlockRange | nu
   if (table) return [table.start, end];
   const level = listIndent(blocks[start]);
   let first = end;
-  while (first > 0 && isListItem(blocks[first].type) && listIndent(blocks[first]) > level) first -= 1;
-  return [first, end];
+  while (first >= 0 && isListItem(blocks[first].type) && listIndent(blocks[first]) > level) first -= 1;
+  // A list item on the same level takes its nested items along; a block it
+  // hangs under (or none) stays where it is, and only the items are passed.
+  if (first >= 0 && isListItem(blocks[first].type) && listIndent(blocks[first]) === level) return [first, end];
+  return [first === end ? end : first + 1, end];
 }
 
 /**

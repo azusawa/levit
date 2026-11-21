@@ -1420,7 +1420,13 @@ export class Transaction {
     const head = this.selection.head;
     const at = findBlockIndex(this.doc, head.blockId);
     const inUnit = at >= start && at <= end;
-    this.setCaret(inUnit ? copy[at - start].id : copy[0].id, inUnit ? head.offset : 0);
+    const takesCaret = (b: BlockNode) => !this.isAtom(b.type);
+    if (inUnit && takesCaret(copy[at - start])) this.setCaret(copy[at - start].id, head.offset);
+    else {
+      // An image or divider takes no caret: the first copy that does, or the caret stays.
+      const first = copy.find(takesCaret);
+      if (first) this.setCaret(first.id, 0);
+    }
     this.docChanged = true;
     return this;
   }

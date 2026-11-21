@@ -119,6 +119,17 @@ describe('moveBlocksUp and moveBlocksDown', () => {
     editor.chain().moveBlocksUp().run();
     expect(ids()).toEqual(['y1', 'y', 'p', 'x', 'x1']);
   });
+
+  it('move a nested item past one block only, not past the block it hangs under', () => {
+    make([para('p', 'p'), bullet('x', 'x', 1), bullet('q', 'q')]);
+    put('q');
+    editor.chain().moveBlocksUp().run();
+    expect(ids()).toEqual(['p', 'q', 'x']);
+    make([bullet('a', 'a'), bullet('b', 'b', 2), bullet('c', 'c', 1)]);
+    put('c');
+    editor.chain().moveBlocksUp().run();
+    expect(ids()).toEqual(['a', 'c', 'b']);
+  });
 });
 
 describe('moveBlock', () => {
@@ -182,6 +193,14 @@ describe('duplicateBlock and deleteBlock', () => {
     editor.chain().duplicateBlock('a').run();
     expect(editor.state.doc.blocks[1].content).toEqual([{ text: 'note', marks: [{ type: 'bold' }] }]);
     expect(editor.state.doc.blocks[0].content[0].marks).toHaveLength(2);
+  });
+
+  it('duplicating an image leaves the caret out of the copy, where it cannot go', () => {
+    make([para('a', 'one'), createBlock('image', { src: 'https://example.com/x.png' }, [], 'img')]);
+    put('a', 2);
+    editor.chain().duplicateBlock('img').run();
+    expect(editor.state.doc.blocks.map((b) => b.type)).toEqual(['paragraph', 'image', 'image']);
+    expect(editor.state.selection.head).toEqual({ blockId: 'a', offset: 2 });
   });
 
   it('duplicating a list item copies the items nested under it', () => {
