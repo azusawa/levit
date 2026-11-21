@@ -16,6 +16,7 @@ import {
   createTableToolbar,
   createImageToolbar,
   createSearchPanel,
+  createBlockHandle,
   sameContent,
   type DocumentData,
   type EditorOptions,
@@ -24,7 +25,7 @@ import {
 
 export type { Editor };
 
-/** Editor options, plus whether to add the menus, the toolbars and the search panel. */
+/** Editor options, plus whether to add the menus, the toolbars, the search panel and the block handle. */
 export interface UseLevitEditorOptions extends Omit<EditorOptions, 'element'> {
   /** Show the formatting toolbar on selected text. Default: true. */
   bubbleMenu?: boolean;
@@ -36,6 +37,8 @@ export interface UseLevitEditorOptions extends Omit<EditorOptions, 'element'> {
   imageToolbar?: boolean;
   /** Open a find and replace panel with Mod+F. Default: true. */
   searchPanel?: boolean;
+  /** Show a handle next to the block under the mouse, to drag the block or open its menu. Default: true. */
+  blockHandle?: boolean;
   /** Called once the editor exists. */
   onReady?: (editor: Editor) => void;
 }
@@ -57,7 +60,7 @@ export function useLevitEditor(options: UseLevitEditorOptions = {}): {
 
   useEffect(() => {
     if (!element) return;
-    const { bubbleMenu = true, slashMenu = true, tableToolbar = true, imageToolbar = true, searchPanel = true, ...editorOptions } = latest.current;
+    const { bubbleMenu = true, slashMenu = true, tableToolbar = true, imageToolbar = true, searchPanel = true, blockHandle = true, ...editorOptions } = latest.current;
     const instance = createLevitEditor(element, {
       ...editorOptions,
       onChange: (ed) => latest.current.onChange?.(ed),
@@ -73,6 +76,7 @@ export function useLevitEditor(options: UseLevitEditorOptions = {}): {
       tableToolbar && createTableToolbar(instance),
       imageToolbar && createImageToolbar(instance),
       searchPanel && createSearchPanel(instance),
+      blockHandle && createBlockHandle(instance),
     ];
     setEditor(instance);
     latest.current.onReady?.(instance);

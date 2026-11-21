@@ -35,6 +35,7 @@ import {
 } from '../model/text.js';
 import { BlockNode } from '../model/types.js';
 import { cellContent, createCell, createTable, isTableCell, markdownRowCells, tableAtIndex, tableIdOf, rowIdOf, type TablePosition } from '../model/table.js';
+import { blockUnit, copyBlocks, moveRange, moveRangeTo, unitRange, type BlockRange } from '../model/move.js';
 import { EditorState } from './state.js';
 
 /** What updateImage changes; a key left out stays as it is. */
@@ -1362,6 +1363,93 @@ export class Transaction {
       if ((block.attrs?.align ?? null) === value) continue;
       this.edit(i).attrs = withTextAlign(block, value);
       this.docChanged = true;
+    }
+    return this;
+  }
+
+  /** The selected blocks with what goes with them (whole tables, nested list items). */
+  private selectedUnit(): BlockRange | null {
+    const { from, to } = this.normalizeSelectionOrder();
+    return unitRange(this.doc.blocks, findBlockIndex(this.doc, from.blockId), findBlockIndex(this.doc, to.blockId));
+  }
+
+  /** The block (by id) with what goes with it, or the selected blocks without an id. */
+  private unitOf(blockId?: string): BlockRange | null {
+    if (blockId === undefined) return this.selectedUnit();
+    return blockUnit(this.doc.blocks, findBlockIndex(this.doc, blockId));
+  }
+
+  /** Puts the blocks in a new order (the same blocks), when there is one. */
+  private reorder(blocks: BlockNode[] | null): this {
+    if (!blocks) return this;
+    this.doc.blocks = blocks;
+    this.docChanged = true;
+    return this;
+  }
+
+  /**
+   * Moves the selected blocks one place up or down, past the block, table or
+   * list item (with its nested items) next to them. A table moves whole, and
+   * a list item takes its nested items along. The selection stays on them.
+   */
+  moveBlocks(direction: 'up' | 'down'): this {
+    const unit = this.selectedUnit();
+    return this.reorder(unit && moveRange(this.doc.blocks, unit, direction));
+  }
+
+  /**
+   * Moves a block (with its table or nested items) to a place: an index
+   * between blocks, 0 being before the first. A place inside a table is the
+   * place before it.
+   */
+  moveBlock(blockId: string, place: number): this {
+    const unit = this.unitOf(blockId);
+    return this.reorder(unit && moveRangeTo(this.doc.blocks, unit, place));
+  }
+
+  /**
+   * Puts a copy of a block (with its table or nested items; the selected
+   * blocks without an id) below it, and the caret in the copy.
+   */
+  duplicateBlock(blockId?: string): this {
+    const unit = this.unitOf(blockId);
+    if (!unit) return this;
+    const [start, end] = unit;
+    const copy = copyBlocks(this.doc.blocks.slice(start, end + 1));
+    this.doc.blocks.splice(end + 1, 0, ...copy);
+    const head = this.selection.head;
+    const at = findBlockIndex(this.doc, head.blockId);
+    const inUnit = at >= start && at <= end;
+    this.setCaret(inUnit ? copy[at - start].id : copy[0].id, inUnit ? head.offset : 0);
+    this.docChanged = true;
+    return this;
+  }
+
+  /**
+   * Deletes a block (with its table or nested items; the selected blocks
+   * without an id). The caret goes to the next block that takes text, or
+   * the one before; a document left empty gets an empty paragraph.
+   */
+  deleteBlock(blockId?: string): this {
+    const unit = this.unitOf(blockId);
+    if (!unit) return this;
+    const [start, end] = unit;
+    const head = findBlockIndex(this.doc, this.selection.head.blockId);
+    const anchor = findBlockIndex(this.doc, this.selection.anchor.blockId);
+    this.doc.blocks.splice(start, end - start + 1);
+    this.docChanged = true;
+    const caretWasThere = [head, anchor].some((i) => i >= start && i <= end);
+    if (!caretWasThere) return this;
+    const takesCaret = (b: BlockNode | undefined) => !!b && !this.isAtom(b.type) && !isTableCell(b.type);
+    const after = this.doc.blocks[start];
+    const before = this.doc.blocks[start - 1];
+    if (takesCaret(after)) this.setCaret(after.id, 0);
+    else if (takesCaret(before)) this.setCaret(before.id, getBlockText(before).length);
+    else if (after ?? before) this.setCaret((after ?? before).id, 0);
+    else {
+      const paragraph = createBlock('paragraph');
+      this.doc.blocks.push(paragraph);
+      this.setCaret(paragraph.id, 0);
     }
     return this;
   }

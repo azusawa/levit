@@ -121,6 +121,15 @@ export const en = {
   noResults: 'No results',
   replacedCount: '{count} replaced',
 
+  // Block handle
+  blockMenu: 'Block menu',
+  blockHandleTitle: 'Drag to move, click for options',
+  turnInto: 'Turn into',
+  moveUp: 'Move up',
+  moveDown: 'Move down',
+  duplicate: 'Duplicate',
+  deleteBlock: 'Delete',
+
   // Blocks
   markDone: 'Mark as done',
   markNotDone: 'Mark as not done',
@@ -260,6 +269,15 @@ export const ko: LevitMessages = {
   noResults: '결과 없음',
   replacedCount: '{count}개 바꿈',
 
+  // Block handle
+  blockMenu: '블록 메뉴',
+  blockHandleTitle: '끌어서 옮기기, 클릭하면 메뉴',
+  turnInto: '바꾸기',
+  moveUp: '위로 옮기기',
+  moveDown: '아래로 옮기기',
+  duplicate: '복제',
+  deleteBlock: '삭제',
+
   markDone: '완료로 표시',
   markNotDone: '미완료로 표시',
   codeLanguagePrompt: '코드 언어',
@@ -394,6 +412,15 @@ export const ja: LevitMessages = {
   searchCount: '{total}件中{current}件目',
   noResults: '一致なし',
   replacedCount: '{count}件を置換しました',
+
+  // Block handle
+  blockMenu: 'ブロックメニュー',
+  blockHandleTitle: 'ドラッグで移動、クリックでメニュー',
+  turnInto: '変換',
+  moveUp: '上へ移動',
+  moveDown: '下へ移動',
+  duplicate: '複製',
+  deleteBlock: '削除',
 
   markDone: '完了にする',
   markNotDone: '未完了にする',

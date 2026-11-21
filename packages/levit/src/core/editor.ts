@@ -371,6 +371,36 @@ export class ChainedCommands {
     return this;
   }
 
+  /** Moves the selected blocks one place up (a table moves whole, a list item with its nested items). */
+  moveBlocksUp(): this {
+    this.tr.moveBlocks('up');
+    return this;
+  }
+
+  /** Moves the selected blocks one place down. */
+  moveBlocksDown(): this {
+    this.tr.moveBlocks('down');
+    return this;
+  }
+
+  /** Moves a block (with its table or nested items) to a place: an index between blocks, 0 before the first. */
+  moveBlock(blockId: string, place: number): this {
+    this.tr.moveBlock(blockId, place);
+    return this;
+  }
+
+  /** Puts a copy of the block (the selected blocks without an id) below it, with the caret in the copy. */
+  duplicateBlock(blockId?: string): this {
+    this.tr.duplicateBlock(blockId);
+    return this;
+  }
+
+  /** Deletes the block (the selected blocks without an id), a table whole, a list item with its nested items. */
+  deleteBlock(blockId?: string): this {
+    this.tr.deleteBlock(blockId);
+    return this;
+  }
+
   run(): boolean {
     this.editor.dispatch(this.tr);
     return true;

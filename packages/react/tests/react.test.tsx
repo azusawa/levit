@@ -38,15 +38,17 @@ describe('<LevitEditor>', () => {
     expect(document.querySelector('.levit-table-toolbar')).not.toBeNull();
     expect(document.querySelector('.levit-image-toolbar')).not.toBeNull();
     expect(document.querySelector('.levit-search')).not.toBeNull();
+    expect(document.querySelector('.levit-block-handle')).not.toBeNull();
   });
 
   it('can leave out the menus', () => {
-    act(() => root.render(<LevitEditor bubbleMenu={false} slashMenu={false} tableToolbar={false} imageToolbar={false} searchPanel={false} />));
+    act(() => root.render(<LevitEditor bubbleMenu={false} slashMenu={false} tableToolbar={false} imageToolbar={false} searchPanel={false} blockHandle={false} />));
     expect(document.querySelector('.levit-bubble-menu')).toBeNull();
     expect(document.querySelector('.levit-slash-menu')).toBeNull();
     expect(document.querySelector('.levit-table-toolbar')).toBeNull();
     expect(document.querySelector('.levit-image-toolbar')).toBeNull();
     expect(document.querySelector('.levit-search')).toBeNull();
+    expect(document.querySelector('.levit-block-handle')).toBeNull();
   });
 
   it('passes the color options to the editor', () => {
@@ -118,6 +120,7 @@ describe('<LevitEditor>', () => {
     expect(document.querySelector('.levit-table-toolbar')).toBeNull();
     expect(document.querySelector('.levit-image-toolbar')).toBeNull();
     expect(document.querySelector('.levit-search')).toBeNull();
+    expect(document.querySelector('.levit-block-handle')).toBeNull();
   });
 
   it('makes exactly one editor and one set of menus under StrictMode', () => {

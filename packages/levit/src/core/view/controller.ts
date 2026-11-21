@@ -6,6 +6,7 @@ import { tableAt } from '../model/table.js';
 import { matchesShortcut } from '../plugin/plugin.js';
 import { TABLE_SHORTCUTS, type TableShortcutCommand } from './table-shortcuts.js';
 import { TEXT_ALIGN_SHORTCUTS, type TextAlign } from '../model/align.js';
+import { BLOCK_MOVE_SHORTCUTS } from '../model/move.js';
 import {
   domRangeToEditorSelection,
   domSelectionToEditorSelection,
@@ -241,6 +242,18 @@ export class InputController {
       return;
     }
 
+    // Mod+Shift+Up and Down move the selected blocks. At the top or bottom
+    // the keys do what the browser does (select to the start or end).
+    const direction = isMod && !e.defaultPrevented ? this.moveShortcut(e) : null;
+    if (direction) {
+      const tr = this.editor.state.tr.moveBlocks(direction);
+      if (tr.docChanged) {
+        e.preventDefault();
+        this.editor.dispatch(tr);
+        return;
+      }
+    }
+
     // Table shortcuts, with the caret in one cell: Mod+Enter adds a row below
     // and Mod+Alt+Enter a column right; Mod+Shift+Backspace deletes the row
     // and Mod+Alt+Backspace the column.
@@ -357,6 +370,13 @@ export class InputController {
     if (!this.editor.isEditable || !this.editor.canSetTextAlign()) return null;
     const entries = Object.entries(TEXT_ALIGN_SHORTCUTS) as [TextAlign, string][];
     return entries.find(([, shortcut]) => matchesShortcut(e, shortcut))?.[0] ?? null;
+  }
+
+  /** The direction for a block move shortcut in an editable editor, or null. */
+  private moveShortcut(e: KeyboardEvent): 'up' | 'down' | null {
+    if (!this.editor.isEditable) return null;
+    if (matchesShortcut(e, BLOCK_MOVE_SHORTCUTS.up)) return 'up';
+    return matchesShortcut(e, BLOCK_MOVE_SHORTCUTS.down) ? 'down' : null;
   }
 
   /**

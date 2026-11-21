@@ -292,6 +292,27 @@ describe('review fixes: binding', () => {
     expect(a.state.doc.blocks[0].id).toBe('a');
   });
 
+  it('sends blocks moved up or down, and both editors keep editing them', () => {
+    const { a, b } = pair([para('a', 'one'), para('b', 'two'), para('c', 'three')]);
+    a.dispatch(a.state.tr.setSelection(caret('c', 0)).moveBlocks('up'));
+    expect(texts(b)).toEqual(['one', 'three', 'two']);
+    b.dispatch(b.state.tr.setSelection(caret('c', 5)).insertText('!'));
+    a.dispatch(a.state.tr.moveBlock('a', 3));
+    expect(texts(a)).toEqual(['three!', 'two', 'one']);
+    expect(json(b)).toEqual(json(a));
+  });
+
+  it('moves a block while others’ changes wait', () => {
+    const { a, b } = pair([para('a', 'one'), para('b', 'two'), para('c', 'three')]);
+    b.dispatch(b.state.tr.setSelection(caret('a', 3)));
+    b.container.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }));
+    a.dispatch(a.state.tr.setSelection(caret('b', 3)).insertText('!'));
+    b.dispatch(b.state.tr.moveBlock('a', 3));
+    expect(texts(a)).toEqual(['two!', 'three', 'one']);
+    b.container.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true }));
+    expect(json(b)).toEqual(json(a));
+  });
+
   it('stops when the editor is destroyed', () => {
     const { a, b } = pair();
     const before = b.state;

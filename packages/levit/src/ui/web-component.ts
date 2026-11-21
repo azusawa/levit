@@ -8,6 +8,7 @@ import { createSlashMenu } from '../plugins/slash-menu.js';
 import { createTableToolbar } from '../plugins/table-toolbar.js';
 import { createImageToolbar } from '../plugins/image-toolbar.js';
 import { createSearchPanel } from '../plugins/search-panel.js';
+import { createBlockHandle } from '../plugins/block-handle.js';
 
 type Menu = { element: HTMLElement; destroy(): void };
 
@@ -18,6 +19,7 @@ const MENUS: Record<string, (editor: LevitEditor) => Menu> = {
   'table-toolbar': createTableToolbar,
   'image-toolbar': createImageToolbar,
   'search-panel': createSearchPanel,
+  'block-handle': createBlockHandle,
 };
 
 // On the server (SSR) there is no HTMLElement. Fall back to an empty class so

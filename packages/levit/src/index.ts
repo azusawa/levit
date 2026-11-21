@@ -73,6 +73,7 @@ export { createSlashMenu, type SlashMenuInstance, type SlashMenuItem } from './p
 export { createTableToolbar, type TableToolbarInstance } from './plugins/table-toolbar.js';
 export { createImageToolbar, type ImageToolbarInstance } from './plugins/image-toolbar.js';
 export { createSearchPanel, type SearchPanelInstance } from './plugins/search-panel.js';
+export { createBlockHandle, type BlockHandleInstance } from './plugins/block-handle.js';
 export { findMatches, replaceMatches, type SearchMatch, type SearchOptions } from './core/model/search.js';
 export { createRemoteCursors, type RemoteCursor, type RemoteCursorsInstance } from './plugins/remote-cursors.js';
 export { commentsPlugin, getComments, type CommentsOptions, type CommentRange } from './plugins/comments.js';

@@ -17,6 +17,7 @@ import {
   createTableToolbar,
   createImageToolbar,
   createSearchPanel,
+  createBlockHandle,
   sameContent,
   type DocumentData,
   type EditorOptions,
@@ -27,7 +28,7 @@ import {
 
 export type { Editor };
 
-/** Editor options, plus whether to add the menus, the toolbars and the search panel. */
+/** Editor options, plus whether to add the menus, the toolbars, the search panel and the block handle. */
 export interface UseLevitEditorOptions extends Omit<EditorOptions, 'element'> {
   /** Show the formatting toolbar on selected text. Default: true. */
   bubbleMenu?: boolean;
@@ -39,6 +40,8 @@ export interface UseLevitEditorOptions extends Omit<EditorOptions, 'element'> {
   imageToolbar?: boolean;
   /** Open a find and replace panel with Mod+F. Default: true. */
   searchPanel?: boolean;
+  /** Show a handle next to the block under the mouse, to drag the block or open its menu. Default: true. */
+  blockHandle?: boolean;
   /** Called once the editor exists. */
   onReady?: (editor: Editor) => void;
 }
@@ -59,7 +62,7 @@ export function useLevitEditor(options: UseLevitEditorOptions = {}): {
 
   onMounted(() => {
     if (!element.value) return;
-    const { bubbleMenu = true, slashMenu = true, tableToolbar = true, imageToolbar = true, searchPanel = true, ...editorOptions } = options;
+    const { bubbleMenu = true, slashMenu = true, tableToolbar = true, imageToolbar = true, searchPanel = true, blockHandle = true, ...editorOptions } = options;
     const instance = createLevitEditor(element.value, editorOptions);
     const menus = [
       bubbleMenu && createBubbleMenu(instance),
@@ -67,6 +70,7 @@ export function useLevitEditor(options: UseLevitEditorOptions = {}): {
       tableToolbar && createTableToolbar(instance),
       imageToolbar && createImageToolbar(instance),
       searchPanel && createSearchPanel(instance),
+      blockHandle && createBlockHandle(instance),
     ];
     editor.value = instance;
     options.onReady?.(instance);
@@ -100,6 +104,7 @@ export const LevitEditor = defineComponent({
     tableToolbar: { type: Boolean, default: true },
     imageToolbar: { type: Boolean, default: true },
     searchPanel: { type: Boolean, default: true },
+    blockHandle: { type: Boolean, default: true },
     colors: { type: Array as PropType<EditorOptions['colors']>, default: undefined },
     colorPicker: { type: Boolean, default: true },
     // A prop rather than an emit, so without an @error listener the editor
@@ -123,6 +128,7 @@ export const LevitEditor = defineComponent({
       tableToolbar: props.tableToolbar,
       imageToolbar: props.imageToolbar,
       searchPanel: props.searchPanel,
+      blockHandle: props.blockHandle,
       colors: props.colors,
       colorPicker: props.colorPicker,
       onChange: (ed) => emit('update:modelValue', ed.getJSON()),

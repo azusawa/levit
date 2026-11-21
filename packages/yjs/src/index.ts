@@ -432,6 +432,22 @@ function newYBlock(block: BlockNode): Y.Map<unknown> {
   return ymap;
 }
 
+/**
+ * The ids of blocks in both lists whose place among the others changed: the
+ * blocks kept in both that are not in the longest run of ids they share.
+ */
+function movedIds(before: readonly BlockNode[], after: readonly BlockNode[]): Set<string> {
+  const afterIds = new Set(after.map((b) => b.id));
+  const beforeIds = new Set(before.map((b) => b.id));
+  const keptBefore = before.filter((b) => afterIds.has(b.id));
+  const keptAfter = after.filter((b) => beforeIds.has(b.id));
+  if (keptBefore.every((b, i) => b.id === keptAfter[i].id)) return new Set();
+  const inOrder = new Set(keptPairs(keptBefore, keptAfter).map(([i]) => keptBefore[i].id));
+  // Too long to compare (keptPairs gave up): the blocks stay where they are.
+  if (inOrder.size === 0) return new Set();
+  return new Set(keptBefore.filter((b) => !inOrder.has(b.id)).map((b) => b.id));
+}
+
 interface Rebase {
   /** Maps a text offset of the editor's older document to the shared text. */
   mapIndex: (blockId: string, index: number) => number;
@@ -496,14 +512,16 @@ function writeBlocks(yblocks: YBlocks, before: readonly BlockNode[], after: read
 
   if (rebase) {
     // Blocks are found by id: the shared list may differ from `before`.
+    // A moved block is removed and added again in its new place.
     const indexOf = (id: string) => yblocks.toArray().findIndex((ymap) => ymap.get('id') === id);
+    const moved = movedIds(before, after);
     const afterIds = new Set(after.map((b) => b.id));
     for (const old of before) {
-      if (afterIds.has(old.id)) continue;
+      if (afterIds.has(old.id) && !moved.has(old.id)) continue;
       const at = indexOf(old.id);
       if (at !== -1) yblocks.delete(at, 1);
     }
-    const beforeById = new Map(before.map((b) => [b.id, b]));
+    const beforeById = new Map(before.filter((b) => !moved.has(b.id)).map((b) => [b.id, b]));
     after.forEach((block, j) => {
       const old = beforeById.get(block.id);
       if (old) {
