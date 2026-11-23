@@ -123,6 +123,8 @@ export const en = {
 
   // Block handle
   blockMenu: 'Block menu',
+  mentionMenuLabel: 'Mentions',
+  emojiMenuLabel: 'Emoji',
   blockHandleTitle: 'Drag to move, click for options',
   turnInto: 'Turn into',
   moveUp: 'Move up',
@@ -271,6 +273,8 @@ export const ko: LevitMessages = {
 
   // Block handle
   blockMenu: '블록 메뉴',
+  mentionMenuLabel: '멘션',
+  emojiMenuLabel: '이모지',
   blockHandleTitle: '끌어서 옮기기, 클릭하면 메뉴',
   turnInto: '바꾸기',
   moveUp: '위로 옮기기',
@@ -415,6 +419,8 @@ export const ja: LevitMessages = {
 
   // Block handle
   blockMenu: 'ブロックメニュー',
+  mentionMenuLabel: 'メンション',
+  emojiMenuLabel: '絵文字',
   blockHandleTitle: 'ドラッグで移動、クリックでメニュー',
   turnInto: '変換',
   moveUp: '上へ移動',

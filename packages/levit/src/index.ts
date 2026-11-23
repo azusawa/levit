@@ -77,6 +77,15 @@ export { createBlockHandle, type BlockHandleInstance } from './plugins/block-han
 export { findMatches, replaceMatches, type SearchMatch, type SearchOptions } from './core/model/search.js';
 export { createRemoteCursors, type RemoteCursor, type RemoteCursorsInstance } from './plugins/remote-cursors.js';
 export { commentsPlugin, getComments, type CommentsOptions, type CommentRange } from './plugins/comments.js';
+export {
+  createAutocomplete,
+  type AutocompleteInstance,
+  type AutocompleteItem,
+  type AutocompleteOptions,
+  type AutocompleteRange,
+} from './plugins/autocomplete.js';
+export { mentionsPlugin, getMentions, MENTION_MARK, type MentionItem, type MentionsOptions, type MentionRange } from './plugins/mentions.js';
+export { emojiPlugin, findEmoji, DEFAULT_EMOJI, type EmojiItem, type EmojiOptions } from './plugins/emoji.js';
 
 // AI Integration Helpers
 export { getAIContext, streamAIResponse, type AIContext } from './ai/stream.js';

@@ -27,6 +27,9 @@
   --levit-comment-bg: rgba(234, 179, 8, 0.18);
   --levit-comment-active-bg: rgba(234, 179, 8, 0.45);
   --levit-comment-border: #ca8a04;
+  /* A mention (mentionsPlugin). */
+  --levit-mention-bg: rgba(59, 130, 246, 0.12);
+  --levit-mention-text: #1d4ed8;
   --levit-selection: rgba(59, 130, 246, 0.18);
   --levit-code-bg: #f1f5f9;
   --levit-code-text: #0f172a;
@@ -79,6 +82,9 @@
   --levit-comment-bg: rgba(234, 179, 8, 0.16);
   --levit-comment-active-bg: rgba(234, 179, 8, 0.38);
   --levit-comment-border: #eab308;
+  /* A mention (mentionsPlugin). */
+  --levit-mention-bg: rgba(96, 165, 250, 0.18);
+  --levit-mention-text: #93c5fd;
   --levit-selection: rgba(59, 130, 246, 0.35);
   --levit-code-bg: #1e293b;
   --levit-code-text: #e2e8f0;
@@ -129,6 +135,9 @@
     --levit-comment-bg: rgba(234, 179, 8, 0.16);
     --levit-comment-active-bg: rgba(234, 179, 8, 0.38);
     --levit-comment-border: #eab308;
+    /* A mention (mentionsPlugin). */
+    --levit-mention-bg: rgba(96, 165, 250, 0.18);
+    --levit-mention-text: #93c5fd;
     --levit-selection: rgba(59, 130, 246, 0.35);
     --levit-code-bg: #1e293b;
     --levit-code-text: #e2e8f0;
@@ -869,8 +878,10 @@ figure.levit-block-image img::selection {
 }
 
 /* Slash Command Menu */
-.levit-slash-menu {
+.levit-slash-menu,
+.levit-autocomplete-menu {
   position: absolute;
+  font-family: var(--levit-font-sans);
   z-index: 1000;
   width: 250px;
   max-height: 300px;
@@ -883,7 +894,8 @@ figure.levit-block-image img::selection {
   animation: levitFadeIn 0.15s ease-out;
 }
 
-.levit-slash-item {
+.levit-slash-item,
+.levit-autocomplete-item {
   display: flex;
   align-items: center;
   padding: 8px 10px;
@@ -894,11 +906,14 @@ figure.levit-block-image img::selection {
 }
 
 .levit-slash-item.is-active,
-.levit-slash-item:hover {
+.levit-slash-item:hover,
+.levit-autocomplete-item.is-active,
+.levit-autocomplete-item:hover {
   background-color: var(--levit-border);
 }
 
-.levit-slash-icon {
+.levit-slash-icon,
+.levit-autocomplete-icon {
   font-size: 16px;
   font-weight: 600;
   width: 24px;
@@ -908,18 +923,21 @@ figure.levit-block-image img::selection {
   justify-content: center;
 }
 
-.levit-slash-content {
+.levit-slash-content,
+.levit-autocomplete-content {
   display: flex;
   flex-direction: column;
 }
 
-.levit-slash-title {
+.levit-slash-title,
+.levit-autocomplete-title {
   font-size: 14px;
   font-weight: 500;
   color: var(--levit-text);
 }
 
-.levit-slash-desc {
+.levit-slash-desc,
+.levit-autocomplete-desc {
   font-size: 11px;
   color: var(--levit-text-muted);
 }
@@ -1272,4 +1290,13 @@ figure.levit-block-image img::selection {
   height: 1px;
   margin: 6px 4px;
   background-color: var(--levit-border);
+}
+
+/* Mentions (mentionsPlugin) */
+.levit-mention {
+  background: var(--levit-mention-bg);
+  color: var(--levit-mention-text);
+  border-radius: 4px;
+  padding: 0 2px;
+  font-weight: 500;
 }

@@ -13,10 +13,14 @@
 <body>
   <div id="editor"></div>
   <script type="module">
-    import { createLevitEditor, createBubbleMenu, createSlashMenu, createTableToolbar, createImageToolbar, createSearchPanel, createBlockHandle } from '/packages/levit/src/index.ts';
+    import { createLevitEditor, createBubbleMenu, createSlashMenu, createTableToolbar, createImageToolbar, createSearchPanel, createBlockHandle, mentionsPlugin, emojiPlugin } from '/packages/levit/src/index.ts';
 
     const editor = createLevitEditor(document.getElementById('editor'), {
       placeholder: 'Type here',
+      plugins: [
+        mentionsPlugin({ items: [{ id: 'u1', label: 'Kim Minsu' }, { id: 'u2', label: 'Lee Jiwoo' }] }),
+        emojiPlugin(),
+      ],
       // Stands in for a real upload: the image is shown from a local blob URL.
       uploadImage: async (file) => URL.createObjectURL(file),
       // A tiny highlighter: wraps a few keywords, like highlight.js would.

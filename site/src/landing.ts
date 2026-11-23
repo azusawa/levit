@@ -10,6 +10,8 @@ import {
   createImageToolbar,
   createSearchPanel,
   createBlockHandle,
+  emojiPlugin,
+  mentionsPlugin,
   documentToHTML,
   getComments,
   htmlToDocument,
@@ -176,9 +178,28 @@ function selectText(ed: LevitEditor, blockIndex: number, phrase: string) {
 let aiEditor: LevitEditor | null = null;
 let bindings: { destroy(): void }[] = [];
 
+/** Made-up people for the "@" list of the writing demo. */
+const demoPeople: Record<Lang, { id: string; label: string }[]> = {
+  en: [
+    { id: 'p1', label: 'Alex Kim' },
+    { id: 'p2', label: 'Sam Lee' },
+    { id: 'p3', label: 'Jordan Park' },
+  ],
+  ko: [
+    { id: 'p1', label: '김민수' },
+    { id: 'p2', label: '이지우' },
+    { id: 'p3', label: '박하늘' },
+  ],
+  ja: [
+    { id: 'p1', label: '佐藤 花子' },
+    { id: 'p2', label: '鈴木 一郎' },
+    { id: 'p3', label: '高橋 美咲' },
+  ],
+};
+
 function build() {
   const sample = samples[pageLang];
-  editor('write', sample.write);
+  editor('write', sample.write, { plugins: [mentionsPlugin({ items: demoPeople[pageLang] }), emojiPlugin()] });
 
   aiEditor = editor('ai', sample.ai, { plugins: [aiPlugin({ provider: createFakeProvider(pageLang) })] });
 

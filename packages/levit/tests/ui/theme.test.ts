@@ -179,3 +179,15 @@ describe('search panel', () => {
     expect(css).toMatch(/\.levit-search-btn:focus-visible[^{]*\{[^}]*outline/);
   });
 });
+
+describe('autocomplete popups and mentions', () => {
+  it('the slash menu and the "@" and ":" popups look alike, float in the menu colors and use the editor font', () => {
+    expect(css).toMatch(/\.levit-slash-menu,\s*\.levit-autocomplete-menu\s*\{[^}]*position:\s*absolute[^}]*background-color:\s*var\(--levit-surface\)/);
+    expect(css).toMatch(/\.levit-slash-menu,\s*\.levit-autocomplete-menu\s*\{[^}]*font-family:\s*var\(--levit-font-sans\)/);
+    expect(css).toMatch(/\.levit-autocomplete-item\.is-active,\s*\.levit-autocomplete-item:hover\s*\{[^}]*background-color/);
+  });
+
+  it('draws a mention in theme colors, light and dark', () => {
+    expect(css).toMatch(/\.levit-mention\s*\{[^}]*background:\s*var\(--levit-mention-bg\)[^}]*color:\s*var\(--levit-mention-text\)/);
+  });
+});
