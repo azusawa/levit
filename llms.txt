@@ -586,6 +586,36 @@ getComments(editor);                       // [{ id, text, from, to }] in docume
 Mark: { type: 'comment', attrs: { ids: 'c1 c2' } } (overlapping comments share
 it). Not inclusive; left out of HTML and Markdown exports.
 
+Mentions and emoji: popups that open on "@" and ":" at the start of a line or
+after a space (not inside a word, so emails and 10:30 stay as typed).
+```ts
+import { mentionsPlugin, emojiPlugin, getMentions, createAutocomplete } from '@yonailab/levit';
+createLevitEditor(el, { plugins: [
+  // A list (filtered by name) or a function of the text after "@", sync or a Promise.
+  mentionsPlugin({ items: (query) => api.searchPeople(query) }),   // [{ id, label, description?, icon? }]
+  emojiPlugin(),            // DEFAULT_EMOJI; or emojiPlugin({ emoji: [{ emoji: '🦄', name: 'unicorn', keywords? }] })
+] });
+editor.commands.insertMention({ id: 'u1', label: 'Kim' });   // at the caret
+getMentions(editor);      // [{ id, label, blockId, offset }] in document order
+```
+Picking a person puts "@Name" with the mark { type: 'mention', attrs: { id,
+label } } and a space after it. Backspace or Delete removes a mention whole.
+HTML: <span class="levit-mention" data-mention-id="u1">@Kim</span> (read back
+on import); Markdown: the text. Emoji: ":" and two letters list them (arrows,
+Enter or Tab, Escape); typing a known name with its closing ":" (":fire:")
+turns it into the emoji. Emoji go in as plain text.
+
+Your own popup with the same behavior (the slash menu is built on it):
+```ts
+const tags = createAutocomplete(editor, {
+  char: '#', label: 'Tags',
+  items: (query) => findTags(query),        // [{ id, title, description?, icon? }], or a Promise
+  onSelect: (item, range) => {},            // range: the "#" and the typed text, or null if it changed
+  allowSpaces: false, minQuery: 0,
+});
+tags.isOpen(); tags.close(); tags.destroy();
+```
+
 ## 12. Security
 Levit filters unsafe content when it renders, reads pasted HTML/Markdown and
 exports HTML: unsafe link and image URLs are dropped (no `javascript:`, no SVG

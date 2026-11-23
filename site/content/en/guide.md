@@ -202,6 +202,12 @@ Commented text gets a light colored background with a line under it. When you pu
 
 Text you type right after a comment is not added to it. Comments are not included when you copy text.
 
+## Mentions and emoji
+
+If the app supports mentions, type **@** at the start of a line or after a space and a list of people opens. Keep typing to narrow it, then pick a name with the arrows and Enter (or Tab), or with the mouse. The name goes in as a mention, with a space after it. Backspace or Delete removes a mention whole.
+
+If the app supports emoji, type **:** and the first letters of a name, such as `:ro` for 🚀, and pick one from the list. Typing the whole name with a closing colon, such as `:fire:`, turns it into 🔥 right away. Faces such as `:)` stay as you typed them.
+
 ## Writing together
 
 If the app lets several people edit the same document, you see the others as they work: each person's caret is a colored line with their name, and their selected text is shaded in the same color. Their changes appear as they type, and your caret stays where it was.
@@ -235,6 +241,8 @@ You can use the editor without a mouse, and screen readers announce the editor, 
 - **Mod+Shift+J** — Justify
 - **Mod+Shift+Up** — Move the block up
 - **Mod+Shift+Down** — Move the block down
+- **@** — Mention someone (if the app supports it)
+- **:** — Insert an emoji (if the app supports it)
 - **Tab** — Indent a list item; in a table, go to the next cell
 - **Shift+Tab** — Outdent a list item; in a table, go to the previous cell
 - **Mod+Enter** — Check or uncheck a task; in a table, add a row below

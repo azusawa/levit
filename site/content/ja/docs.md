@@ -755,6 +755,42 @@ getComments(editor);                 // [{ id, text, from, to }] ドキュメン
 - コメントの直後に入力したテキストはコメントに含まれません。
 - HTML や Markdown へのエクスポートではコメントは除かれます。Yjs を使うとコメントの位置も共有されます。
 
+## メンションと絵文字
+
+`mentionsPlugin` は「@」で人の一覧を、`emojiPlugin` は「:」で絵文字の一覧を開きます。どちらも行頭か空白の後でだけ開くので、メールアドレスや 10:30 のような時刻は入力したまま残ります。
+
+```ts
+import { createLevitEditor, mentionsPlugin, emojiPlugin, getMentions } from '@yonailab/levit';
+
+const editor = createLevitEditor(element, {
+  plugins: [
+    mentionsPlugin({ items: (query) => api.searchPeople(query) }), // または一覧: [{ id, label, description?, icon? }]
+    emojiPlugin(),                                                  // または emojiPlugin({ emoji: [{ emoji: '🦄', name: 'unicorn' }] })
+  ],
+});
+
+editor.commands.insertMention({ id: 'u1', label: 'Kim' }); // カーソル位置に
+getMentions(editor);                                      // [{ id, label, blockId, offset }] 文書の順に
+```
+
+- `items` に一覧を渡すと、入力に合わせて名前で絞り込みます。関数を渡すと「@」の後に入力した文字を受け取り、人の一覧をすぐに、または後で（Promise。たとえばサーバーから）返します。表示するのは最後の入力への答えだけです。
+- 人を選ぶと「@名前」に `mention` マーク（`attrs: { id, label }`）が付いて入り、後ろに空白が入ります。メンションは Backspace か Delete 一回でまるごと消えます。
+- HTML に書き出すと `<span class="levit-mention" data-mention-id="u1">@Kim</span>` になり、読み込むとメンションに戻ります。Markdown には文字だけが出ます。
+- 絵文字は「:」の後に二文字入力すると出るので、`:)` はそのまま残ります。知っている名前を閉じのコロンまで書くと（`:fire:`）すぐ絵文字に変わります。絵文字は文字として入ります。`DEFAULT_EMOJI` と `findEmoji(list, query)` も公開しています。
+
+同じポップアップで、タグなど別の一覧も作れます。スラッシュメニューもこのポップアップで作られています。
+
+```ts
+import { createAutocomplete } from '@yonailab/levit';
+
+const tags = createAutocomplete(editor, {
+  char: '#',
+  label: 'Tags',
+  items: (query) => findTags(query),  // [{ id, title, description?, icon? }] または Promise
+  onSelect: (item, range) => {},      // range: 「#」と入力した文字。その間に変わっていれば null
+});
+```
+
 ## 多言語とアクセシビリティ
 
 ### メッセージ

@@ -756,6 +756,42 @@ getComments(editor);                 // [{ id, text, from, to }] in document ord
 - Text typed right after a comment is not part of it.
 - Comments are left out of HTML and Markdown exports. With Yjs, their positions are shared too.
 
+## Mentions and emoji
+
+`mentionsPlugin` opens a list of people on "@", and `emojiPlugin` a list of emoji on ":". Both open at the start of a line or after a space, so email addresses and times such as 10:30 stay as typed.
+
+```ts
+import { createLevitEditor, mentionsPlugin, emojiPlugin, getMentions } from '@yonailab/levit';
+
+const editor = createLevitEditor(element, {
+  plugins: [
+    mentionsPlugin({ items: (query) => api.searchPeople(query) }), // or a list: [{ id, label, description?, icon? }]
+    emojiPlugin(),                                                  // or emojiPlugin({ emoji: [{ emoji: '🦄', name: 'unicorn' }] })
+  ],
+});
+
+editor.commands.insertMention({ id: 'u1', label: 'Kim' }); // at the caret
+getMentions(editor);                                      // [{ id, label, blockId, offset }] in document order
+```
+
+- `items` is a list, filtered by name as the user types, or a function of the text after "@" that returns people now or later (a Promise, for example from your server). Only the latest answer is shown.
+- Picking someone puts "@Name" with a `mention` mark (`attrs: { id, label }`) and a space after it. Backspace or Delete removes a mention whole.
+- HTML export writes `<span class="levit-mention" data-mention-id="u1">@Kim</span>`, which import reads back; Markdown has the text.
+- Emoji show after ":" and two letters, so `:)` stays as typed. A whole known name with its closing colon (`:fire:`) turns into the emoji. Emoji go in as text. `DEFAULT_EMOJI` and `findEmoji(list, query)` are exported.
+
+The same popup is yours for other lists, such as tags. The slash menu is built on it too.
+
+```ts
+import { createAutocomplete } from '@yonailab/levit';
+
+const tags = createAutocomplete(editor, {
+  char: '#',
+  label: 'Tags',
+  items: (query) => findTags(query),  // [{ id, title, description?, icon? }], or a Promise
+  onSelect: (item, range) => {},      // range: the "#" and what was typed, or null if it changed
+});
+```
+
 ## Languages and accessibility
 
 ### Messages

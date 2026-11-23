@@ -755,6 +755,42 @@ getComments(editor);                 // [{ id, text, from, to }] 문서 순서�
 - 댓글 바로 뒤에 입력한 글은 댓글에 포함되지 않습니다.
 - HTML·Markdown으로 내보낼 때 댓글은 빠집니다. Yjs를 쓰면 댓글 위치도 함께 공유됩니다.
 
+## 멘션과 이모지
+
+`mentionsPlugin`은 `@`를 입력하면 사람 목록을, `emojiPlugin`은 `:`를 입력하면 이모지 목록을 엽니다. 둘 다 줄 첫머리나 띄어쓰기 뒤에서만 열리므로 메일 주소나 10:30 같은 시각은 입력한 그대로 남습니다.
+
+```ts
+import { createLevitEditor, mentionsPlugin, emojiPlugin, getMentions } from '@yonailab/levit';
+
+const editor = createLevitEditor(element, {
+  plugins: [
+    mentionsPlugin({ items: (query) => api.searchPeople(query) }), // 또는 목록: [{ id, label, description?, icon? }]
+    emojiPlugin(),                                                  // 또는 emojiPlugin({ emoji: [{ emoji: '🦄', name: 'unicorn' }] })
+  ],
+});
+
+editor.commands.insertMention({ id: 'u1', label: 'Kim' }); // 커서 자리에
+getMentions(editor);                                      // [{ id, label, blockId, offset }] 문서 순서대로
+```
+
+- `items`에는 목록을 주면 입력한 글로 이름을 걸러 보여 줍니다. 함수를 주면 `@` 다음에 입력한 글을 받아 사람 목록을 바로 또는 나중에(Promise, 예를 들어 서버에서) 돌려줍니다. 마지막으로 입력한 글에 대한 답만 보여 줍니다.
+- 사람을 고르면 `@이름`에 `mention` 표시(`attrs: { id, label }`)가 붙어 들어가고 뒤에 띄어쓰기가 붙습니다. 멘션은 Backspace나 Delete 한 번에 통째로 지워집니다.
+- HTML로 내보내면 `<span class="levit-mention" data-mention-id="u1">@Kim</span>`이 되고, 가져올 때 다시 멘션이 됩니다. Markdown에는 글자만 나갑니다.
+- 이모지는 `:` 다음에 두 글자를 입력하면 나오므로 `:)`는 그대로 남습니다. 아는 이름을 닫는 콜론까지 쓰면(`:fire:`) 바로 이모지로 바뀝니다. 이모지는 글자로 들어갑니다. `DEFAULT_EMOJI`와 `findEmoji(list, query)`도 내보냅니다.
+
+같은 팝업으로 태그 같은 다른 목록도 만들 수 있습니다. 슬래시 메뉴도 이 팝업으로 만들어져 있습니다.
+
+```ts
+import { createAutocomplete } from '@yonailab/levit';
+
+const tags = createAutocomplete(editor, {
+  char: '#',
+  label: 'Tags',
+  items: (query) => findTags(query),  // [{ id, title, description?, icon? }] 또는 Promise
+  onSelect: (item, range) => {},      // range: "#"와 입력한 글. 그새 바뀌었으면 null
+});
+```
+
 ## 다국어와 접근성
 
 ### 문구
