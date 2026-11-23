@@ -317,7 +317,7 @@ getMentions(editor);   // [{ id, label, blockId, offset }] 문서 순서대로 (
 ```
 
 - 줄 첫머리나 띄어쓰기 뒤에서 `@`를 입력하면 사람 목록이 열리고, 더 입력하면 좁혀집니다. 방향키와 `Enter`(또는 `Tab`)나 마우스로 고르면 `@이름`이 멘션으로 들어가고 뒤에 띄어쓰기가 붙습니다. 메일 주소처럼 단어 안의 `@`에서는 열리지 않습니다.
-- 멘션은 `Backspace`·`Delete` 한 번에 통째로 지워집니다. 문서에는 사람의 id와 이름이 함께 저장되고, HTML에는 `<span class="levit-mention" data-mention-id="…">`로, Markdown에는 `@이름`으로 나갑니다.
+- 멘션은 `Backspace`·`Delete` 한 번에 통째로 지워지고, 커서가 멘션 글자 중간에 멈추지 않아 멘션 안에 글이 섞이지 않습니다. 문서에는 사람의 id와 이름이 함께 저장되고, HTML에는 `<span class="levit-mention" data-mention-id="…">`로, Markdown에는 `@이름`으로 나갑니다.
 - 이모지는 `:` 다음에 두 글자 이상 입력하면 목록이 열립니다. 그래서 `10:30`이나 `:)`는 입력한 그대로 둡니다.
 - 같은 팝업으로 `#태그` 같은 자동완성을 직접 만들 수도 있습니다: `createAutocomplete(editor, { char: '#', label: '태그', items, onSelect })`. 슬래시 메뉴도 이 팝업으로 만들어져 있습니다.
 

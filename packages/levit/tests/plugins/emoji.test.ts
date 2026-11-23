@@ -104,4 +104,27 @@ describe('emoji plugin', () => {
     type(':fire:');
     expect(editor.state.doc.blocks[0].content).toEqual([{ text: 'Hi 🔥', marks: [{ type: 'bold' }] }]);
   });
+
+  it('leaves Ctrl and Cmd shortcuts with ":" to the app', () => {
+    setup();
+    caret('p', 0);
+    type('see :fire');
+    for (const init of [{ ctrlKey: true, shiftKey: true }, { metaKey: true, shiftKey: true }]) {
+      const e = new KeyboardEvent('keydown', { key: ':', ...init, bubbles: true, cancelable: true });
+      container.dispatchEvent(e);
+      expect(e.defaultPrevented).toBe(false);
+    }
+    expect(blockText()).toBe('see :fire');
+  });
+
+  it('finds the app’s emoji whatever the case of their names', () => {
+    setup(emojiPlugin({ emoji: [{ emoji: '🦄', name: 'Unicorn', keywords: ['Magic'] }] }));
+    caret('p', 0);
+    type(':mag');
+    expect(shown()).toEqual(['unicorn']);
+    press('Escape');
+    type(' :Unicorn:');
+    expect(blockText()).toBe(':mag 🦄');
+  });
 });
+

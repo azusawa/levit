@@ -1,6 +1,6 @@
 import type { LevitEditor } from '../core/editor.js';
 import type { LevitPlugin } from '../core/plugin/plugin.js';
-import type { InlineMark, InlineNode } from '../core/model/types.js';
+import type { BlockNode, EditorPosition, InlineMark, InlineNode } from '../core/model/types.js';
 import type { Transaction } from '../core/state/transaction.js';
 import { findBlockIndex, getBlockText, normalizeInlineNodes, splitBlockContent } from '../core/model/document.js';
 import { createAutocomplete, type AutocompleteRange } from './autocomplete.js';
@@ -42,6 +42,8 @@ const LIST_LIMIT = 10;
 const MAX_ID_LENGTH = 200;
 
 const mentionOf = (node: InlineNode): InlineMark | undefined => node.marks?.find((m) => m.type === MENTION_MARK);
+/** True for a whole mention: its text is still "@" and the name. */
+const isWhole = (node: InlineNode, mark: InlineMark) => node.text === `@${mark.attrs?.label ?? ''}`;
 const validId = (id: unknown): id is string => typeof id === 'string' && id.length > 0 && id.length <= MAX_ID_LENGTH;
 
 function escapeAttr(value: string): string {
@@ -55,7 +57,7 @@ export function getMentions(editor: LevitEditor): MentionRange[] {
     let offset = 0;
     for (const node of block.content) {
       const mark = mentionOf(node);
-      if (mark && validId(mark.attrs?.id)) found.push({ id: mark.attrs.id, label: String(mark.attrs.label ?? ''), blockId: block.id, offset });
+      if (mark && validId(mark.attrs?.id) && isWhole(node, mark)) found.push({ id: mark.attrs.id, label: String(mark.attrs.label ?? ''), blockId: block.id, offset });
       offset += node.text.length;
     }
   }
@@ -63,9 +65,9 @@ export function getMentions(editor: LevitEditor): MentionRange[] {
 }
 
 /** Where the mention around a part of a block is: [start, end), or null. */
-function mentionAround(tr: Transaction, blockIndex: number, from: number, to: number): [number, number] | null {
+function mentionAround(block: BlockNode, from: number, to: number): [number, number] | null {
   let offset = 0;
-  for (const node of tr.doc.blocks[blockIndex].content) {
+  for (const node of block.content) {
     const end = offset + node.text.length;
     if (mentionOf(node) && offset < to && end > from) return [offset, end];
     offset = end;
@@ -80,12 +82,36 @@ function removeWhole(editor: LevitEditor, direction: -1 | 1): boolean {
   const { blockId, offset } = selection.head;
   const index = findBlockIndex(doc, blockId);
   if (index === -1) return false;
-  const tr = editor.state.tr;
-  const range = direction === -1 ? mentionAround(tr, index, offset - 1, offset) : mentionAround(tr, index, offset, offset + 1);
+  const block = doc.blocks[index];
+  const range = direction === -1 ? mentionAround(block, offset - 1, offset) : mentionAround(block, offset, offset + 1);
   if (!range) return false;
+  const tr = editor.state.tr;
   const anchor = { blockId, offset: range[0] };
   editor.dispatch(tr.setSelection({ anchor, head: { blockId, offset: range[1] }, isCollapsed: false }).deleteRange());
   return true;
+}
+
+/**
+ * Keeps the caret out of mentions, so nothing is typed into one: a caret
+ * inside goes after it, or before it when it stepped in from the end.
+ */
+function keepCaretOut(editor: LevitEditor): () => void {
+  let last: EditorPosition | null = null;
+  return () => {
+    const { selection, doc } = editor.state;
+    const head = selection.head;
+    const block = selection.isCollapsed && !editor.isComposing ? doc.blocks[findBlockIndex(doc, head.blockId)] : undefined;
+    const range = block ? mentionAround(block, head.offset, head.offset) : null;
+    if (!range || head.offset <= range[0] || head.offset >= range[1]) {
+      last = { ...head };
+      return;
+    }
+    // One step left from its end (ArrowLeft): before it. Anything else, such as a click: after it.
+    const fromEnd = !!last && last.blockId === head.blockId && last.offset === range[1];
+    const to = { blockId: head.blockId, offset: fromEnd ? range[0] : range[1] };
+    last = to;
+    editor.dispatch(editor.state.tr.setSelection({ anchor: to, head: to, isCollapsed: true }));
+  };
 }
 
 /** Puts a mention (and a space after it) in place of a range, or at the caret. */
@@ -109,8 +135,17 @@ function insertMention(tr: Transaction, item: MentionItem, range: AutocompleteRa
   return true;
 }
 
-/** The people as popup entries; ones without an id are left out. */
-const asEntries = (list: readonly MentionItem[]) => list.filter((item) => validId(item.id) && item.label).map((item) => ({ ...item, title: item.label }));
+/**
+ * The people as popup entries; ones without an id are left out. Once a
+ * space is typed, only names that have the whole query stay, so the list
+ * closes when the sentence goes on ("@Kim please ...").
+ */
+const asEntries = (list: readonly MentionItem[], query: string) => {
+  const needle = query.toLowerCase();
+  return list
+    .filter((item) => validId(item.id) && item.label && (!/\s/.test(query) || item.label.toLowerCase().includes(needle)))
+    .map((item) => ({ ...item, title: item.label }));
+};
 
 /** The people for a query, from a list: those whose name has it. */
 function filterList(list: readonly MentionItem[], query: string): MentionItem[] {
@@ -166,14 +201,18 @@ export function mentionsPlugin(options: MentionsOptions): LevitPlugin {
         allowSpaces: true,
         items: (query) => {
           const found = items(query);
-          return found instanceof Promise ? found.then(asEntries) : asEntries(found);
+          return found instanceof Promise ? found.then((list) => asEntries(list, query)) : asEntries(found, query);
         },
         onSelect: (item, range) => {
           const tr = editor.state.tr;
           if (insertMention(tr, item, range)) editor.dispatch(tr);
         },
       });
-      return () => popup.destroy();
+      const stop = editor.on('selectionUpdate', keepCaretOut(editor));
+      return () => {
+        popup.destroy();
+        stop();
+      };
     },
   };
 }

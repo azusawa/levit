@@ -185,4 +185,41 @@ describe('mentions', () => {
     editor.destroy();
     expect(document.querySelector('.levit-mention-menu')).toBeNull();
   });
+
+  it('the caret does not stop inside a mention, so nothing is typed into one', () => {
+    setup();
+    caret('p', 0);
+    type('@lee');
+    press('Enter');
+    type('x');
+    // A click inside puts the caret after it.
+    caret('p', 4);
+    expect(editor.state.selection.head).toEqual({ blockId: 'p', offset: 10 });
+    // Coming from its end (ArrowLeft), the caret goes before it.
+    caret('p', 9);
+    expect(editor.state.selection.head).toEqual({ blockId: 'p', offset: 0 });
+    // And from its start, after it.
+    caret('p', 1);
+    expect(editor.state.selection.head).toEqual({ blockId: 'p', offset: 10 });
+    type('!');
+    expect(content()[0]).toEqual({ text: '@Lee Jiwoo', marks: [{ type: 'mention', attrs: { id: 'u2', label: 'Lee Jiwoo' } }] });
+  });
+
+  it('getMentions leaves out pieces of a mention that are no longer whole', () => {
+    const piece = { text: '@Le', marks: [{ type: 'mention', attrs: { id: 'u2', label: 'Lee Jiwoo' } }] };
+    setup({}, [createBlock('paragraph', {}, [piece, createTextNode(' hi')], 'p')]);
+    expect(getMentions(editor)).toEqual([]);
+  });
+
+  it('a name with a space must have what was typed, so the list closes once the sentence goes on', () => {
+    setup({ items: () => people });
+    caret('p', 0);
+    type('@kim h');
+    expect(shown()).toEqual(['Kim Haneul']);
+    type('i there');
+    expect(document.querySelector('.levit-mention-menu')!.getAttribute('style')).toContain('display: none');
+    press('Enter');
+    expect(editor.state.doc.blocks).toHaveLength(2);
+  });
 });
+

@@ -774,7 +774,7 @@ getMentions(editor);                                      // [{ id, label, block
 ```
 
 - `items`에는 목록을 주면 입력한 글로 이름을 걸러 보여 줍니다. 함수를 주면 `@` 다음에 입력한 글을 받아 사람 목록을 바로 또는 나중에(Promise, 예를 들어 서버에서) 돌려줍니다. 마지막으로 입력한 글에 대한 답만 보여 줍니다.
-- 사람을 고르면 `@이름`에 `mention` 표시(`attrs: { id, label }`)가 붙어 들어가고 뒤에 띄어쓰기가 붙습니다. 멘션은 Backspace나 Delete 한 번에 통째로 지워집니다.
+- 사람을 고르면 `@이름`에 `mention` 표시(`attrs: { id, label }`)가 붙어 들어가고 뒤에 띄어쓰기가 붙습니다. 멘션은 Backspace나 Delete 한 번에 통째로 지워지고, 커서가 멘션 중간에 멈추지 않아 멘션 안에 글이 섞이지 않습니다.
 - HTML로 내보내면 `<span class="levit-mention" data-mention-id="u1">@Kim</span>`이 되고, 가져올 때 다시 멘션이 됩니다. Markdown에는 글자만 나갑니다.
 - 이모지는 `:` 다음에 두 글자를 입력하면 나오므로 `:)`는 그대로 남습니다. 아는 이름을 닫는 콜론까지 쓰면(`:fire:`) 바로 이모지로 바뀝니다. 이모지는 글자로 들어갑니다. `DEFAULT_EMOJI`와 `findEmoji(list, query)`도 내보냅니다.
 

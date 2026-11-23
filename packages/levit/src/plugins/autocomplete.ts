@@ -37,6 +37,8 @@ export interface AutocompleteOptions<T extends AutocompleteItem> {
   classPrefix?: string;
   /** Another class name for the popup, like 'levit-mention-menu'. */
   className?: string;
+  /** Tab picks the highlighted entry too. Default true; false leaves Tab to the editor. */
+  selectOnTab?: boolean;
 }
 
 export interface AutocompleteInstance {
@@ -61,7 +63,7 @@ const GAP = 6;
  * editor points at the highlighted entry with aria-activedescendant.
  */
 export function createAutocomplete<T extends AutocompleteItem>(editor: LevitEditor, options: AutocompleteOptions<T>): AutocompleteInstance {
-  const { char, minQuery = 0, allowSpaces = false } = options;
+  const { char, minQuery = 0, allowSpaces = false, selectOnTab = true } = options;
   const prefix = options.classPrefix ?? 'levit-autocomplete';
   const menu = document.createElement('div');
   menu.className = options.className ? `${prefix}-menu ${options.className}` : `${prefix}-menu`;
@@ -79,6 +81,9 @@ export function createAutocomplete<T extends AutocompleteItem>(editor: LevitEdit
   let activeIndex = 0;
   // Counts queries, so a late answer for an old one is dropped.
   let request = 0;
+  // While newer entries are on the way, Enter waits for them.
+  let loading = false;
+  let pickWhenLoaded = false;
   let positionTimer: ReturnType<typeof setTimeout> | undefined;
 
   const visible = () => at !== null && shownItems.length > 0;
@@ -123,6 +128,8 @@ export function createAutocomplete<T extends AutocompleteItem>(editor: LevitEdit
       });
       menu.appendChild(el);
     });
+    // Keep the highlighted entry in view when the list scrolls.
+    (menu.children[activeIndex] as HTMLElement | undefined)?.scrollIntoView?.({ block: 'nearest' });
     point();
   }
 
@@ -141,12 +148,14 @@ export function createAutocomplete<T extends AutocompleteItem>(editor: LevitEdit
   }
 
   function show(list: readonly T[]) {
+    loading = false;
     if (!at) return;
     if (list.length === 0) return close();
     shownItems = list;
     activeIndex = 0;
     renderList();
     place();
+    if (pickWhenLoaded) select(0);
   }
 
   function load(q: string) {
@@ -160,6 +169,7 @@ export function createAutocomplete<T extends AutocompleteItem>(editor: LevitEdit
     }
     const result = options.items(q);
     if (result instanceof Promise) {
+      loading = true;
       result.then(
         (list) => token === request && show(list),
         () => token === request && close()
@@ -221,6 +231,8 @@ export function createAutocomplete<T extends AutocompleteItem>(editor: LevitEdit
 
   function close() {
     at = null;
+    loading = false;
+    pickWhenLoaded = false;
     pending = false;
     query = '';
     shownItems = [];
@@ -233,8 +245,9 @@ export function createAutocomplete<T extends AutocompleteItem>(editor: LevitEdit
 
   function handleKeyDown(e: KeyboardEvent) {
     if (!at) {
-      // Shortcuts such as Mod+/ type nothing; AltGr (Ctrl+Alt) types characters.
-      if (e.key === char && !e.metaKey && e.ctrlKey === e.altKey) {
+      // Shortcuts such as Mod+/ type nothing; Option on a Mac and AltGr
+      // (Ctrl+Alt) type characters, like "@" on German keyboards.
+      if (e.key === char && !e.metaKey && !(e.ctrlKey && !e.altKey)) {
         const from = opensHere();
         if (from) open(from);
       }
@@ -247,9 +260,11 @@ export function createAutocomplete<T extends AutocompleteItem>(editor: LevitEdit
       const step = e.key === 'ArrowDown' ? 1 : -1;
       activeIndex = (activeIndex + step + shownItems.length) % shownItems.length;
       renderList();
-    } else if (e.key === 'Enter' || (e.key === 'Tab' && !e.shiftKey)) {
+    } else if (e.key === 'Enter' || (selectOnTab && e.key === 'Tab' && !e.shiftKey)) {
       e.preventDefault();
-      select(activeIndex);
+      // The list is for an older query: pick from the newer one once it is here.
+      if (loading) pickWhenLoaded = true;
+      else select(activeIndex);
     } else if (e.key === 'Escape') {
       e.preventDefault();
       close();

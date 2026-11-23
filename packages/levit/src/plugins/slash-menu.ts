@@ -213,6 +213,8 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
     classPrefix: 'levit-slash',
     // "/table 4x3": the query may hold spaces, though not right after the "/".
     allowSpaces: true,
+    // Tab stays with tables and lists: next cell, indent.
+    selectOnTab: false,
     items: itemsFor,
     onSelect: (item, range) => {
       // Take out the "/" and what was typed after it; the rest of the line stays.

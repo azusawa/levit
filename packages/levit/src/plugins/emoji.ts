@@ -7,7 +7,7 @@ import { createAutocomplete } from './autocomplete.js';
 /** An emoji and the name typed for it after ":". */
 export interface EmojiItem {
   emoji: string;
-  /** Lowercase letters, digits, "_", "+" and "-", as in :thumbsup:. */
+  /** Letters, digits, "_", "+" and "-", as in :thumbsup:. Matched in any case. */
   name: string;
   /** Other words that find it. */
   keywords?: string[];
@@ -149,7 +149,12 @@ function replaceWith(editor: LevitEditor, from: EditorPosition, to: EditorPositi
  * emoji. The emoji go in as text.
  */
 export function emojiPlugin(options: EmojiOptions = {}): LevitPlugin {
-  const list = options.emoji ?? DEFAULT_EMOJI;
+  // Names and keywords are matched in lowercase, as they are typed.
+  const list = (options.emoji ?? DEFAULT_EMOJI).map((item) => ({
+    ...item,
+    name: item.name.toLowerCase(),
+    ...(item.keywords ? { keywords: item.keywords.map((k) => k.toLowerCase()) } : {}),
+  }));
   const byName = new Map(list.map((item) => [item.name, item]));
   return {
     name: 'emoji',
@@ -168,6 +173,8 @@ export function emojiPlugin(options: EmojiOptions = {}): LevitPlugin {
       // The closing ":" of a known name: the emoji instead of the ":".
       const onKeyDown = (event: KeyboardEvent) => {
         if (event.key !== ':' || event.isComposing || editor.isComposing || !editor.isEditable) return;
+        // Ctrl and Cmd shortcuts are the app's; Option and AltGr type characters.
+        if (event.metaKey || (event.ctrlKey && !event.altKey)) return;
         const typed = typedName(editor);
         const item = typed && byName.get(typed.name);
         if (!typed || !item) return;

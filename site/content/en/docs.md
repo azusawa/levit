@@ -775,7 +775,7 @@ getMentions(editor);                                      // [{ id, label, block
 ```
 
 - `items` is a list, filtered by name as the user types, or a function of the text after "@" that returns people now or later (a Promise, for example from your server). Only the latest answer is shown.
-- Picking someone puts "@Name" with a `mention` mark (`attrs: { id, label }`) and a space after it. Backspace or Delete removes a mention whole.
+- Picking someone puts "@Name" with a `mention` mark (`attrs: { id, label }`) and a space after it. Backspace or Delete removes a mention whole, and the caret never stops inside one, so nothing is typed into it.
 - HTML export writes `<span class="levit-mention" data-mention-id="u1">@Kim</span>`, which import reads back; Markdown has the text.
 - Emoji show after ":" and two letters, so `:)` stays as typed. A whole known name with its closing colon (`:fire:`) turns into the emoji. Emoji go in as text. `DEFAULT_EMOJI` and `findEmoji(list, query)` are exported.
 

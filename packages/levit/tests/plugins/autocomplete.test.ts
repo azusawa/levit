@@ -223,4 +223,62 @@ describe('autocomplete popup', () => {
     popup.destroy();
     expect(document.querySelector('.levit-autocomplete-menu')).toBeNull();
   });
+
+  it('opens for a character typed with Option on a Mac or AltGr, but not for Ctrl or Cmd shortcuts', () => {
+    setup();
+    caret('p', 0);
+    container.dispatchEvent(new KeyboardEvent('keydown', { key: '@', altKey: true, bubbles: true, cancelable: true }));
+    editor.dispatch(editor.state.tr.insertText('@'));
+    expect(isOpen()).toBe(true);
+    press('Escape');
+    type(' ');
+    for (const init of [{ ctrlKey: true }, { metaKey: true }]) {
+      container.dispatchEvent(new KeyboardEvent('keydown', { key: '@', ...init, bubbles: true, cancelable: true }));
+      editor.dispatch(editor.state.tr.insertText('@'));
+      expect(isOpen()).toBe(false);
+      type(' ');
+    }
+  });
+
+  it('Enter while newer items are on the way picks from them, not from the old list', async () => {
+    const onSelect = setup({ items: (query) => Promise.resolve(query === 'k' ? [fruits[0], fruits[1]] : [fruits[1]]) });
+    caret('p', 0);
+    type('@k');
+    await flush();
+    type('i');
+    press('Enter');
+    // The key is taken, and the pick waits for the answer.
+    expect(editor.state.doc.blocks).toHaveLength(1);
+    expect(onSelect).not.toHaveBeenCalled();
+    await flush();
+    expect(onSelect).toHaveBeenCalledWith(fruits[1], expect.anything());
+  });
+
+  it('Tab can be left to the editor', () => {
+    const onSelect = setup({ selectOnTab: false });
+    caret('p', 0);
+    type('@');
+    const tab = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+    container.dispatchEvent(tab);
+    expect(tab.defaultPrevented).toBe(false);
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it('keeps the highlighted entry in view', () => {
+    const seen = vi.fn();
+    const original = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = function (this: Element) {
+      seen(this.id);
+    };
+    try {
+      setup();
+      caret('p', 0);
+      type('@');
+      press('ArrowDown');
+      expect(seen).toHaveBeenLastCalledWith(`${popup.element.id}-1`);
+    } finally {
+      Element.prototype.scrollIntoView = original;
+    }
+  });
 });
+

@@ -599,7 +599,8 @@ editor.commands.insertMention({ id: 'u1', label: 'Kim' });   // at the caret
 getMentions(editor);      // [{ id, label, blockId, offset }] in document order
 ```
 Picking a person puts "@Name" with the mark { type: 'mention', attrs: { id,
-label } } and a space after it. Backspace or Delete removes a mention whole.
+label } } and a space after it. Backspace or Delete removes a mention whole, and the caret never stops inside
+one, so nothing is typed into it.
 HTML: <span class="levit-mention" data-mention-id="u1">@Kim</span> (read back
 on import); Markdown: the text. Emoji: ":" and two letters list them (arrows,
 Enter or Tab, Escape); typing a known name with its closing ":" (":fire:")
