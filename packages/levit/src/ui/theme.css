@@ -412,6 +412,35 @@ blockquote.levit-block-blockquote {
   margin: 0.8em 0;
 }
 
+/* Callout: the kind's palette color on a tint of it, with its mark. */
+.levit-block-callout_block {
+  --_callout-color: var(--levit-color-blue);
+  --_callout-mark: "ℹ";
+  position: relative;
+  margin: 0.8em 0;
+  padding: 10px 14px 10px 40px;
+  border-left: 3px solid var(--_callout-color);
+  border-radius: var(--levit-radius);
+  background-color: color-mix(in srgb, var(--_callout-color) 10%, transparent);
+  white-space: pre-wrap;
+}
+
+.levit-block-callout_block::before {
+  content: var(--_callout-mark);
+  content: var(--_callout-mark) / "";
+  position: absolute;
+  left: 14px;
+  color: var(--_callout-color);
+  font-weight: 700;
+  user-select: none;
+  pointer-events: none;
+}
+
+.levit-block-callout_block[data-kind="tip"] { --_callout-color: var(--levit-color-green); --_callout-mark: "✓"; }
+.levit-block-callout_block[data-kind="important"] { --_callout-color: var(--levit-color-purple); --_callout-mark: "★"; }
+.levit-block-callout_block[data-kind="warning"] { --_callout-color: var(--levit-color-yellow); --_callout-mark: "!"; }
+.levit-block-callout_block[data-kind="caution"] { --_callout-color: var(--levit-color-red); --_callout-mark: "✕"; }
+
 /* Code block */
 pre.levit-block-code_block {
   background-color: var(--levit-code-bg);

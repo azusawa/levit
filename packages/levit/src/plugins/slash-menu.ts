@@ -98,6 +98,13 @@ export function createSlashMenu(editor: LevitEditor): SlashMenuInstance {
       action: (ed) => ed.dispatch(ed.state.tr.setBlockType('blockquote')),
     },
     {
+      id: 'callout-block',
+      title: m.callout,
+      description: m.calloutDescription,
+      icon: '💡',
+      action: (ed) => ed.dispatch(ed.state.tr.setBlockType('callout_block')),
+    },
+    {
       id: 'code-block',
       title: m.codeBlock,
       description: m.codeBlockDescription,

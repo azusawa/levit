@@ -12,8 +12,13 @@ import {
 import { schemaFor, type Schema, type SerializerOptions } from '../core/plugin/plugin.js';
 import { createCell, splitTableRow, tableAtIndex, type TablePosition } from '../core/model/table.js';
 import { normalizeCodeLanguage, normalizeHeadingLevel, sanitizeHref, sanitizeImageSrc } from '../core/model/sanitize.js';
+import { calloutAttrs, calloutKind, normalizeCalloutKind } from '../core/model/callout.js';
 
 const BUILT_IN_MARKDOWN_BLOCKS = new Set(BUILT_IN_BLOCK_TYPES);
+
+/** The first line of a GitHub alert, "[!WARNING]". */
+const ALERT_LINE = /^\[!(\w+)\]\s*$/;
+const isAlertLine = (line: string) => normalizeCalloutKind(ALERT_LINE.exec(line)?.[1]) !== null;
 
 export function documentToMarkdown(doc: DocumentData, options: SerializerOptions = {}): string {
   const schema = schemaFor(options.plugins);
@@ -44,7 +49,11 @@ export function documentToMarkdown(doc: DocumentData, options: SerializerOptions
         break;
       }
       case 'blockquote':
-        line = `> ${breaks('> ')}`;
+        // A quote of the words "[!NOTE]" must not read back as a callout.
+        line = `> ${isAlertLine(blockText) ? '\\' : ''}${breaks('> ')}`;
+        break;
+      case 'callout_block':
+        line = `> [!${calloutKind(block).toUpperCase()}]\n> ${breaks('> ')}`;
         break;
       case 'code_block':
         line = `\`\`\`${normalizeCodeLanguage(block.attrs?.language) ?? ''}\n${blockText}\n\`\`\``;
@@ -538,7 +547,15 @@ export function markdownToDocument(markdown: string, options: SerializerOptions 
 
     // Blockquote: every line starts with ">"
     if (lines.every((l) => /^\s*>/.test(l))) {
-      const text = lines.map((l) => l.replace(/^\s*>\s?/, '')).join('\n');
+      const quoted = lines.map((l) => l.replace(/^\s*>\s?/, ''));
+      // A GitHub alert: "> [!WARNING]" on the first line.
+      if (isAlertLine(quoted[0])) {
+        const kind = normalizeCalloutKind(ALERT_LINE.exec(quoted[0])![1])!;
+        blocks.push(createBlock('callout_block', calloutAttrs(kind), parseInlineMarkdown(readHardBreaks(quoted.slice(1).join('\n')))));
+        continue;
+      }
+      if (quoted[0].startsWith('\\') && isAlertLine(quoted[0].slice(1))) quoted[0] = quoted[0].slice(1);
+      const text = quoted.join('\n');
       blocks.push(createBlock('blockquote', {}, parseInlineMarkdown(readHardBreaks(text))));
       continue;
     }

@@ -12,6 +12,7 @@ import {
 import { cellContent, createCell, tableAtIndex, type TablePosition } from '../core/model/table.js';
 import { defaultSchema, schemaFor, type BlockSpec, type Schema, type SerializerOptions } from '../core/plugin/plugin.js';
 import { normalizeCodeLanguage, normalizeHeadingLevel, sanitizeHref, sanitizeImageSrc } from '../core/model/sanitize.js';
+import { calloutAttrs, calloutKind, normalizeCalloutKind, type CalloutKind } from '../core/model/callout.js';
 import { IMAGE_WIDTHS, normalizeImageAlign, normalizeImageSize } from '../core/model/image.js';
 import { blockTextAlign, canAlignText, normalizeTextAlign } from '../core/model/align.js';
 
@@ -90,6 +91,9 @@ export function documentToHTML(doc: DocumentData, options: SerializerOptions = {
       }
       case 'blockquote':
         html += `<blockquote${alignStyle(block)}>${contentHtml}</blockquote>`;
+        break;
+      case 'callout_block':
+        html += `<aside data-callout="${calloutKind(block)}">${contentHtml}</aside>`;
         break;
       case 'horizontal_rule':
         html += '<hr>';
@@ -241,12 +245,13 @@ const BLOCK_TAGS = new Set([
  * The block type for loose content, the nesting level of the list we are in,
  * and the alignment of the element around it.
  */
-type Context = { type: string; depth?: number; checked?: boolean; align?: string | null };
+type Context = { type: string; depth?: number; checked?: boolean; align?: string | null; kind?: CalloutKind };
 
 /** Attributes for a block made in this context: nested list items get their level. */
 function attrsFor(ctx: Context): Record<string, any> {
   const attrs: Record<string, any> = ctx.type.endsWith('list_item') && ctx.depth ? { indent: ctx.depth } : {};
   if (ctx.type === 'task_list_item') attrs.checked = ctx.checked === true;
+  if (ctx.type === 'callout_block' && ctx.kind) Object.assign(attrs, calloutAttrs(ctx.kind));
   if (ctx.align && canAlignText(ctx.type)) attrs.align = ctx.align;
   return attrs;
 }
@@ -407,6 +412,12 @@ function readBlockElement(el: Element, outer: Context, out: BlockNode[]): void {
     readBlocks(el, ctx, out);
   } else if (tag === 'table') {
     readTable(el, out);
+  } else if (tag === 'aside' && el.hasAttribute('data-callout')) {
+    const kind = normalizeCalloutKind(el.getAttribute('data-callout')) ?? 'note';
+    const before = out.length;
+    readBlocks(el, { type: 'callout_block', kind }, out);
+    // An empty callout is still a callout.
+    if (out.length === before) out.push(createBlock('callout_block', calloutAttrs(kind)));
   } else if (tag === 'blockquote') {
     readBlocks(el, { type: 'blockquote', align: ctx.align }, out);
   } else if (tag === 'ul' || tag === 'ol') {

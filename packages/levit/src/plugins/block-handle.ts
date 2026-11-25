@@ -1,3 +1,4 @@
+import { calloutAttrs, calloutKind, type CalloutKind } from '../core/model/callout.js';
 import type { LevitEditor } from '../core/editor.js';
 import { caretAt, findBlockIndex, getBlockText, orderedSelection } from '../core/model/document.js';
 import { blockUnit } from '../core/model/move.js';
@@ -166,13 +167,33 @@ export function createBlockHandle(editor: LevitEditor): BlockHandleInstance {
       [m.orderedList, 'ordered_list_item'],
       [m.taskList, 'task_list_item', { checked: false }],
       [m.quote, 'blockquote'],
+      [m.callout, 'callout_block'],
       [m.codeBlock, 'code_block'],
     ];
-    return types.map(([label, type, attrs]) => ({
+    const entries: MenuEntry[] = types.map(([label, type, attrs]) => ({
       label,
-      checked: block.type === type && (type !== 'heading' || level === attrs?.level),
+      checked: block.type === type && type !== 'callout_block' && (type !== 'heading' || level === attrs?.level),
       run: () => editor.chain().setBlockType(type, attrs).run(),
     }));
+    if (block.type !== 'callout_block') return entries;
+    // In a callout, "Callout" gives way to its kinds.
+    const kinds: [string, CalloutKind][] = [
+      [m.calloutNote, 'note'],
+      [m.calloutTip, 'tip'],
+      [m.calloutImportant, 'important'],
+      [m.calloutWarning, 'warning'],
+      [m.calloutCaution, 'caution'],
+    ];
+    const at = types.findIndex(([, type]) => type === 'callout_block');
+    return [
+      ...entries.slice(0, at),
+      ...kinds.map(([label, kind]) => ({
+        label,
+        checked: calloutKind(block) === kind,
+        run: () => editor.chain().setBlockType('callout_block', calloutAttrs(kind)).run(),
+      })),
+      ...entries.slice(at + 1),
+    ];
   }
 
   function blockEntries(): MenuEntry[] {

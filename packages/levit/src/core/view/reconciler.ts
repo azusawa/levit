@@ -8,6 +8,7 @@ import { isListItem, listIndent } from '../model/document.js';
 import { isTableCell, tableAtIndex, tableIdOf } from '../model/table.js';
 import { defaultSchema, type Schema } from '../plugin/plugin.js';
 import { en, format, type LevitMessages } from '../../i18n/messages.js';
+import { calloutKind, type CalloutKind } from '../model/callout.js';
 
 export interface ReconcilerOptions {
   highlightCode?: (code: string, language: string) => string;
@@ -253,6 +254,7 @@ export class DOMReconciler {
         return 'blockquote';
       case 'code_block':
         return 'pre';
+      case 'callout_block':
       case 'bullet_list_item':
       case 'ordered_list_item':
       case 'task_list_item':
@@ -313,6 +315,7 @@ export class DOMReconciler {
     else delete el.dataset.size;
     if (align) el.dataset.align = align;
     else delete el.dataset.align;
+    this.applyCallout(el, block);
     // A paragraph's, heading's or quote's alignment.
     const textAlign = blockTextAlign(block);
     if (textAlign) el.style.textAlign = textAlign;
@@ -320,6 +323,26 @@ export class DOMReconciler {
       el.style.removeProperty('text-align');
       if (el.getAttribute('style') === '') el.removeAttribute('style');
     }
+  }
+
+  /** A callout's kind (theme.css draws it) and its name for screen readers. */
+  private applyCallout(el: HTMLElement, block: BlockNode): void {
+    if (block.type !== 'callout_block') {
+      if (!el.hasAttribute('data-kind')) return;
+      delete el.dataset.kind;
+      el.removeAttribute('role');
+      el.removeAttribute('aria-label');
+      return;
+    }
+    const kind = calloutKind(block);
+    el.dataset.kind = kind;
+    el.setAttribute('role', 'note');
+    el.setAttribute('aria-label', this.calloutName(kind));
+  }
+
+  private calloutName(kind: CalloutKind): string {
+    const m = this.messages;
+    return { note: m.calloutNote, tip: m.calloutTip, important: m.calloutImportant, warning: m.calloutWarning, caution: m.calloutCaution }[kind];
   }
 
   private updateBlockContent(el: HTMLElement, block: BlockNode): void {

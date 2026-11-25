@@ -154,6 +154,45 @@
               "description": "Optional. A new id is made when missing."
             },
             "type": {
+              "const": "callout_block"
+            },
+            "attrs": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "note",
+                    "tip",
+                    "important",
+                    "warning",
+                    "caution"
+                  ],
+                  "description": "Leave it out for a note."
+                }
+              },
+              "additionalProperties": false
+            },
+            "content": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/inline"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "content"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Optional. A new id is made when missing."
+            },
+            "type": {
               "const": "code_block"
             },
             "attrs": {

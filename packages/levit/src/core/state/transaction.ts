@@ -340,6 +340,15 @@ export class Transaction {
       return this.outdentListItem();
     }
 
+    // Offset is 0 in a callout: leave it, keep the text.
+    if (block.type === 'callout_block') {
+      const edited = this.edit(blockIdx);
+      edited.type = 'paragraph';
+      edited.attrs = {};
+      this.docChanged = true;
+      return this;
+    }
+
     // Offset is 0 in a list item: leave the list, keep the text
     if (isListItem(block.type)) {
       const edited = this.edit(blockIdx);
@@ -1072,6 +1081,20 @@ export class Transaction {
       this.setCaret(cells[row.length].id, 0);
       this.docChanged = true;
       return this;
+    }
+
+    // Enter makes a new line in a callout; on an empty last line it leaves.
+    if (type === undefined && block.type === 'callout_block') {
+      const text = getBlockText(block);
+      if (text === '') {
+        block.type = 'paragraph';
+        block.attrs = {};
+        this.docChanged = true;
+        return this;
+      }
+      if (offset !== text.length || !text.endsWith('\n')) return this.insertText('\n');
+      this.deleteInBlock(blockIdx, offset - 1, offset);
+      return this.splitBlock('paragraph');
     }
 
     if (type === undefined && isListItem(block.type)) {

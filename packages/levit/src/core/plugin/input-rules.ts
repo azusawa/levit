@@ -1,5 +1,6 @@
 import { Transaction } from '../state/transaction.js';
 import { findBlockIndex, getBlockText, listIndent } from '../model/document.js';
+import { calloutAttrs, normalizeCalloutKind } from '../model/callout.js';
 
 export interface InputRule {
   match: RegExp;
@@ -35,6 +36,11 @@ export const defaultInputRules: InputRule[] = [
   {
     match: /^>\s$/,
     handler: (tr, _match, blockId) => convertBlock(tr, blockId, 'blockquote'),
+  },
+  // Callout: "[!warning] " and the other kinds
+  {
+    match: /^\[!(note|tip|important|warning|caution)\]\s$/i,
+    handler: (tr, match, blockId) => convertBlock(tr, blockId, 'callout_block', calloutAttrs(normalizeCalloutKind(match[1])!)),
   },
   // Code block: ```
   {
