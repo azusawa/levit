@@ -50,7 +50,7 @@ export function documentToMarkdown(doc: DocumentData, options: SerializerOptions
       }
       case 'blockquote':
         // A quote of the words "[!NOTE]" must not read back as a callout.
-        line = `> ${isAlertLine(blockText) ? '\\' : ''}${breaks('> ')}`;
+        line = `> ${isAlertLine(blockText.replace(/^\\*/, '')) ? '\\' : ''}${breaks('> ')}`;
         break;
       case 'callout_block':
         line = `> [!${calloutKind(block).toUpperCase()}]\n> ${breaks('> ')}`;
@@ -554,8 +554,9 @@ export function markdownToDocument(markdown: string, options: SerializerOptions 
         blocks.push(createBlock('callout_block', calloutAttrs(kind), parseInlineMarkdown(readHardBreaks(quoted.slice(1).join('\n')))));
         continue;
       }
-      if (quoted[0].startsWith('\\') && isAlertLine(quoted[0].slice(1))) quoted[0] = quoted[0].slice(1);
-      const text = quoted.join('\n');
+      // The writer put a "\\" before a quote's first line that would read as an alert.
+      const escaped = quoted[0].startsWith('\\') && isAlertLine(quoted[0].replace(/^\\*/, ''));
+      const text = [escaped ? quoted[0].slice(1) : quoted[0], ...quoted.slice(1)].join('\n');
       blocks.push(createBlock('blockquote', {}, parseInlineMarkdown(readHardBreaks(text))));
       continue;
     }

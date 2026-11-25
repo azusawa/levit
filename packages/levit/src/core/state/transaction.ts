@@ -36,6 +36,7 @@ import {
 import { BlockNode } from '../model/types.js';
 import { cellContent, createCell, createTable, isTableCell, markdownRowCells, tableAtIndex, tableIdOf, rowIdOf, type TablePosition } from '../model/table.js';
 import { blockUnit, copyBlocks, moveRange, moveRangeTo, unitRange, type BlockRange } from '../model/move.js';
+import { calloutAttrs, normalizeCalloutKind } from '../model/callout.js';
 import { EditorState } from './state.js';
 
 /** What updateImage changes; a key left out stays as it is. */
@@ -1086,7 +1087,10 @@ export class Transaction {
     // Enter makes a new line in a callout; on an empty last line it leaves.
     if (type === undefined && block.type === 'callout_block') {
       const text = getBlockText(block);
-      if (text === '') {
+      // An empty callout, or one holding only an empty line, becomes a paragraph.
+      if (text === '' || (text === '\n' && offset === 1)) {
+        block.content = [createTextNode('')];
+        this.setCaret(block.id, 0);
         block.type = 'paragraph';
         block.attrs = {};
         this.docChanged = true;
@@ -1367,7 +1371,9 @@ export class Transaction {
       // An alignment stays when the new type can have one too.
       const align = canAlignText(type) ? blockTextAlign(block) : null;
       block.type = type;
-      block.attrs = align ? { ...attrs, align } : { ...attrs };
+      // A callout keeps only a kind it knows.
+      const own = type === 'callout_block' ? calloutAttrs(normalizeCalloutKind(attrs.kind) ?? 'note') : attrs;
+      block.attrs = align ? { ...own, align } : { ...own };
       this.docChanged = true;
     }
     return this;

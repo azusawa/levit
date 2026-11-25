@@ -251,9 +251,9 @@ type Context = { type: string; depth?: number; checked?: boolean; align?: string
 function attrsFor(ctx: Context): Record<string, any> {
   const attrs: Record<string, any> = ctx.type.endsWith('list_item') && ctx.depth ? { indent: ctx.depth } : {};
   if (ctx.type === 'task_list_item') attrs.checked = ctx.checked === true;
-  if (ctx.type === 'callout_block' && ctx.kind) Object.assign(attrs, calloutAttrs(ctx.kind));
+  const kind = ctx.type === 'callout_block' && ctx.kind ? calloutAttrs(ctx.kind) : {};
   if (ctx.align && canAlignText(ctx.type)) attrs.align = ctx.align;
-  return attrs;
+  return { ...attrs, ...kind };
 }
 
 /**
@@ -416,8 +416,8 @@ function readBlockElement(el: Element, outer: Context, out: BlockNode[]): void {
     const kind = normalizeCalloutKind(el.getAttribute('data-callout')) ?? 'note';
     const before = out.length;
     readBlocks(el, { type: 'callout_block', kind }, out);
-    // An empty callout is still a callout.
-    if (out.length === before) out.push(createBlock('callout_block', calloutAttrs(kind)));
+    // A callout holding only lists, code and the like still keeps its box, empty.
+    if (!out.slice(before).some((b) => b.type === 'callout_block')) out.splice(before, 0, createBlock('callout_block', calloutAttrs(kind)));
   } else if (tag === 'blockquote') {
     readBlocks(el, { type: 'blockquote', align: ctx.align }, out);
   } else if (tag === 'ul' || tag === 'ol') {

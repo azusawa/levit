@@ -23,4 +23,11 @@ test.describe('callout', () => {
     await expect(page.locator('.levit-block-callout_block')).toHaveCount(1);
     await expect(page.locator('p.levit-block-paragraph', { hasText: 'after' })).toHaveCount(1);
   });
+
+  test('an empty callout shows its mark, not the placeholder', async ({ page }) => {
+    await page.keyboard.type('[!warning] ');
+    const mark = await page.locator('.levit-block-callout_block').evaluate((el) => getComputedStyle(el, '::before').content);
+    expect(mark).toContain('!');
+    expect(mark).not.toContain('Type something');
+  });
 });

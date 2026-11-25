@@ -109,6 +109,23 @@ describe('callout in the editor', () => {
     expect(editor.state.doc.blocks[0].attrs?.kind).toBeUndefined();
   });
 
+  it('Enter on a callout that holds only an empty line leaves no empty box behind', () => {
+    make([callout('c', '\n')]);
+    caret('c', 1);
+    enter();
+    expect(summary()).toEqual([['paragraph', '']]);
+  });
+
+  it('setBlockType keeps only a kind it knows, in lowercase', () => {
+    make([para('p', 'x')]);
+    caret('p', 0);
+    editor.chain().setBlockType('callout_block', { kind: 'Warning' }).run();
+    expect(editor.state.doc.blocks[0].attrs).toEqual({ kind: 'warning' });
+    editor.chain().setBlockType('callout_block', { kind: 'danger' }).run();
+    expect(editor.state.doc.blocks[0].attrs).toEqual({});
+    expect(validateDocument(editor.getJSON()).valid).toBe(true);
+  });
+
   it('Backspace at its start turns it into a paragraph and keeps the text', () => {
     make([para('p', 'before'), callout('c', 'body', 'caution')]);
     caret('c', 0);
@@ -201,6 +218,19 @@ describe('callout in other formats', () => {
     editor.destroy();
     editor = new LevitEditor({ element, plugins: [plugin], initialContent: createDocument([createBlock('callout', {}, [createTextNode('x')], 'c')]) });
     expect(element.querySelector('[data-block-id="c"]')!.tagName).toBe('SECTION');
+  });
+
+  it('HTML: an aside that holds only a list keeps its callout', () => {
+    const blocks = htmlToDocument('<aside data-callout="warning"><ul><li>a</li></ul></aside>').blocks;
+    expect(blocks.map((b) => [b.type, b.attrs?.kind, getBlockText(b)])).toEqual([['callout_block', 'warning', ''], ['bullet_list_item', undefined, 'a']]);
+  });
+
+  it('Markdown: a quote of "\\[!NOTE]" keeps its backslash', () => {
+    for (const text of ['\\[!NOTE]', '\\\\[!TIP]']) {
+      const doc = createDocument([createBlock('blockquote', {}, [createTextNode(text)], 'q')]);
+      const back = markdownToDocument(documentToMarkdown(doc)).blocks[0];
+      expect([back.type, getBlockText(back)]).toEqual(['blockquote', text]);
+    }
   });
 
   it('the AI schema and validator know it', () => {
