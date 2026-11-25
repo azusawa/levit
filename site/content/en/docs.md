@@ -756,6 +756,18 @@ getComments(editor);                 // [{ id, text, from, to }] in document ord
 - Text typed right after a comment is not part of it.
 - Comments are left out of HTML and Markdown exports. With Yjs, their positions are shared too.
 
+## Callouts
+
+A callout is a box that sets text apart. Its kind is `note` (the default), `tip`, `important`, `warning` or `caution`.
+
+```ts
+editor.chain().setBlockType('callout_block', { kind: 'warning' }).run();
+```
+
+- Markdown uses GitHub's alert syntax: `> [!WARNING]`, then the text on `>` lines.
+- HTML is `<aside data-callout="warning">…</aside>`.
+- The block type name `callout` stays free for your own plugins.
+
 ## Mentions and emoji
 
 `mentionsPlugin` opens a list of people on "@", and `emojiPlugin` a list of emoji on ":". Both open at the start of a line or after a space, so email addresses and times such as 10:30 stay as typed.

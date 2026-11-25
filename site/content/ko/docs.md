@@ -755,6 +755,18 @@ getComments(editor);                 // [{ id, text, from, to }] 문서 순서�
 - 댓글 바로 뒤에 입력한 글은 댓글에 포함되지 않습니다.
 - HTML·Markdown으로 내보낼 때 댓글은 빠집니다. Yjs를 쓰면 댓글 위치도 함께 공유됩니다.
 
+## 콜아웃
+
+콜아웃은 글을 눈에 띄게 하는 상자입니다. 종류는 `note`(기본), `tip`, `important`, `warning`, `caution`입니다.
+
+```ts
+editor.chain().setBlockType('callout_block', { kind: 'warning' }).run();
+```
+
+- Markdown은 GitHub 알림 문법을 씁니다. `> [!WARNING]` 다음 줄부터 `>`로 내용을 씁니다.
+- HTML은 `<aside data-callout="warning">…</aside>`입니다.
+- 블록 타입 이름 `callout`은 직접 만드는 플러그인이 쓸 수 있게 비워 두었습니다.
+
 ## 멘션과 이모지
 
 `mentionsPlugin`은 `@`를 입력하면 사람 목록을, `emojiPlugin`은 `:`를 입력하면 이모지 목록을 엽니다. 둘 다 줄 첫머리나 띄어쓰기 뒤에서만 열리므로 메일 주소나 10:30 같은 시각은 입력한 그대로 남습니다.

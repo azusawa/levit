@@ -140,6 +140,10 @@ Choose **Divider** in the slash menu, or type `---` on an empty line.
 
 To delete an image or a divider, put the caret at the start of the block right after it and press Backspace, or at the end of the block right before it and press Delete.
 
+## Callouts
+
+A callout sets text apart in a colored box: Note, Tip, Important, Warning or Caution. Pick **Callout** in the slash menu, or type `[!warning] ` at the start of a line. To change its kind, open the block menu. Enter adds a line inside it, and Enter on an empty last line leaves it.
+
 ## Moving blocks
 
 Hover over a block and a handle (⋮⋮) appears on its left. Drag the handle to move the block; a blue line shows where it will go. Click the handle for the block menu, where you can turn the block into another type, move it up or down, duplicate it or delete it. If the block is part of your selection, the menu acts on every selected block.

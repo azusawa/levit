@@ -755,6 +755,18 @@ getComments(editor);                 // [{ id, text, from, to }] ドキュメン
 - コメントの直後に入力したテキストはコメントに含まれません。
 - HTML や Markdown へのエクスポートではコメントは除かれます。Yjs を使うとコメントの位置も共有されます。
 
+## コールアウト
+
+コールアウトは文章を目立たせる枠です。種類は `note`(既定)、`tip`、`important`、`warning`、`caution` です。
+
+```ts
+editor.chain().setBlockType('callout_block', { kind: 'warning' }).run();
+```
+
+- Markdown では GitHub のアラート記法を使います。`> [!WARNING]` の次の行から `>` で本文を書きます。
+- HTML は `<aside data-callout="warning">…</aside>` です。
+- ブロック型の名前 `callout` は、独自のプラグインで使えるよう空けてあります。
+
 ## メンションと絵文字
 
 `mentionsPlugin` は「@」で人の一覧を、`emojiPlugin` は「:」で絵文字の一覧を開きます。どちらも行頭か空白の後でだけ開くので、メールアドレスや 10:30 のような時刻は入力したまま残ります。

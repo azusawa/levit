@@ -586,6 +586,14 @@ getComments(editor);                       // [{ id, text, from, to }] in docume
 Mark: { type: 'comment', attrs: { ids: 'c1 c2' } } (overlapping comments share
 it). Not inclusive; left out of HTML and Markdown exports.
 
+Callouts: the built-in block type 'callout_block', with attrs.kind 'tip',
+'important', 'warning' or 'caution' (no kind is a note). Make one with the
+slash menu, "[!warning] " at the start of a line, or
+editor.chain().setBlockType('callout_block', { kind: 'warning' }).run().
+Enter adds a line inside it; Enter on an empty last line leaves it.
+Markdown: "> [!WARNING]" then "> text". HTML: <aside data-callout="warning">.
+The block type name "callout" stays free for plugins.
+
 Mentions and emoji: popups that open on "@" and ":" at the start of a line or
 after a space (not inside a word, so emails and 10:30 stay as typed).
 ```ts
