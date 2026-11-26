@@ -144,6 +144,10 @@ To delete an image or a divider, put the caret at the start of the block right a
 
 A callout sets text apart in a colored box: Note, Tip, Important, Warning or Caution. Pick **Callout** in the slash menu, or type `[!warning] ` at the start of a line. To change its kind, open the block menu. Enter adds a line inside it, and Enter on an empty last line leaves it.
 
+## Toggles
+
+A toggle folds lines away under a summary. Pick **Toggle** in the slash menu, write the summary, and press Enter to write the lines under it. Click `▸` or press `Mod+Enter` to open or close it. In a closed toggle, Enter at the end of the summary starts a new line below the toggle.
+
 ## Moving blocks
 
 Hover over a block and a handle (⋮⋮) appears on its left. Drag the handle to move the block; a blue line shows where it will go. Click the handle for the block menu, where you can turn the block into another type, move it up or down, duplicate it or delete it. If the block is part of your selection, the menu acts on every selected block.
@@ -249,7 +253,7 @@ You can use the editor without a mouse, and screen readers announce the editor, 
 - **:** — Insert an emoji (if the app supports it)
 - **Tab** — Indent a list item; in a table, go to the next cell
 - **Shift+Tab** — Outdent a list item; in a table, go to the previous cell
-- **Mod+Enter** — Check or uncheck a task; in a table, add a row below
+- **Mod+Enter** — Check or uncheck a task, or open or close a toggle; in a table, add a row below
 - **Mod+Alt+Enter** — In a table, add a column right
 - **Mod+Shift+Backspace** — In a table, delete the row
 - **Mod+Alt+Backspace** — In a table, delete the column

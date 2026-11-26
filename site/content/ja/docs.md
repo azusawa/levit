@@ -767,6 +767,19 @@ editor.chain().setBlockType('callout_block', { kind: 'warning' }).run();
 - HTML は `<aside data-callout="warning">…</aside>` です。
 - ブロック型の名前 `callout` は、独自のプラグインで使えるよう空けてあります。
 
+## トグル
+
+トグルは最初の行が見出しで、残りの行はその下に折りたたまれます。開いているときは `attrs.open` が `true` です。
+
+```ts
+editor.chain().setBlockType('toggle_block').run();   // 新しいトグルは開いた状態で始まる
+editor.chain().toggleBlockOpen().run();              // カーソルのあるトグルを開閉
+```
+
+- `▸` ボタンと `Mod+Enter` で開閉します。
+- HTML と Markdown では `<details open><summary>…</summary>…</details>` として書き出し、GitHub でもトグルとして表示されます。
+- トグルに入るのは文章だけです。貼り付けた `<details>` の中のリストやコードなどのブロックは、トグルの後ろに別のブロックとして入ります。
+
 ## メンションと絵文字
 
 `mentionsPlugin` は「@」で人の一覧を、`emojiPlugin` は「:」で絵文字の一覧を開きます。どちらも行頭か空白の後でだけ開くので、メールアドレスや 10:30 のような時刻は入力したまま残ります。

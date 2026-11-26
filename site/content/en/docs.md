@@ -768,6 +768,19 @@ editor.chain().setBlockType('callout_block', { kind: 'warning' }).run();
 - HTML is `<aside data-callout="warning">…</aside>`.
 - The block type name `callout` stays free for your own plugins.
 
+## Toggles
+
+A toggle's first line is its summary, and its other lines fold away under it. `attrs.open` is `true` while it is open.
+
+```ts
+editor.chain().setBlockType('toggle_block').run();   // a new toggle starts open
+editor.chain().toggleBlockOpen().run();              // open or close the one at the caret
+```
+
+- The `▸` button and `Mod+Enter` open and close it.
+- HTML and Markdown write it as `<details open><summary>…</summary>…</details>`, which GitHub shows as a toggle.
+- A toggle holds text only. Lists, code and other blocks inside a pasted `<details>` come after the toggle.
+
 ## Mentions and emoji
 
 `mentionsPlugin` opens a list of people on "@", and `emojiPlugin` a list of emoji on ":". Both open at the start of a line or after a space, so email addresses and times such as 10:30 stay as typed.

@@ -594,6 +594,14 @@ Enter adds a line inside it; Enter on an empty last line leaves it.
 Markdown: "> [!WARNING]" then "> text". HTML: <aside data-callout="warning">.
 The block type name "callout" stays free for plugins.
 
+Toggles: the built-in block type 'toggle_block'. Its first line is the
+summary; the other lines fold away. attrs.open is true when open (no attr
+is closed). setBlockType('toggle_block') makes an open one;
+editor.chain().toggleBlockOpen(id?).run() opens or closes it (also the ▸
+button and Mod+Enter). Enter in an open toggle adds a line; in the summary of
+a closed one it starts a paragraph after it. HTML and Markdown:
+<details open><summary>…</summary>…</details>. isToggleOpen(block) is exported.
+
 Mentions and emoji: popups that open on "@" and ":" at the start of a line or
 after a space (not inside a word, so emails and 10:30 stay as typed).
 ```ts

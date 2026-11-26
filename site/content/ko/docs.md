@@ -767,6 +767,19 @@ editor.chain().setBlockType('callout_block', { kind: 'warning' }).run();
 - HTML은 `<aside data-callout="warning">…</aside>`입니다.
 - 블록 타입 이름 `callout`은 직접 만드는 플러그인이 쓸 수 있게 비워 두었습니다.
 
+## 토글
+
+토글은 첫 줄이 제목이고, 나머지 줄은 그 아래에 접힙니다. 펼쳐져 있으면 `attrs.open`이 `true`입니다.
+
+```ts
+editor.chain().setBlockType('toggle_block').run();   // 새 토글은 펼친 채로 시작
+editor.chain().toggleBlockOpen().run();              // 커서가 있는 토글을 접고 펼치기
+```
+
+- `▸` 버튼과 `Mod+Enter`로 접고 펼칩니다.
+- HTML과 Markdown에서는 `<details open><summary>…</summary>…</details>`로 쓰며, GitHub에서도 토글로 보입니다.
+- 토글에는 글만 담깁니다. 붙여 넣은 `<details>` 안의 목록, 코드 같은 블록은 토글 뒤에 따로 들어갑니다.
+
 ## 멘션과 이모지
 
 `mentionsPlugin`은 `@`를 입력하면 사람 목록을, `emojiPlugin`은 `:`를 입력하면 이모지 목록을 엽니다. 둘 다 줄 첫머리나 띄어쓰기 뒤에서만 열리므로 메일 주소나 10:30 같은 시각은 입력한 그대로 남습니다.
