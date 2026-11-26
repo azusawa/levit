@@ -37,6 +37,7 @@ import { BlockNode } from '../model/types.js';
 import { cellContent, createCell, createTable, isTableCell, markdownRowCells, tableAtIndex, tableIdOf, rowIdOf, type TablePosition } from '../model/table.js';
 import { blockUnit, copyBlocks, moveRange, moveRangeTo, unitRange, type BlockRange } from '../model/move.js';
 import { calloutAttrs, normalizeCalloutKind } from '../model/callout.js';
+import { isToggleOpen, toggleAttrs, toggleSummaryLength } from '../model/toggle.js';
 import { EditorState } from './state.js';
 
 /** What updateImage changes; a key left out stays as it is. */
@@ -341,8 +342,8 @@ export class Transaction {
       return this.outdentListItem();
     }
 
-    // Offset is 0 in a callout: leave it, keep the text.
-    if (block.type === 'callout_block') {
+    // Offset is 0 in a callout or toggle: leave it, keep the text.
+    if (block.type === 'callout_block' || block.type === 'toggle_block') {
       const edited = this.edit(blockIdx);
       edited.type = 'paragraph';
       edited.attrs = {};
@@ -1084,8 +1085,17 @@ export class Transaction {
       return this;
     }
 
-    // Enter makes a new line in a callout; on an empty last line it leaves.
-    if (type === undefined && block.type === 'callout_block') {
+    // Enter in the summary of a closed toggle starts a paragraph after it.
+    if (type === undefined && block.type === 'toggle_block' && !isToggleOpen(block) && offset <= toggleSummaryLength(block)) {
+      const paragraph = createBlock('paragraph');
+      this.doc.blocks.splice(blockIdx + 1, 0, paragraph);
+      this.setCaret(paragraph.id, 0);
+      this.docChanged = true;
+      return this;
+    }
+
+    // Enter makes a new line in a callout or toggle; on an empty last line it leaves.
+    if (type === undefined && (block.type === 'callout_block' || block.type === 'toggle_block')) {
       const text = getBlockText(block);
       // An empty callout, or one holding only an empty line, becomes a paragraph.
       if (text === '' || (text === '\n' && offset === 1)) {
@@ -1311,6 +1321,16 @@ export class Transaction {
   }
 
   /** Checks or unchecks a task item: the one with blockId, or the one at the caret. */
+  /** Opens or closes a toggle (the one at the caret by default). */
+  toggleBlockOpen(blockId = this.selection.anchor.blockId): this {
+    const index = findBlockIndex(this.doc, blockId);
+    const block = this.doc.blocks[index];
+    if (!block || block.type !== 'toggle_block') return this;
+    this.edit(index).attrs = toggleAttrs(!isToggleOpen(block));
+    this.docChanged = true;
+    return this;
+  }
+
   toggleTaskChecked(blockId = this.selection.anchor.blockId): this {
     const index = findBlockIndex(this.doc, blockId);
     const block = this.doc.blocks[index];
@@ -1372,7 +1392,11 @@ export class Transaction {
       const align = canAlignText(type) ? blockTextAlign(block) : null;
       block.type = type;
       // A callout keeps only a kind it knows.
-      const own = type === 'callout_block' ? calloutAttrs(normalizeCalloutKind(attrs.kind) ?? 'note') : attrs;
+      // A toggle keeps only open: true, and a new one starts open.
+      const own =
+        type === 'callout_block' ? calloutAttrs(normalizeCalloutKind(attrs.kind) ?? 'note')
+        : type === 'toggle_block' ? toggleAttrs(attrs.open === undefined || attrs.open === true)
+        : attrs;
       block.attrs = align ? { ...own, align } : { ...own };
       this.docChanged = true;
     }

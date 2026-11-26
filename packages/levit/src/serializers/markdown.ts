@@ -6,13 +6,16 @@ import {
   createDocument,
   createTextNode,
   generateBlockId,
+  getBlockText,
   isListItem,
   listIndent,
+  sliceBlockContent,
 } from '../core/model/document.js';
 import { schemaFor, type Schema, type SerializerOptions } from '../core/plugin/plugin.js';
 import { createCell, splitTableRow, tableAtIndex, type TablePosition } from '../core/model/table.js';
 import { normalizeCodeLanguage, normalizeHeadingLevel, sanitizeHref, sanitizeImageSrc } from '../core/model/sanitize.js';
 import { calloutAttrs, calloutKind, normalizeCalloutKind } from '../core/model/callout.js';
+import { isToggleOpen, toggleAttrs, toggleSummaryLength } from '../core/model/toggle.js';
 
 const BUILT_IN_MARKDOWN_BLOCKS = new Set(BUILT_IN_BLOCK_TYPES);
 
@@ -52,6 +55,16 @@ export function documentToMarkdown(doc: DocumentData, options: SerializerOptions
         // A quote of the words "[!NOTE]" must not read back as a callout.
         line = `> ${isAlertLine(blockText.replace(/^\\*/, '')) ? '\\' : ''}${breaks('> ')}`;
         break;
+      case 'toggle_block': {
+        // GitHub shows <details> as a toggle. The lines stay together (no
+        // blank line), so the body is written with hard breaks.
+        const length = toggleSummaryLength(block);
+        const text = getBlockText(block);
+        const part = (from: number, to: number) => inlineMarkdown({ ...block, content: sliceBlockContent(block, from, to) }, schema);
+        const body = length < text.length ? `\n${part(length + 1, text.length).replace(/\n/g, '\\\n')}` : '';
+        line = `<details${isToggleOpen(block) ? ' open' : ''}>\n<summary>${part(0, length)}</summary>${body}\n</details>`;
+        break;
+      }
       case 'callout_block':
         line = `> [!${calloutKind(block).toUpperCase()}]\n> ${breaks('> ')}`;
         break;
@@ -455,6 +468,20 @@ function splitBlocks(markdown: string): string[] {
   return blocks;
 }
 
+/** A toggle as documentToMarkdown writes it, or null. */
+function readToggle(text: string): BlockNode | null {
+  const lines = text.split(/\r?\n/);
+  const open = /^<details( open)?>$/.exec(lines[0]);
+  const summary = /^<summary>(.*)<\/summary>$/.exec(lines[1] ?? '');
+  if (!open || !summary || lines.length < 3 || lines[lines.length - 1] !== '</details>') return null;
+  const body = lines.slice(2, -1);
+  const content = [
+    ...parseInlineMarkdown(summary[1]),
+    ...(body.length > 0 ? [createTextNode('\n'), ...parseInlineMarkdown(readHardBreaks(body.join('\n')))] : []),
+  ];
+  return createBlock('toggle_block', toggleAttrs(open[1] !== undefined), normalizeInlineNodes(content));
+}
+
 export function markdownToDocument(markdown: string, options: SerializerOptions = {}): DocumentData {
   const schema = schemaFor(options.plugins);
   if (!markdown || !markdown.trim()) {
@@ -479,6 +506,13 @@ export function markdownToDocument(markdown: string, options: SerializerOptions 
       break;
     }
     if (claimed) continue;
+
+    // Toggle: <details>, <summary> on the next line, then the body lines.
+    const toggle = readToggle(trimmed);
+    if (toggle) {
+      blocks.push(toggle);
+      continue;
+    }
 
     // Divider: three or more -, * or _
     if (/^([-*_])(\s*\1){2,}$/.test(trimmed)) {

@@ -160,6 +160,14 @@ function cellSelection(container: HTMLElement, sel: Selection): EditorSelection 
   };
 }
 
+/** True when a text node comes after the walker's current one (the walker stays put). */
+function hasTextAfter(walker: TreeWalker): boolean {
+  const current = walker.currentNode;
+  const next = walker.nextNode();
+  walker.currentNode = current;
+  return next !== null;
+}
+
 /**
  * Finds the DOM Text node and relative offset corresponding to a character offset in a block.
  */
@@ -170,7 +178,10 @@ function findDOMPoint(blockEl: HTMLElement, targetOffset: number): { node: Node;
 
   while ((textNode = walker.nextNode())) {
     const len = (textNode.nodeValue || '').length;
-    if (accumulated + len >= targetOffset) {
+    // Right after a line break that ends a text node, the caret belongs at the
+    // start of the next line, which may be in another element (a toggle's body).
+    const breakEnds = accumulated + len === targetOffset && (textNode.nodeValue || '').endsWith('\n');
+    if (accumulated + len >= targetOffset && !(breakEnds && hasTextAfter(walker))) {
       return {
         node: textNode,
         offset: Math.max(0, targetOffset - accumulated),

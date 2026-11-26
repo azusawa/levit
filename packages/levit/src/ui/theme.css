@@ -210,9 +210,9 @@ levit-editor {
 }
 
 /* Empty block placeholder */
-/* List items and callouts draw their marker with ::before, so they never show a placeholder. */
-.levit-block.is-empty:first-child:last-child:not(.levit-list-item):not(.levit-block-callout_block)::before,
-.levit-editor-root[data-placeholder] .levit-block.is-empty:first-child:not(.levit-list-item):not(.levit-block-callout_block)::before {
+/* List items, callouts and toggles have a marker on the left, so they never show a placeholder. */
+.levit-block.is-empty:first-child:last-child:not(.levit-list-item):not(.levit-block-callout_block):not(.levit-block-toggle_block)::before,
+.levit-editor-root[data-placeholder] .levit-block.is-empty:first-child:not(.levit-list-item):not(.levit-block-callout_block):not(.levit-block-toggle_block)::before {
   content: attr(data-placeholder);
   position: absolute;
   left: 0;
@@ -222,7 +222,7 @@ levit-editor {
   user-select: none;
 }
 
-.levit-editor-root[data-placeholder] .levit-block.is-empty:not(.levit-list-item):not(.levit-block-callout_block)::before {
+.levit-editor-root[data-placeholder] .levit-block.is-empty:not(.levit-list-item):not(.levit-block-callout_block):not(.levit-block-toggle_block)::before {
   content: attr(data-placeholder);
   position: absolute;
   left: 0;
@@ -440,6 +440,47 @@ blockquote.levit-block-blockquote {
 .levit-block-callout_block[data-kind="important"] { --_callout-color: var(--levit-color-purple); --_callout-mark: "★"; }
 .levit-block-callout_block[data-kind="warning"] { --_callout-color: var(--levit-color-yellow); --_callout-mark: "!"; }
 .levit-block-callout_block[data-kind="caution"] { --_callout-color: var(--levit-color-red); --_callout-mark: "✕"; }
+
+/* Toggle: a button, the summary, and the body that hides while closed. */
+.levit-block-toggle_block {
+  position: relative;
+  margin: 0.4em 0;
+  padding-left: 26px;
+  white-space: pre-wrap;
+}
+
+.levit-toggle-button {
+  position: absolute;
+  left: 0;
+  top: 0.1em;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--levit-text-muted);
+}
+
+.levit-toggle-button::before {
+  content: "▸";
+  content: "▸" / "";
+  transition: transform 0.15s ease;
+}
+
+.levit-toggle-button:hover {
+  background-color: var(--levit-code-bg);
+}
+
+.levit-block-toggle_block[data-open="true"] > .levit-toggle-button::before {
+  transform: rotate(90deg);
+}
+
+.levit-block-toggle_block[data-open="false"] > .levit-toggle-body {
+  display: none;
+}
 
 /* Code block */
 pre.levit-block-code_block {

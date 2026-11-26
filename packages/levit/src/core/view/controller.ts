@@ -287,7 +287,7 @@ export class InputController {
 
     if (e.key === 'Enter' && isMod && !e.defaultPrevented) {
       e.preventDefault();
-      this.editor.chain().toggleTaskChecked().run();
+      this.editor.chain().toggleTaskChecked().toggleBlockOpen().run();
       return;
     }
 
@@ -335,11 +335,13 @@ export class InputController {
       return;
     }
 
-    const box = (e.target as Element | null)?.closest?.('.levit-task-checkbox');
+    const box = (e.target as Element | null)?.closest?.('.levit-task-checkbox, .levit-toggle-button');
     if (!box || !this.container.contains(box)) return;
     e.preventDefault();
     const blockId = box.closest('[data-block-id]')?.getAttribute('data-block-id');
-    if (blockId) this.editor.chain().toggleTaskChecked(blockId).run();
+    if (!blockId) return;
+    if (box.classList.contains('levit-toggle-button')) this.editor.chain().toggleBlockOpen(blockId).run();
+    else this.editor.chain().toggleTaskChecked(blockId).run();
   }
 
   /** A click on a code block's language label (also the one a screen reader sends). */

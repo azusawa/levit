@@ -6,6 +6,8 @@ import {
   createDocument,
   createTextNode,
   generateBlockId,
+  getBlockText,
+  sliceBlockContent,
   listIndent,
   normalizeInlineNodes,
 } from '../core/model/document.js';
@@ -13,6 +15,7 @@ import { cellContent, createCell, tableAtIndex, type TablePosition } from '../co
 import { defaultSchema, schemaFor, type BlockSpec, type Schema, type SerializerOptions } from '../core/plugin/plugin.js';
 import { normalizeCodeLanguage, normalizeHeadingLevel, sanitizeHref, sanitizeImageSrc } from '../core/model/sanitize.js';
 import { calloutAttrs, calloutKind, normalizeCalloutKind, type CalloutKind } from '../core/model/callout.js';
+import { isToggleOpen, toggleAttrs, toggleSummaryLength } from '../core/model/toggle.js';
 import { IMAGE_WIDTHS, normalizeImageAlign, normalizeImageSize } from '../core/model/image.js';
 import { blockTextAlign, canAlignText, normalizeTextAlign } from '../core/model/align.js';
 
@@ -92,6 +95,14 @@ export function documentToHTML(doc: DocumentData, options: SerializerOptions = {
       case 'blockquote':
         html += `<blockquote${alignStyle(block)}>${contentHtml}</blockquote>`;
         break;
+      case 'toggle_block': {
+        const length = toggleSummaryLength(block);
+        const text = getBlockText(block);
+        const part = (from: number, to: number) => inlineHTML({ ...block, content: sliceBlockContent(block, from, to) }, schema);
+        const body = length < text.length ? `<p>${part(length + 1, text.length)}</p>` : '';
+        html += `<details${isToggleOpen(block) ? ' open' : ''}><summary>${part(0, length)}</summary>${body}</details>`;
+        break;
+      }
       case 'callout_block':
         html += `<aside data-callout="${calloutKind(block)}">${contentHtml}</aside>`;
         break;
@@ -412,6 +423,8 @@ function readBlockElement(el: Element, outer: Context, out: BlockNode[]): void {
     readBlocks(el, ctx, out);
   } else if (tag === 'table') {
     readTable(el, out);
+  } else if (tag === 'details') {
+    readToggle(el, out);
   } else if (tag === 'aside' && el.hasAttribute('data-callout')) {
     const kind = normalizeCalloutKind(el.getAttribute('data-callout')) ?? 'note';
     const before = out.length;
@@ -438,6 +451,28 @@ function readBlockElement(el: Element, outer: Context, out: BlockNode[]): void {
   } else {
     readBlocks(el, ctx, out);
   }
+}
+
+/**
+ * A <details> becomes a toggle: its <summary> is the first line, and the text
+ * and paragraphs after it are the other lines. Lists, code and other blocks
+ * inside it follow the toggle as blocks of their own.
+ */
+function readToggle(el: Element, out: BlockNode[]): void {
+  const summary = Array.from(el.children).find((c) => tagOf(c) === 'summary');
+  const rest = el.cloneNode(true) as Element;
+  Array.from(rest.children).find((c) => tagOf(c) === 'summary')?.remove();
+  const inner: BlockNode[] = [];
+  readBlocks(rest, { type: 'paragraph' }, inner);
+  const lines = inner.findIndex((b) => b.type !== 'paragraph');
+  const body = lines === -1 ? inner : inner.slice(0, lines);
+  const content = [
+    ...(summary ? readInline(Array.from(summary.childNodes)) : []),
+    ...body.flatMap((b) => [createTextNode('\n'), ...b.content]),
+  ];
+  const attrs = toggleAttrs(el.hasAttribute('open'));
+  out.push(createBlock('toggle_block', attrs, normalizeInlineNodes(content.length > 0 ? content : [createTextNode('')])));
+  if (lines !== -1) out.push(...inner.slice(lines));
 }
 
 /** Widest a pasted cell may be (colspan), so a huge colspan cannot make thousands of cells. */

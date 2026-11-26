@@ -168,6 +168,7 @@ export function createBlockHandle(editor: LevitEditor): BlockHandleInstance {
       [m.taskList, 'task_list_item', { checked: false }],
       [m.quote, 'blockquote'],
       [m.callout, 'callout_block'],
+      [m.toggle, 'toggle_block'],
       [m.codeBlock, 'code_block'],
     ];
     const entries: MenuEntry[] = types.map(([label, type, attrs]) => ({

@@ -60,6 +60,7 @@ export function getDocumentSchema(options: SerializerOptions = {}): JSONSchema {
     blockSchema('paragraph', attrs({ align: ALIGN })),
     blockSchema('heading', attrs({ level: { type: 'integer', minimum: 1, maximum: 6 }, align: ALIGN }, ['level'])),
     blockSchema('blockquote', attrs({ align: ALIGN })),
+    blockSchema('toggle_block', attrs({ open: { type: 'boolean', description: 'true shows the lines after the first; leave it out for closed.' } })),
     blockSchema('callout_block', attrs({ kind: { enum: [...CALLOUT_KINDS], description: 'Leave it out for a note.' } })),
     blockSchema('code_block', attrs({ language: { type: 'string', pattern: '^[A-Za-z0-9_+#.-]{1,32}$' } })),
     ...LIST_TYPES.map((type) => blockSchema(type, attrs({ indent: INDENT }))),
@@ -258,6 +259,9 @@ const both = (...checks: AttrCheck[]): AttrCheck => (a, fail) => checks.forEach(
 const BLOCK_ATTRS: Record<string, AttrCheck> = {
   paragraph: both(onlyKeys(['align']), checkAlign),
   blockquote: both(onlyKeys(['align']), checkAlign),
+  toggle_block: both(onlyKeys(['open']), (a, fail) => {
+    if (a.open !== undefined && typeof a.open !== 'boolean') fail('open', 'must be true or false');
+  }),
   callout_block: both(onlyKeys(['kind']), (a, fail) => {
     if (a.kind !== undefined && !CALLOUT_KINDS.includes(a.kind as CalloutKind)) fail('kind', `must be one of ${CALLOUT_KINDS.join(', ')}`);
   }),

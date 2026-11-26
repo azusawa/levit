@@ -41,6 +41,7 @@ export type { ImageAlign, ImageSize } from './core/model/image.js';
 export type { TextAlign } from './core/model/align.js';
 export { CALLOUT_KINDS, calloutKind, normalizeCalloutKind } from './core/model/callout.js';
 export type { CalloutKind } from './core/model/callout.js';
+export { isToggleOpen } from './core/model/toggle.js';
 export { HistoryManager, type HistoryItem } from './core/state/history.js';
 
 // Model & Types

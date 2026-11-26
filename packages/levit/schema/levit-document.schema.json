@@ -154,6 +154,39 @@
               "description": "Optional. A new id is made when missing."
             },
             "type": {
+              "const": "toggle_block"
+            },
+            "attrs": {
+              "type": "object",
+              "properties": {
+                "open": {
+                  "type": "boolean",
+                  "description": "true shows the lines after the first; leave it out for closed."
+                }
+              },
+              "additionalProperties": false
+            },
+            "content": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/inline"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "content"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Optional. A new id is made when missing."
+            },
+            "type": {
               "const": "callout_block"
             },
             "attrs": {

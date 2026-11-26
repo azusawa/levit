@@ -150,6 +150,12 @@ export class ChainedCommands {
     return this;
   }
 
+  /** Opens or closes a toggle (the one at the caret by default). */
+  toggleBlockOpen(blockId?: string): this {
+    this.tr.toggleBlockOpen(blockId);
+    return this;
+  }
+
   /** Checks or unchecks a task item (the one at the caret by default). */
   toggleTaskChecked(blockId?: string): this {
     this.tr.toggleTaskChecked(blockId);

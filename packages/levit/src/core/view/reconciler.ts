@@ -4,11 +4,12 @@ import { normalizeImageAlign, normalizeImageSize } from '../model/image.js';
 import { BlockNode, InlineMark, InlineNode } from '../model/types.js';
 import { EditorState } from '../state/state.js';
 import { normalizeCodeLanguage, normalizeHeadingLevel, sanitizeHref, sanitizeImageSrc } from '../model/sanitize.js';
-import { isListItem, listIndent } from '../model/document.js';
+import { getBlockText, isListItem, listIndent, sliceBlockContent } from '../model/document.js';
 import { isTableCell, tableAtIndex, tableIdOf } from '../model/table.js';
 import { defaultSchema, type Schema } from '../plugin/plugin.js';
 import { en, format, type LevitMessages } from '../../i18n/messages.js';
 import { calloutKind, type CalloutKind } from '../model/callout.js';
+import { isToggleOpen, toggleSummaryLength } from '../model/toggle.js';
 
 export interface ReconcilerOptions {
   highlightCode?: (code: string, language: string) => string;
@@ -255,6 +256,7 @@ export class DOMReconciler {
       case 'code_block':
         return 'pre';
       case 'callout_block':
+      case 'toggle_block':
       case 'bullet_list_item':
       case 'ordered_list_item':
       case 'task_list_item':
@@ -316,6 +318,8 @@ export class DOMReconciler {
     if (align) el.dataset.align = align;
     else delete el.dataset.align;
     this.applyCallout(el, block);
+    if (block.type === 'toggle_block') el.dataset.open = String(isToggleOpen(block));
+    else delete el.dataset.open;
     // A paragraph's, heading's or quote's alignment.
     const textAlign = blockTextAlign(block);
     if (textAlign) el.style.textAlign = textAlign;
@@ -366,6 +370,7 @@ export class DOMReconciler {
       return;
     }
     if (block.type === 'task_list_item') this.addCheckbox(el, block);
+    if (block.type === 'toggle_block') this.addToggleButton(el, block);
     const language = block.type === 'code_block' ? normalizeCodeLanguage(block.attrs?.language) : null;
     if (block.type === 'code_block') this.addLanguageLabel(el, language);
 
@@ -389,16 +394,54 @@ export class DOMReconciler {
       return;
     }
 
-    for (const node of block.content) {
-      if (!node.text) continue;
-      const domNode = this.renderInlineNode(node);
-      el.appendChild(domNode);
+    if (block.type === 'toggle_block') {
+      this.fillToggle(el, block);
+      return;
     }
+    this.fillInline(el, block.content);
+  }
 
+  /** Puts inline nodes in an element, with a <br> to show a trailing empty line. */
+  private fillInline(el: HTMLElement, content: InlineNode[]): void {
+    for (const node of content) {
+      if (!node.text) continue;
+      el.appendChild(this.renderInlineNode(node));
+    }
     // A trailing newline only shows an empty last line if a <br> follows it.
-    if (block.content.map((c) => c.text).join('').endsWith('\n')) {
+    if (content.map((c) => c.text).join('').endsWith('\n')) {
       el.appendChild(document.createElement('br'));
     }
+  }
+
+  /**
+   * A toggle's summary (its first line, with the line break after it) and its
+   * body (the other lines), which theme.css hides while it is closed.
+   */
+  private fillToggle(el: HTMLElement, block: BlockNode): void {
+    const length = toggleSummaryLength(block);
+    const text = getBlockText(block);
+    const summary = document.createElement('div');
+    summary.className = 'levit-toggle-summary';
+    const head = sliceBlockContent(block, 0, Math.min(length + 1, text.length));
+    for (const node of head) if (node.text) summary.appendChild(this.renderInlineNode(node));
+    el.appendChild(summary);
+    if (length === text.length) return;
+    const body = document.createElement('div');
+    body.className = 'levit-toggle-body';
+    this.fillInline(body, sliceBlockContent(block, length + 1, text.length));
+    el.appendChild(body);
+  }
+
+  /** The button that opens and closes a toggle. It holds no text, so caret offsets skip it. */
+  private addToggleButton(el: HTMLElement, block: BlockNode): void {
+    const open = isToggleOpen(block);
+    const button = document.createElement('span');
+    button.className = 'levit-toggle-button';
+    button.contentEditable = 'false';
+    button.setAttribute('role', 'button');
+    button.setAttribute('aria-expanded', String(open));
+    button.setAttribute('aria-label', open ? this.messages.collapse : this.messages.expand);
+    el.appendChild(button);
   }
 
   /**
