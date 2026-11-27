@@ -429,6 +429,8 @@ export class DOMReconciler {
     const body = document.createElement('div');
     body.className = 'levit-toggle-body';
     this.fillInline(body, sliceBlockContent(block, length + 1, text.length));
+    // An empty body line still shows, so the caret has a place on it.
+    if (!body.firstChild) body.appendChild(document.createElement('br'));
     el.appendChild(body);
   }
 

@@ -169,6 +169,15 @@ function hasTextAfter(walker: TreeWalker): boolean {
 }
 
 /**
+ * The <br> for an empty line after a text node that ends in a line break,
+ * when it is in another element (an empty toggle body), or null.
+ */
+function breakAfter(blockEl: HTMLElement, textNode: Node): Element | null {
+  const br = Array.from(blockEl.querySelectorAll('br')).find((b) => textNode.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+  return br && !br.parentNode!.contains(textNode) ? br : null;
+}
+
+/**
  * Finds the DOM Text node and relative offset corresponding to a character offset in a block.
  */
 function findDOMPoint(blockEl: HTMLElement, targetOffset: number): { node: Node; offset: number } {
@@ -182,6 +191,8 @@ function findDOMPoint(blockEl: HTMLElement, targetOffset: number): { node: Node;
     // start of the next line, which may be in another element (a toggle's body).
     const breakEnds = accumulated + len === targetOffset && (textNode.nodeValue || '').endsWith('\n');
     if (accumulated + len >= targetOffset && !(breakEnds && hasTextAfter(walker))) {
+      const br = breakEnds ? breakAfter(blockEl, textNode) : null;
+      if (br) return { node: br.parentNode!, offset: Array.prototype.indexOf.call(br.parentNode!.childNodes, br) };
       return {
         node: textNode,
         offset: Math.max(0, targetOffset - accumulated),

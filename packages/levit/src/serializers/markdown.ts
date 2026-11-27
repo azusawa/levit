@@ -57,11 +57,16 @@ export function documentToMarkdown(doc: DocumentData, options: SerializerOptions
         break;
       case 'toggle_block': {
         // GitHub shows <details> as a toggle. The lines stay together (no
-        // blank line), so the body is written with hard breaks.
+        // blank line), so the body is written with hard breaks. A last line
+        // that is blank or ends in "\\" gets one more "\\", which readToggle
+        // takes off, so it is not a blank line that ends the block.
         const length = toggleSummaryLength(block);
         const text = getBlockText(block);
         const part = (from: number, to: number) => inlineMarkdown({ ...block, content: sliceBlockContent(block, from, to) }, schema);
-        const body = length < text.length ? `\n${part(length + 1, text.length).replace(/\n/g, '\\\n')}` : '';
+        const lines = length < text.length ? part(length + 1, text.length).split('\n') : [];
+        const last = lines[lines.length - 1];
+        const marked = last !== undefined && (!last.trim() || last.endsWith('\\')) ? [...lines.slice(0, -1), `${last}\\`] : lines;
+        const body = marked.length > 0 ? `\n${marked.join('\\\n')}` : '';
         line = `<details${isToggleOpen(block) ? ' open' : ''}>\n<summary>${part(0, length)}</summary>${body}\n</details>`;
         break;
       }
@@ -474,7 +479,10 @@ function readToggle(text: string): BlockNode | null {
   const open = /^<details( open)?>$/.exec(lines[0]);
   const summary = /^<summary>(.*)<\/summary>$/.exec(lines[1] ?? '');
   if (!open || !summary || lines.length < 3 || lines[lines.length - 1] !== '</details>') return null;
-  const body = lines.slice(2, -1);
+  const written = lines.slice(2, -1);
+  // documentToMarkdown puts one more "\\" after the last line.
+  const last = written[written.length - 1];
+  const body = last?.endsWith('\\') ? [...written.slice(0, -1), last.slice(0, -1)] : written;
   const content = [
     ...parseInlineMarkdown(summary[1]),
     ...(body.length > 0 ? [createTextNode('\n'), ...parseInlineMarkdown(readHardBreaks(body.join('\n')))] : []),

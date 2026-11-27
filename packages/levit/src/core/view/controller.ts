@@ -335,17 +335,26 @@ export class InputController {
       return;
     }
 
+    this.pressBox(e);
+  }
+
+  /** A press on a task checkbox or a toggle's button checks it or opens it. */
+  private pressBox(e: MouseEvent): void {
     const box = (e.target as Element | null)?.closest?.('.levit-task-checkbox, .levit-toggle-button');
     if (!box || !this.container.contains(box)) return;
     e.preventDefault();
     const blockId = box.closest('[data-block-id]')?.getAttribute('data-block-id');
-    if (!blockId) return;
+    if (!blockId || !this.editor.isEditable) return;
     if (box.classList.contains('levit-toggle-button')) this.editor.chain().toggleBlockOpen(blockId).run();
     else this.editor.chain().toggleTaskChecked(blockId).run();
   }
 
-  /** A click on a code block's language label (also the one a screen reader sends). */
+  /**
+   * A click on a code block's language label. A click with no press before
+   * it (detail 0, as a screen reader sends) also works a checkbox or toggle.
+   */
   private handleClick(e: MouseEvent): void {
+    if (e.detail === 0) this.pressBox(e);
     const label = this.languageLabel(e.target);
     if (!label || !this.editor.isEditable) return;
     e.preventDefault();

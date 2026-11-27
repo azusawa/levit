@@ -378,6 +378,10 @@ export class Transaction {
     if (blockIdx > 0) {
       const prevBlock = this.edit(blockIdx - 1);
       const prevTextLen = getBlockText(prevBlock).length;
+      // The text goes on the hidden last line of a closed toggle: open it.
+      if (prevBlock.type === 'toggle_block' && !isToggleOpen(prevBlock) && toggleSummaryLength(prevBlock) < prevTextLen) {
+        prevBlock.attrs = toggleAttrs(true);
+      }
 
       prevBlock.content = mergeBlockContent(prevBlock.content, block.content);
       // Remove current block
@@ -1320,17 +1324,31 @@ export class Transaction {
     return [fromIdx, toIdx];
   }
 
-  /** Checks or unchecks a task item: the one with blockId, or the one at the caret. */
-  /** Opens or closes a toggle (the one at the caret by default). */
+  /**
+   * Opens or closes a toggle (the one at the caret by default). Closing it
+   * moves a caret in its body to the end of the summary, where it shows.
+   */
   toggleBlockOpen(blockId = this.selection.anchor.blockId): this {
     const index = findBlockIndex(this.doc, blockId);
     const block = this.doc.blocks[index];
     if (!block || block.type !== 'toggle_block') return this;
-    this.edit(index).attrs = toggleAttrs(!isToggleOpen(block));
+    const open = !isToggleOpen(block);
+    this.edit(index).attrs = toggleAttrs(open);
     this.docChanged = true;
+    if (!open) {
+      const length = toggleSummaryLength(block);
+      const clamp = (p: EditorPosition): EditorPosition => (p.blockId === blockId && p.offset > length ? { blockId, offset: length } : p);
+      const anchor = clamp(this.selection.anchor);
+      const head = clamp(this.selection.head);
+      if (anchor !== this.selection.anchor || head !== this.selection.head) {
+        this.selection = { anchor, head, isCollapsed: anchor.blockId === head.blockId && anchor.offset === head.offset };
+        this.selectionChanged = true;
+      }
+    }
     return this;
   }
 
+  /** Checks or unchecks a task item: the one with blockId, or the one at the caret. */
   toggleTaskChecked(blockId = this.selection.anchor.blockId): this {
     const index = findBlockIndex(this.doc, blockId);
     const block = this.doc.blocks[index];

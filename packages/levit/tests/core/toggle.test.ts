@@ -202,3 +202,54 @@ describe('toggle in other formats', () => {
     expect(validateDocument(createDocument([createBlock('toggle_block', { open: 'yes' }, [createTextNode('x')])])).valid).toBe(false);
   });
 });
+
+describe('toggle review fixes', () => {
+  it('Markdown: an empty last body line, a blank one and one ending in "\\" read back', () => {
+    for (const text of ['Title\n', 'Title\nfoo\n', 'Title\nfoo\n  ', 'Title\na\\', 'Title\n\\']) {
+      const back = markdownToDocument(documentToMarkdown(createDocument([toggle('t', text, true)]))).blocks;
+      expect(back.map((b) => [b.type, getBlockText(b)])).toEqual([['toggle_block', text]]);
+    }
+  });
+
+  it('draws an empty body line, and the caret after the summary goes in it', () => {
+    make([toggle('t', 'Title\n', true)]);
+    editor.focus();
+    caret('t', 6);
+    const body = el('t').querySelector('.levit-toggle-body');
+    expect(body?.querySelector('br')).not.toBeNull();
+    expect(body!.contains(getSelection()!.getRangeAt(0).startContainer)).toBe(true);
+  });
+
+  it('closing it with the caret in the body moves the caret to the end of the summary', () => {
+    make([toggle('t', 'Title\nbody', true)]);
+    caret('t', 8);
+    button('t').dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+    expect(isToggleOpen(editor.state.doc.blocks[0])).toBe(false);
+    expect(editor.state.selection.head).toEqual({ blockId: 't', offset: 5 });
+  });
+
+  it('Backspace at the start of a paragraph after a closed toggle opens it, so the merged text shows', () => {
+    make([toggle('t', 'Title\nbody'), para('p', 'next')]);
+    caret('p', 0);
+    editor.chain().deleteBackward().run();
+    expect(summary()).toEqual([['toggle_block', 'Title\nbodynext']]);
+    expect(isToggleOpen(editor.state.doc.blocks[0])).toBe(true);
+  });
+
+  it('a click without a press (as a screen reader sends) opens it, and a mouse click does not toggle twice', () => {
+    make([toggle('t', 'Title\nbody')]);
+    button('t').dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 0 }));
+    expect(isToggleOpen(editor.state.doc.blocks[0])).toBe(true);
+    button('t').dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, detail: 1 }));
+    button('t').dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 }));
+    expect(isToggleOpen(editor.state.doc.blocks[0])).toBe(false);
+  });
+
+  it('does nothing while the editor is not editable', () => {
+    make([toggle('t', 'Title\nbody')]);
+    editor.setEditable(false);
+    button('t').dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+    button('t').dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 0 }));
+    expect(isToggleOpen(editor.state.doc.blocks[0])).toBe(false);
+  });
+});
